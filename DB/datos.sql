@@ -46,5 +46,4 @@ INSERT INTO rol (codigo, nombre, descripcion) VALUES
 
 INSERT INTO turno (codigo, nombre, hora_entrada, hora_salida) VALUES
 ('MAT', 'Matutino', '06:00:00', '14:00:00'),
-('VESP', 'Vespertino', '14:00:00', '22:00:00'),
-('NOCT', 'Nocturno', '22:00:00', '06:00:00');
+('VESP', 'Vespertino', '14:00:00', '22:00:00');
