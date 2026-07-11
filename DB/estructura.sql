@@ -1,4 +1,4 @@
--- Active: 1762888131509@@127.0.0.1@3306@cuatro
+-- Active: 1783038914702@@localhost@3306@cuatro
 DROP DATABASE IF EXISTS cuatro;
 CREATE DATABASE IF NOT EXISTS cuatro;
 USE cuatro;
@@ -174,6 +174,8 @@ CREATE TABLE orden_produccion (
   folio int NOT NULL AUTO_INCREMENT,
   fecha date DEFAULT NULL,
   hora time DEFAULT NULL,
+  cantidad_planificada int DEFAULT 0,
+  cantidad_producida int DEFAULT 0,
   modelo_laptop varchar(8) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
   PRIMARY KEY (folio)

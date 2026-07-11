@@ -251,6 +251,8 @@ class OrdenProduccion(models.Model):
     folio = models.AutoField(primary_key=True)
     fecha = models.DateField()
     hora = models.TimeField()
+    cantidad_planificada = models.IntegerField(default=0)
+    cantidad_producida = models.IntegerField(default=0)
 
     modelo_laptop = models.ForeignKey(
         ModeloLaptop,
