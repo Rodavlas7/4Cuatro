@@ -1,5 +1,5 @@
 from django.db import models
-
+'''
 # Create your models here.
 # 1
 class Rol(models.Model):
@@ -471,4 +471,4 @@ class RegistroEmbalaje(models.Model):
     )
 
     class Meta:
-        db_table = "registro_embalaje"
+        db_table = "registro_embalaje"'''
