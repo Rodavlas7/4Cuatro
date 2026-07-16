@@ -174,10 +174,8 @@ CREATE TABLE orden_produccion (
   folio int NOT NULL AUTO_INCREMENT,
   fecha date DEFAULT NULL,
   hora time DEFAULT NULL,
-  cantidad_planificada int DEFAULT 0,
-  cantidad_producida int DEFAULT 0,
   modelo_laptop varchar(8) DEFAULT NULL,
-  cant_planificda int DEFAULT NULL,
+  cant_planificda int DEFAULT 0,
   cant_producida int DEFAULT 0,
   estado varchar(8) DEFAULT NULL,
   PRIMARY KEY (folio)
@@ -262,7 +260,7 @@ CREATE TABLE usuario_token (
   num INT AUTO_INCREMENT PRIMARY KEY,
   usuario INT NOT NULL,
   token VARCHAR(100),
-  FOREIGN KEY (usuario) REFERENCES usuario(id)
+  FOREIGN KEY (usuario) REFERENCES usuario(numero)
 );
 
 -- --------------------------------------------------------
