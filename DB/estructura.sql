@@ -259,7 +259,7 @@ DROP TABLE IF EXISTS usuario;
 CREATE TABLE usuario (
   numero int NOT NULL AUTO_INCREMENT,
   usuario varchar(32) DEFAULT NULL,
-  contrasena varchar(32) DEFAULT NULL,
+  contrasena varchar(256) DEFAULT NULL,
   estado tinyint(1) DEFAULT NULL,
   empleado int DEFAULT NULL,
   PRIMARY KEY (numero)
