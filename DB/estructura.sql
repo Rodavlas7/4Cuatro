@@ -1,4 +1,8 @@
 -- Active: 1783038914702@@localhost@3306@cuatro
+
+-- TRACEX — Estructura de base de datos
+-- Version: 2026-07-15
+
 DROP DATABASE IF EXISTS cuatro;
 CREATE DATABASE IF NOT EXISTS cuatro;
 USE cuatro;
@@ -48,7 +52,7 @@ DROP TABLE IF EXISTS edo_linea;
 CREATE TABLE edo_linea (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
-  descripcion varchar(128) DEFAULT NULL,
+  descripcion varchar(64) DEFAULT NULL,
   PRIMARY KEY (codigo)
 );
 
@@ -93,7 +97,7 @@ DROP TABLE IF EXISTS estacion;
 CREATE TABLE estacion (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
-  descripcion varchar(64) DEFAULT NULL,
+  descripcion varchar(128) DEFAULT NULL,
   linea varchar(8) DEFAULT NULL,
   activo BOOLEAN DEFAULT FALSE,
   PRIMARY KEY (codigo)
@@ -129,7 +133,7 @@ DROP TABLE IF EXISTS linea;
 CREATE TABLE linea (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
-  descripcion varchar(32) DEFAULT NULL,
+  descripcion varchar(128) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
   activo BOOLEAN DEFAULT FALSE,
   PRIMARY KEY (codigo)
@@ -137,7 +141,7 @@ CREATE TABLE linea (
 
 DROP TABLE IF EXISTS lote_comp;
 CREATE TABLE lote_comp (
-  codigo varchar(8) NOT NULL,
+  codigo varchar(12) NOT NULL,
   descripcion varchar(64) DEFAULT NULL,
   PRIMARY KEY (codigo)
 );
@@ -154,7 +158,7 @@ CREATE TABLE modelo_componente (
   codigo varchar(8) NOT NULL,
   nombre varchar(256) DEFAULT NULL,
   tipo_componente varchar(8) DEFAULT NULL,
-  fabricante VARCHAR(64) NOT NULL,
+  fabricante VARCHAR(64) NULL,
   PRIMARY KEY (codigo)
 );
 
