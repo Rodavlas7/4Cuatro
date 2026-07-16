@@ -86,27 +86,6 @@ class LoteLaptopCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 # ============================================================================
-# EDO_LAPTOP SERIALIZERS
-# ============================================================================
-class EdoLaptopListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.EdoLaptop
-        fields = ['codigo', 'nombre']
-
-
-class EdoLaptopDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.EdoLaptop
-        fields = ['codigo', 'nombre']
-
-
-class EdoLaptopCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.EdoLaptop
-        fields = ['codigo', 'nombre']
-
-
-# ============================================================================
 # MODELO_LAPTOP SERIALIZERS
 # ============================================================================
 class ModeloLaptopListSerializer(serializers.ModelSerializer):
@@ -152,12 +131,14 @@ class ModeloComponenteCreateUpdateSerializer(serializers.ModelSerializer):
 # EMPLEADO SERIALIZERS
 # ============================================================================
 class EmpleadoListSerializer(serializers.ModelSerializer):
+    turno = serializers.CharField(source='turno.nombre', read_only=True)
     class Meta:
         model = models.Empleado
-        fields = ['numero', 'nombrepila', 'primerapell', 'segundoapell']
+        fields = ['numero', 'nombrepila', 'primerapell', 'segundoapell', 'turno']
 
 
 class EmpleadoDetailSerializer(serializers.ModelSerializer):
+    turno = serializers.CharField(source='turno.nombre', read_only=True)
     class Meta:
         model = models.Empleado
         fields = ['numero', 'nombrepila', 'primerapell', 'segundoapell', 'rol', 'turno']
@@ -173,12 +154,15 @@ class EmpleadoCreateUpdateSerializer(serializers.ModelSerializer):
 # USUARIO SERIALIZERS
 # ============================================================================
 class UsuarioListSerializer(serializers.ModelSerializer):
+    empleado = EmpleadoListSerializer(read_only=True)
     class Meta:
         model = models.Usuario
-        fields = ['numero', 'usuario', 'estado']
+        fields = ['numero', 'usuario', 'estado', 'empleado']
 
 
 class UsuarioDetailSerializer(serializers.ModelSerializer):
+    empleado = EmpleadoDetailSerializer(read_only=True)
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Usuario
         fields = ['numero', 'usuario', 'contrasena', 'estado', 'empleado']
@@ -187,19 +171,21 @@ class UsuarioDetailSerializer(serializers.ModelSerializer):
 class UsuarioCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Usuario
-        fields = ['numero', 'usuario', 'contrasena', 'estado', 'empleado']
+        fields = ['numero', 'usuario', 'contrasena', 'empleado']
 
 
 # ============================================================================
 # LINEA SERIALIZERS
 # ============================================================================
 class LineaListSerializer(serializers.ModelSerializer):
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Linea
-        fields = ['codigo', 'nombre']
+        fields = ['codigo', 'nombre', 'estado']
 
 
 class LineaDetailSerializer(serializers.ModelSerializer):
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Linea
         fields = ['codigo', 'nombre', 'descripcion', 'estado']
@@ -208,7 +194,7 @@ class LineaDetailSerializer(serializers.ModelSerializer):
 class LineaCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Linea
-        fields = ['codigo', 'nombre', 'descripcion', 'estado']
+        fields = ['codigo', 'nombre', 'descripcion']
 
 
 # ============================================================================
@@ -278,12 +264,16 @@ class EmpleadoEstacionCreateUpdateSerializer(serializers.ModelSerializer):
 # ORDEN_PRODUCCION SERIALIZERS
 # ============================================================================
 class OrdenProduccionListSerializer(serializers.ModelSerializer):
+    modelo_laptop = ModeloLaptopListSerializer(read_only=True)
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.OrdenProduccion
         fields = ['folio', 'fecha', 'modelo_laptop', 'estado']
 
 
 class OrdenProduccionDetailSerializer(serializers.ModelSerializer):
+    modelo_laptop = ModeloLaptopDetailSerializer(read_only=True)
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.OrdenProduccion
         fields = ['folio', 'fecha', 'hora', 'modelo_laptop', 'cant_planificda', 'cant_producida', 'estado']
@@ -292,29 +282,29 @@ class OrdenProduccionDetailSerializer(serializers.ModelSerializer):
 class OrdenProduccionCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.OrdenProduccion
-        fields = ['folio', 'fecha', 'hora', 'modelo_laptop', 'cant_planificda', 'cant_producida', 'estado']
+        fields = ['folio', 'fecha', 'hora', 'modelo_laptop', 'cant_planificda', 'cant_producida']
+
 
 
 # ============================================================================
-# COMPONENTE SERIALIZERS
+# ORDEN_MATERIAL SERIALIZERS
 # ============================================================================
-class ComponenteListSerializer(serializers.ModelSerializer):
+class OrdenMaterialListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Componente
-        fields = ['numero', 'num_serie', 'modelo', 'lote', 'estado']
+        model = models.OrdenMaterial
+        fields = ['numero', 'fecha', 'linea']
 
 
-class ComponenteDetailSerializer(serializers.ModelSerializer):
+class OrdenMaterialDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Componente
-        fields = ['numero', 'num_serie', 'descripcion', 'linea', 'orden_material', 'registro_ensamblaje', 'modelo', 'lote', 'estado']
+        model = models.OrdenMaterial
+        fields = ['numero', 'fecha', 'hora', 'linea']
 
 
-class ComponenteCreateUpdateSerializer(serializers.ModelSerializer):
+class OrdenMaterialCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Componente
-        fields = ['numero', 'num_serie', 'descripcion', 'linea', 'orden_material', 'registro_ensamblaje', 'modelo', 'lote', 'estado']
-
+        model = models.OrdenMaterial
+        fields = ['numero', 'fecha', 'hora', 'linea']
 
 # ============================================================================
 # DETALLE_MATERIAL SERIALIZERS
@@ -338,15 +328,75 @@ class DetalleMaterialCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 # ============================================================================
+# COMPONENTE SERIALIZERS
+# ============================================================================
+class ComponenteListSerializer(serializers.ModelSerializer):
+    modelo = ModeloComponenteListSerializer(read_only=True)
+    lote = LoteCompListSerializer(read_only=True)
+    linea = LineaListSerializer(read_only=True)
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
+    class Meta:
+        model = models.Componente
+        fields = ['numero', 'num_serie', 'modelo', 'lote', 'linea', 'estado']
+
+
+class ComponenteDetailSerializer(serializers.ModelSerializer):
+    modelo = ModeloComponenteDetailSerializer(read_only=True)
+    lote = LoteCompDetailSerializer(read_only=True)
+    linea = LineaDetailSerializer(read_only=True)
+    orden_material = OrdenMaterialDetailSerializer(read_only=True)
+    registro_ensamblaje = RegistroEnsamblajeDetailSerializer(read_only=True)
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
+    class Meta:
+        model = models.Componente
+        fields = ['numero', 'num_serie', 'descripcion', 'linea', 'orden_material', 'registro_ensamblaje', 'modelo', 'lote', 'estado']
+
+
+class ComponenteCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Componente
+        fields = ['numero', 'num_serie', 'descripcion', 'linea', 'orden_material', 'registro_ensamblaje', 'modelo', 'lote']
+
+
+# ============================================================================
+# REGISTRO_ENSAMBLAJE SERIALIZERS
+# ============================================================================
+class RegistroEnsamblajeListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroEnsamblaje
+        fields = ['numero', 'fecha_inicio', 'laptop', 'linea']
+
+
+class RegistroEnsamblajeDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroEnsamblaje
+        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
+
+
+class RegistroEnsamblajeCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroEnsamblaje
+        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
+
+# ============================================================================
 # LAPTOP SERIALIZERS
 # ============================================================================
 class LaptopListSerializer(serializers.ModelSerializer):
+    modelo = ModeloLaptopListSerializer(read_only=True)
+    linea = LineaListSerializer(read_only=True)
+    lote = LoteLaptopListSerializer(read_only=True)
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'modelo', 'estado', 'linea']
+        fields = ['numero', 'descripcion', 'modelo', 'estado', 'linea', 'lote']
 
 
 class LaptopDetailSerializer(serializers.ModelSerializer):
+    modelo = ModeloLaptopDetailSerializer(read_only=True)
+    linea = LineaDetailSerializer(read_only=True)
+    lote = LoteLaptopDetailSerializer(read_only=True)
+    orden = OrdenProduccionDetailSerializer(read_only=True)
+    estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Laptop
         fields = ['numero', 'descripcion', 'orden', 'modelo', 'estado', 'linea', 'lote']
@@ -355,7 +405,7 @@ class LaptopDetailSerializer(serializers.ModelSerializer):
 class LaptopCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'orden', 'modelo', 'estado', 'linea', 'lote']
+        fields = ['numero', 'descripcion', 'orden', 'modelo', 'linea', 'lote']
 
 
 # ============================================================================
@@ -440,25 +490,3 @@ class RegistroEmbalajeCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.RegistroEmbalaje
         fields = ['numero', 'fecha', 'hora', 'laptop', 'tipo']
-
-
-# ============================================================================
-# REGISTRO_ENSAMBLAJE SERIALIZERS
-# ============================================================================
-class RegistroEnsamblajeListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.RegistroEnsamblaje
-        fields = ['numero', 'fecha_inicio', 'laptop', 'linea']
-
-
-class RegistroEnsamblajeDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.RegistroEnsamblaje
-        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
-
-
-class RegistroEnsamblajeCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.RegistroEnsamblaje
-        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
-    
