@@ -61,12 +61,13 @@ CREATE TABLE edo_produccion (
 
 DROP TABLE IF EXISTS empleado;
 CREATE TABLE empleado (
-  numero int NOT NULL AUTO_INCREMENT,
+  numero int NOT NULL,
   nombrePila varchar(50) DEFAULT NULL,
   primerApell varchar(32) DEFAULT NULL,
   segundoApell varchar(32) DEFAULT NULL,
   rol varchar(8) DEFAULT NULL,
   turno varchar(8) DEFAULT NULL,
+  activo BOOLEAN DEFAULT FALSE,
   PRIMARY KEY (numero)
 );
 
@@ -75,7 +76,7 @@ CREATE TABLE empleado_estacion (
   empleado int NOT NULL,
   estacion varchar(8) NOT NULL,
   fecha_inicio date NOT NULL,
-  fecha_fin date DEFAULT NULL,
+  fecha_fin date NULL,
   PRIMARY KEY (empleado, estacion, fecha_inicio)
 );
 
@@ -84,7 +85,7 @@ CREATE TABLE empleado_linea (
   empleado int NOT NULL,
   linea varchar(8) NOT NULL,
   fecha_inicio date NOT NULL,
-  fecha_fin date DEFAULT NULL,
+  fecha_fin date NULL,
   PRIMARY KEY (empleado, linea, fecha_inicio)
 );
 
@@ -94,6 +95,7 @@ CREATE TABLE estacion (
   nombre varchar(32) DEFAULT NULL,
   descripcion varchar(64) DEFAULT NULL,
   linea varchar(8) DEFAULT NULL,
+  activo BOOLEAN DEFAULT FALSE,
   PRIMARY KEY (codigo)
 );
 
@@ -113,6 +115,7 @@ CREATE TABLE inspeccion_calidad (
 DROP TABLE IF EXISTS laptop;
 CREATE TABLE laptop (
   numero int NOT NULL AUTO_INCREMENT,
+  num_serie VARCHAR(50) NOT NULL,
   descripcion varchar(256) DEFAULT NULL,
   orden int DEFAULT NULL,
   modelo varchar(8) DEFAULT NULL,
@@ -128,6 +131,7 @@ CREATE TABLE linea (
   nombre varchar(32) DEFAULT NULL,
   descripcion varchar(32) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
+  activo BOOLEAN DEFAULT FALSE,
   PRIMARY KEY (codigo)
 );
 
@@ -150,6 +154,7 @@ CREATE TABLE modelo_componente (
   codigo varchar(8) NOT NULL,
   nombre varchar(256) DEFAULT NULL,
   tipo_componente varchar(8) DEFAULT NULL,
+  fabricante VARCHAR(64) NOT NULL,
   PRIMARY KEY (codigo)
 );
 
@@ -175,7 +180,7 @@ CREATE TABLE orden_produccion (
   fecha date DEFAULT NULL,
   hora time DEFAULT NULL,
   modelo_laptop varchar(8) DEFAULT NULL,
-  cant_planificda int DEFAULT 0,
+  cant_planificada INT DEFAULT 0,
   cant_producida int DEFAULT 0,
   estado varchar(8) DEFAULT NULL,
   PRIMARY KEY (folio)
@@ -349,4 +354,6 @@ CREATE UNIQUE INDEX IUK_tipo_embalaje_nombre ON tipo_embalaje(nombre);
 CREATE UNIQUE INDEX IUK_turno_nombre ON turno(nombre);
 CREATE UNIQUE INDEX IUK_usuario_usuario ON usuario(usuario);
 CREATE UNIQUE INDEX IUK_usuario_empleado ON usuario(empleado);
+
+CREATE UNIQUE INDEX IUK_serie_laptop ON laptop(num_serie);
 
