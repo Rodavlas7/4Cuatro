@@ -44,27 +44,6 @@ class TipoEmbalajeCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 # ============================================================================
-# EDO_PRODUCCION SERIALIZERS
-# ============================================================================
-class EdoProduccionListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.EdoProduccion
-        fields = ['codigo', 'nombre']
-
-
-class EdoProduccionDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.EdoProduccion
-        fields = ['codigo', 'nombre']
-
-
-class EdoProduccionCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.EdoProduccion
-        fields = ['codigo', 'nombre']
-
-
-# ============================================================================
 # LOTE_LAPTOP SERIALIZERS
 # ============================================================================
 class LoteLaptopListSerializer(serializers.ModelSerializer):
@@ -83,6 +62,7 @@ class LoteLaptopCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.LoteLaptop
         fields = ['codigo', 'fecha']
+
 
 # ============================================================================
 # MODELO_LAPTOP SERIALIZERS
@@ -327,6 +307,27 @@ class DetalleMaterialCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 # ============================================================================
+# REGISTRO_ENSAMBLAJE SERIALIZERS
+# ============================================================================
+class RegistroEnsamblajeListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroEnsamblaje
+        fields = ['numero', 'fecha_inicio', 'laptop', 'linea']
+
+
+class RegistroEnsamblajeDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroEnsamblaje
+        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
+
+
+class RegistroEnsamblajeCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.RegistroEnsamblaje
+        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
+
+
+# ============================================================================
 # COMPONENTE SERIALIZERS
 # ============================================================================
 class ComponenteListSerializer(serializers.ModelSerializer):
@@ -356,26 +357,6 @@ class ComponenteCreateUpdateSerializer(serializers.ModelSerializer):
         model = models.Componente
         fields = ['numero', 'num_serie', 'descripcion', 'linea', 'orden_material', 'registro_ensamblaje', 'modelo', 'lote']
 
-
-# ============================================================================
-# REGISTRO_ENSAMBLAJE SERIALIZERS
-# ============================================================================
-class RegistroEnsamblajeListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.RegistroEnsamblaje
-        fields = ['numero', 'fecha_inicio', 'laptop', 'linea']
-
-
-class RegistroEnsamblajeDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.RegistroEnsamblaje
-        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
-
-
-class RegistroEnsamblajeCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.RegistroEnsamblaje
-        fields = ['numero', 'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'laptop', 'linea']
 
 # ============================================================================
 # LAPTOP SERIALIZERS
