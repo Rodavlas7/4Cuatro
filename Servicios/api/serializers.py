@@ -84,7 +84,6 @@ class LoteLaptopCreateUpdateSerializer(serializers.ModelSerializer):
         model = models.LoteLaptop
         fields = ['codigo', 'fecha']
 
-
 # ============================================================================
 # MODELO_LAPTOP SERIALIZERS
 # ============================================================================
