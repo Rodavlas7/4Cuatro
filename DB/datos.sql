@@ -46,47 +46,47 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- 1. ROLES
 
 INSERT INTO rol (codigo, nombre, descripcion) VALUES
-('ROL001', 'Administrador',       'Acceso total al sistema, gestión de usuarios y configuración general'),
-('ROL002', 'Supervisor',          'Supervisión de líneas de ensamblaje, asignación de personal y consulta de reportes'),
-('ROL003', 'Operario Ensamblaje', 'Registro de ensamblaje y asociación de componentes en estaciones de trabajo'),
-('ROL004', 'Inspector Calidad',   'Registro y consulta de inspecciones de calidad de laptops'),
-('ROL005', 'Operario Embalaje',   'Registro del proceso de embalaje y actualización de estado final');
+('ADMIN', 'Administrador',       'Acceso total al sistema, gestión de usuarios y configuración general'),
+('SUPER', 'Supervisor',          'Supervisión de líneas de ensamblaje, asignación de personal y consulta de reportes'),
+('OPENSA', 'Operario Ensamblaje', 'Registro de ensamblaje y asociación de componentes en estaciones de trabajo'),
+('OPCALI', 'Inspector Calidad',   'Registro y consulta de inspecciones de calidad de laptops'),
+('OPEMBA', 'Operario Embalaje',   'Registro del proceso de embalaje y actualización de estado final');
 
 
 -- 2. TURNOS
 
 INSERT INTO turno (codigo, nombre, hora_entrada, hora_salida) VALUES
-('TUR001', 'Matutino',   '06:00:00', '14:00:00'),
-('TUR002', 'Vespertino', '14:00:00', '22:00:00');
+('MAT', 'Matutino',   '06:00:00', '14:00:00'),
+('VES', 'Vespertino', '14:00:00', '22:00:00');
 
 -- 3. ESTADOS DE LÍNEA
 
 INSERT INTO edo_linea (codigo, nombre, descripcion) VALUES
-('EDL001', 'Activa',       'Línea en operación normal'),
-('EDL002', 'Inactiva',     'Línea fuera de operación temporalmente'),
-('EDL003', 'En Paro',      'Línea detenida por incidencia registrada'),
-('EDL004', 'Mantenimiento','Línea en proceso de mantenimiento preventivo o correctivo');
+('ACTI', 'Activa',       'Línea en operación normal'),
+('INAC', 'Inactiva',     'Línea fuera de operación temporalmente'),
+('PARO', 'En Paro',      'Línea detenida por incidencia registrada'),
+('MANT', 'Mantenimiento','Línea en proceso de mantenimiento preventivo o correctivo');
 
 
 -- 4. ESTADOS DE LAPTOP 
 
 INSERT INTO edo_laptop (codigo, nombre) VALUES
-('EDO001', 'Registrada'),       
-('EDO002', 'En Ensamblaje'),    
-('EDO003', 'En Inspección'),    
-('EDO004', 'Aprobada'),         
-('EDO005', 'Rechazada'),        
-('EDO006', 'Pendiente Embalaje'),
-('EDO007', 'Embalada');         
+('REGIS', 'Registrada'),       
+('PENSAM', 'En Ensamblaje'),    
+('PINSPE', 'En Inspección'),    
+('APROV', 'Aprobada'),         
+('RECHA', 'Rechazada'),        
+('PENDEM', 'Pendiente Embalaje'),
+('EMBALA', 'Embalada');         
 
 
 -- 5. ESTADOS DE PRODUCCIÓN 
 
 INSERT INTO edo_produccion (codigo, nombre) VALUES
-('EDP001', 'Pendiente'),
-('EDP002', 'En Proceso'),
-('EDP003', 'Completada'),
-('EDP004', 'Cancelada');
+('PEND', 'Pendiente'),
+('PROC', 'En Proceso'),
+('COMP', 'Completada'),
+('CANC', 'Cancelada');
 
 
 -- 6. TIPOS DE COMPONENTE
@@ -178,12 +178,12 @@ INSERT INTO modelo_componente (codigo, nombre, tipo_componente) VALUES
 -- 5 normales y una de embalaje
 
 INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
-('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'EDL001'),
-('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'EDL001'),
-('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'EDL001'),
-('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'EDL001'),
-('LIN005', 'Línea E — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'EDL001'),
-('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'EDL001');
+('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
+('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
+('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
+('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
+('LIN005', 'Línea E — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
+('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'ACTI');
 
 
 -- 11. ESTACIONES — Líneas de ensamblaje
@@ -246,3 +246,158 @@ INSERT INTO lote_laptop (codigo, fecha) VALUES
 INSERT INTO lote_comp (codigo, descripcion) VALUES
 ('LCOMP-001', 'Lote de componentes AMD'),
 ('LCOMP-002', 'Lote de componentes Intel');
+
+
+
+-- 14. EMPLEADOS
+
+
+-- LINEA A para el equipo matutino
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607001, 'Carlos',    'García',   'López',    'OPENSA', 'MAT', TRUE),
+(2607002, 'María',     'Fernández','Sánchez',  'OPENSA', 'MAT', TRUE),
+(2607003, 'Luis',      'Martínez', 'Gómez',    'OPENSA', 'MAT', TRUE),
+(2607004, 'Lucía',     'Torres',   'Vargas',   'OPCALI', 'MAT', TRUE),
+(2607005, 'Chelly',    'Montes',   'Marcos',   'SUPER',  'MAT', TRUE);
+
+
+-- LINEA B
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607006, 'Jorge',     'Ramírez',  'Díaz',     'OPENSA', 'MAT', TRUE),
+(2607007, 'Elena',     'Castro',   'Ruiz',     'OPENSA', 'MAT', TRUE),
+(2607008, 'Miguel',    'Ortiz',    'Méndez',   'OPENSA', 'MAT', TRUE),
+(2607009, 'Roberto',   'Flores',   'Silva',    'OPCALI', 'MAT', TRUE),
+(2607010, 'Patricia',  'Navarro',  'Ríos',     'SUPER',  'MAT', TRUE);
+
+
+-- LINEA C
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607011, 'Pedro',     'Mendoza',  'Vega',     'OPENSA', 'MAT', TRUE),
+(2607012, 'Laura',     'Salinas',  'Ponce',    'OPENSA', 'MAT', TRUE),
+(2607013, 'Valeria',   'Guzmán',   'Rojas',    'OPENSA', 'MAT', TRUE),
+(2607014, 'Héctor',    'Paz',      'Mora',     'OPCALI', 'MAT', TRUE),
+(2607015, 'Diana',     'Ríos',     'Blanco',   'SUPER',  'MAT', TRUE);
+
+
+-- LINEA D
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607016, 'Mario',     'Cruz',     'Vidal',    'OPENSA', 'MAT', TRUE),
+(2607017, 'Teresa',    'Luna',     'Ortiz',    'OPENSA', 'MAT', TRUE),
+(2607018, 'Raúl',      'Navarro',  'Pinto',    'OPENSA', 'MAT', TRUE),
+(2607019, 'Carmen',    'Sosa',     'Molina',   'OPCALI', 'MAT', TRUE),
+(2607020, 'Gloria',    'Peña',     'Silva',    'SUPER',  'MAT', TRUE);
+
+
+-- LINEA E
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607021, 'Hugo',      'Díaz',     'Ramos',    'OPENSA', 'MAT', TRUE),
+(2607022, 'Silvia',    'Vargas',   'Luna',     'OPENSA', 'MAT', TRUE),
+(2607023, 'Beatriz',   'Méndez',   'Solis',    'OPENSA', 'MAT', TRUE),
+(2607024, 'Ramón',     'Blanco',   'Cruz',     'OPCALI', 'MAT', TRUE),
+(2607025, 'Julia',     'Cabrera',  'Pérez',    'SUPER',  'MAT', TRUE);
+
+
+-- LINEA F (EMBALAJE)
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607026, 'Ricardo',   'Gutiérrez','Pérez',    'OPEMBA', 'MAT', TRUE),
+(2607027, 'Isabel',    'Domínguez','Salas',    'OPEMBA', 'MAT', TRUE),
+(2607028, 'Arturo',    'Jiménez',  'Cruz',     'SUPER',  'MAT', TRUE);
+
+
+
+-- 14.1 ASIGNACION DE UN EMPLEADO A SU LINEA
+
+INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
+-- LINEA A (LIN001)
+(2607001, 'LIN001', '2026-07-15', NULL),
+(2607002, 'LIN001', '2026-07-15', NULL),
+(2607003, 'LIN001', '2026-07-15', NULL),
+(2607004, 'LIN001', '2026-07-15', NULL),
+(2607005, 'LIN001', '2026-07-15', NULL);
+
+
+-- LINEA B (LIN002)
+INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
+(2607006, 'LIN002', '2026-07-15', NULL),
+(2607007, 'LIN002', '2026-07-15', NULL),
+(2607008, 'LIN002', '2026-07-15', NULL),
+(2607009, 'LIN002', '2026-07-15', NULL),
+(2607010, 'LIN002', '2026-07-15', NULL);
+
+
+-- LINEA C (LIN003)
+INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
+(2607011, 'LIN003', '2026-07-15', NULL),
+(2607012, 'LIN003', '2026-07-15', NULL),
+(2607013, 'LIN003', '2026-07-15', NULL),
+(2607014, 'LIN003', '2026-07-15', NULL),
+(2607015, 'LIN003', '2026-07-15', NULL);
+
+
+-- LINEA D (LIN004)
+INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
+(2607016, 'LIN004', '2026-07-15', NULL),
+(2607017, 'LIN004', '2026-07-15', NULL),
+(2607018, 'LIN004', '2026-07-15', NULL),
+(2607019, 'LIN004', '2026-07-15', NULL),
+(2607020, 'LIN004', '2026-07-15', NULL);
+
+
+-- LINEA E (LIN005)
+INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
+(2607021, 'LIN005', '2026-07-15', NULL),
+(2607022, 'LIN005', '2026-07-15', NULL),
+(2607023, 'LIN005', '2026-07-15', NULL),
+(2607024, 'LIN005', '2026-07-15', NULL),
+(2607025, 'LIN005', '2026-07-15', NULL);
+
+
+-- LINEA F - EMBALAJE (LIN006)
+INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
+(2607026, 'LIN006', '2026-07-15', NULL),
+(2607027, 'LIN006', '2026-07-15', NULL),
+(2607028, 'LIN006', '2026-07-15', NULL);
+
+
+
+-- 14.2 ASIGNACION DE UN EMPLEADO A SU ESTACION
+
+INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
+-- LINEA A
+(2607001, 'EST-A1', '2026-07-15', NULL),
+(2607002, 'EST-A2', '2026-07-15', NULL),
+(2607003, 'EST-A3', '2026-07-15', NULL),
+(2607004, 'EST-A4', '2026-07-15', NULL);
+
+-- LINEA B
+INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
+(2607006, 'EST-B1', '2026-07-15', NULL),
+(2607007, 'EST-B2', '2026-07-15', NULL),
+(2607008, 'EST-B3', '2026-07-15', NULL),
+(2607009, 'EST-B4', '2026-07-15', NULL);
+
+-- LINEA C
+INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
+(2607011, 'EST-C1', '2026-07-15', NULL),
+(2607012, 'EST-C2', '2026-07-15', NULL),
+(2607013, 'EST-C3', '2026-07-15', NULL),
+(2607014, 'EST-C4', '2026-07-15', NULL);
+
+-- LINEA D 
+INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
+(2607016, 'EST-D1', '2026-07-15', NULL),
+(2607017, 'EST-D2', '2026-07-15', NULL),
+(2607018, 'EST-D3', '2026-07-15', NULL),
+(2607019, 'EST-D4', '2026-07-15', NULL);
+
+-- LINEA E
+INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
+(2607021, 'EST-E1', '2026-07-15', NULL),
+(2607022, 'EST-E2', '2026-07-15', NULL),
+(2607023, 'EST-E3', '2026-07-15', NULL),
+(2607024, 'EST-E4', '2026-07-15', NULL);
+
+-- LINEA F (EMBALAJE)
+INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
+(2607026, 'EST-F1', '2026-07-15', NULL),
+(2607027, 'EST-F2', '2026-07-15', NULL);
