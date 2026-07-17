@@ -80,7 +80,16 @@ INSERT INTO edo_laptop (codigo, nombre) VALUES
 ('EMBALA', 'Embalada');         
 
 
--- 5. ESTADOS DE PRODUCCIÓN 
+-- 5. ESTADOS DE COMPONENTE
+
+INSERT INTO edo_componente (codigo, nombre, descripcion) VALUES
+('EDC001', 'Disponible', 'Componente en inventario listo para ensamblaje'),
+('EDC002', 'En Uso',     'Componente asignado e instalado en una laptop'),
+('EDC003', 'Dañado',     'Componente con defecto de fábrica o dañado en proceso'),
+('EDC004', 'Mermado',    'Componente descartado o perdido');
+
+
+-- 6. ESTADOS DE PRODUCCIÓN 
 
 INSERT INTO edo_produccion (codigo, nombre) VALUES
 ('PEND', 'Pendiente'),
@@ -89,7 +98,7 @@ INSERT INTO edo_produccion (codigo, nombre) VALUES
 ('CANC', 'Cancelada');
 
 
--- 6. TIPOS DE COMPONENTE
+-- 7. TIPOS DE COMPONENTE
 
 INSERT INTO tipo_comp (codigo, nombre) VALUES
 ('TC001', 'Procesador'),
@@ -109,7 +118,7 @@ INSERT INTO tipo_comp (codigo, nombre) VALUES
 ('TC015', 'Altavoces');
 
 
--- 7. TIPOS DE EMBALAJE
+-- 8. TIPOS DE EMBALAJE
 
 INSERT INTO tipo_embalaje (codigo, nombre) VALUES
 ('TE001', 'Caja Estándar'),
@@ -118,13 +127,13 @@ INSERT INTO tipo_embalaje (codigo, nombre) VALUES
 ('TE004', 'Caja con Espuma de Protección');
 
 
--- 8. MODELOS DE LAPTOP
+-- 9. MODELOS DE LAPTOP
 
 INSERT INTO modelo_laptop (codigo, nombre) VALUES
 ('ML001', 'ThinkPad T14 Gen 5');
 
 
--- 9. MODELOS DE COMPONENTE (ThinkPad T14 Gen 5)
+-- 10. MODELOS DE COMPONENTE (ThinkPad T14 Gen 5)
 
 INSERT INTO modelo_componente (codigo, nombre, tipo_componente) VALUES
 -- Procesadores
@@ -174,7 +183,7 @@ INSERT INTO modelo_componente (codigo, nombre, tipo_componente) VALUES
 ('MC031', 'Harman 2x2W Speaker T14G5',      'TC015');
 
 
--- 10. LÍNEAS DE ENSAMBLAJE 
+-- 11. LÍNEAS DE ENSAMBLAJE 
 -- 5 normales y una de embalaje
 
 INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
@@ -186,7 +195,7 @@ INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
 ('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'ACTI');
 
 
--- 11. ESTACIONES — Líneas de ensamblaje
+-- 12. ESTACIONES — Líneas de ensamblaje
 --
 --  EST-X1  Preparación y verificación de componentes
 --  EST-X2  Ensamblaje de placa y procesador
@@ -234,13 +243,13 @@ INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
 ('EST-F2', 'F2 — Empaque y Sellado',    'Colocación en caja con material de protección, inclusión de manuales y sellado final',    'LIN006');
 
 
--- 12. LOTE DE LAPTOPS
+-- 13. LOTE DE LAPTOPS
 
 INSERT INTO lote_laptop (codigo, fecha) VALUES
 ('LOT2026A', '2026-07-15');
 
 
--- 13. LOTE DE COMPONENTES (ejemplo)
+-- 14. LOTE DE COMPONENTES (ejemplo)
 
 INSERT INTO lote_comp (codigo, descripcion) VALUES
 ('LCOMP-001', 'Lote de componentes AMD'),
@@ -248,7 +257,7 @@ INSERT INTO lote_comp (codigo, descripcion) VALUES
 
 
 
--- 14. EMPLEADOS
+-- 15. EMPLEADOS
 
 
 -- LINEA A para el equipo matutino
@@ -304,7 +313,7 @@ INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno,
 
 
 
--- 14.1 ASIGNACION DE UN EMPLEADO A SU LINEA
+-- 15.1 ASIGNACION DE UN EMPLEADO A SU LINEA
 
 INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
 -- LINEA A (LIN001)
@@ -359,7 +368,7 @@ INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
 
 
 
--- 14.2 ASIGNACION DE UN EMPLEADO A SU ESTACION
+-- 15.2 ASIGNACION DE UN EMPLEADO A SU ESTACION
 
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 -- LINEA A
