@@ -193,46 +193,45 @@ INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
 --  EST-X3  Integración de pantalla, teclado y chasis
 --  EST-X4  Pruebas funcionales y cierre
 
-
--- Línea A
+-- Línea A: Chasis Superior y Periféricos Base
 INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-A1', 'A1 — Preparación',          'Verificación y preparación de componentes antes del ensamblaje', 'LIN001'),
-('EST-A2', 'A2 — Placa y CPU',          'Instalación de tarjeta madre, procesador, RAM y SSD',            'LIN001'),
-('EST-A3', 'A3 — Chasis y Periféricos', 'Integración de pantalla, teclado, touchpad y chasis',            'LIN001'),
-('EST-A4', 'A4 — Pruebas y Cierre',     'Pruebas funcionales POST, cierre de ensamblaje y etiquetado',    'LIN001');
+('EST-A1', 'A1 — Chasis y Touchpad',    'Inspección del chasis superior e instalación y atornillado del touchpad',                 'LIN001'),
+('EST-A2', 'A2 — Módulo de Teclado',    'Colocación del teclado retroiluminado, fijación y ruteo inicial del flexor',              'LIN001'),
+('EST-A3', 'A3 — Audio y Conexiones',   'Montaje de altavoces, enrutamiento de cables de audio y fijación acústica',               'LIN001'),
+('EST-A4', 'A4 — Conector de Carga',    'Instalación del conector de carga USB-C, anclaje al chasis y revisión de puertos',        'LIN001');
 
--- Línea B
+-- Línea B: Tarjeta Madre y Procesamiento
 INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-B1', 'B1 — Preparación',          'Verificación y preparación de componentes antes del ensamblaje', 'LIN002'),
-('EST-B2', 'B2 — Placa y CPU',          'Instalación de tarjeta madre, procesador, RAM y SSD',            'LIN002'),
-('EST-B3', 'B3 — Chasis y Periféricos', 'Integración de pantalla, teclado, touchpad y chasis',            'LIN002'),
-('EST-B4', 'B4 — Pruebas y Cierre',     'Pruebas funcionales POST, cierre de ensamblaje y etiquetado',    'LIN002');
+('EST-B1', 'B1 — Tarjeta Madre',        'Colocación de la tarjeta madre en el chasis superior y fijación con tornillos',           'LIN002'),
+('EST-B2', 'B2 — Conexión de Periféricos','Conexión de los flexores del teclado, touchpad y altavoces a la tarjeta madre',         'LIN002'),
+('EST-B3', 'B3 — CPU y Pasta Térmica',  'Montaje del procesador en el socket y aplicación de pasta térmica',                       'LIN002'),
+('EST-B4', 'B4 — Memoria RAM',          'Inserción de módulos de memoria RAM en las ranuras SO-DIMM y aseguramiento',              'LIN002');
 
--- Línea C
+-- Línea C: Almacenamiento, Red y Refrigeración
 INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-C1', 'C1 — Preparación',          'Verificación y preparación de componentes antes del ensamblaje', 'LIN003'),
-('EST-C2', 'C2 — Placa y CPU',          'Instalación de tarjeta madre, procesador, RAM y SSD',            'LIN003'),
-('EST-C3', 'C3 — Chasis y Periféricos', 'Integración de pantalla, teclado, touchpad y chasis',            'LIN003'),
-('EST-C4', 'C4 — Pruebas y Cierre',     'Pruebas funcionales POST, cierre de ensamblaje y etiquetado',    'LIN003');
+('EST-C1', 'C1 — Almacenamiento SSD',   'Instalación de la unidad NVMe M.2 y fijación del tornillo de retención',                  'LIN003'),
+('EST-C2', 'C2 — Tarjeta de Red',       'Instalación del módulo Wi-Fi y conexión cuidadosa de las antenas de red',                 'LIN003'),
+('EST-C3', 'C3 — Disipador Térmico',    'Montaje del módulo térmico sobre el procesador y atornillado en cruz',                    'LIN003'),
+('EST-C4', 'C4 — Conexión de Ventilación','Conexión del cable de alimentación del ventilador a la tarjeta madre',                  'LIN003');
 
--- Línea D
+-- Línea D: Ensamblaje de Pantalla y Energía
 INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-D1', 'D1 — Preparación',          'Verificación y preparación de componentes antes del ensamblaje', 'LIN004'),
-('EST-D2', 'D2 — Placa y CPU',          'Instalación de tarjeta madre, procesador, RAM y SSD',            'LIN004'),
-('EST-D3', 'D3 — Chasis y Periféricos', 'Integración de pantalla, teclado, touchpad y chasis',            'LIN004'),
-('EST-D4', 'D4 — Pruebas y Cierre',     'Pruebas funcionales POST, cierre de ensamblaje y etiquetado',    'LIN004');
+('EST-D1', 'D1 — Módulo de Pantalla',   'Preparación de la pantalla e instalación de la cámara web en el marco',                   'LIN004'),
+('EST-D2', 'D2 — Bisagras y Enrutamiento','Acoplamiento de las bisagras de pantalla al chasis principal y enrutamiento de cables', 'LIN004'),
+('EST-D3', 'D3 — Conexión de Video',    'Conexión del cable de video (eDP) y cable de cámara a la tarjeta madre',                  'LIN004'),
+('EST-D4', 'D4 — Batería Principal',    'Colocación de la batería de Li-Ion, atornillado y conexión de alimentación a la placa',   'LIN004');
 
--- Línea E
+-- Línea E: Cierre de Equipo y Calidad
 INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-E1', 'E1 — Preparación',          'Verificación y preparación de componentes antes del ensamblaje', 'LIN005'),
-('EST-E2', 'E2 — Placa y CPU',          'Instalación de tarjeta madre, procesador, RAM y SSD',            'LIN005'),
-('EST-E3', 'E3 — Chasis y Periféricos', 'Integración de pantalla, teclado, touchpad y chasis',            'LIN005'),
-('EST-E4', 'E4 — Pruebas y Cierre',     'Pruebas funcionales POST, cierre de ensamblaje y etiquetado',    'LIN005');
+('EST-E1', 'E1 — Chasis Inferior',      'Colocación de la tapa inferior (Bottom Cover) y atornillado preliminar de las esquinas',  'LIN005'),
+('EST-E2', 'E2 — Cierre y Revisión',    'Atornillado final, revisión de ajuste de plásticos y limpieza de excesos',                'LIN005'),
+('EST-E3', 'E3 — Pruebas Funcionales',  'Encendido del equipo, pruebas POST, verificación de RAM, SSD, cámara y teclado',          'LIN005'),
+('EST-E4', 'E4 — Inspección de Calidad','Validación final por el inspector, registro de aprobación y generación de número de serie','LIN005');
 
--- Línea F — Embalaje
+-- Línea F: Embalaje
 INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-F1', 'F1 — Verificación Pre-Embalaje', 'Revisión final de número de serie, estado y etiquetado antes del empaque',    'LIN006'),
-('EST-F2', 'F2 — Empaque y Sellado',         'Selección de tipo de embalaje, empaque físico y sellado final del producto',  'LIN006');
+('EST-F1', 'F1 — Limpieza y Escaneo',   'Revisión estética final, limpieza de pantalla, chasis y escaneo del número de serie',     'LIN006'),
+('EST-F2', 'F2 — Empaque y Sellado',    'Colocación en caja con material de protección, inclusión de manuales y sellado final',    'LIN006');
 
 
 -- 12. LOTE DE LAPTOPS
