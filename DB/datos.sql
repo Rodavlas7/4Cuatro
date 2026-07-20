@@ -72,11 +72,9 @@ INSERT INTO edo_linea (codigo, nombre, descripcion) VALUES
 
 INSERT INTO edo_laptop (codigo, nombre) VALUES
 ('REGIS', 'Registrada'),       
-('PENSAM', 'En Ensamblaje'),    
-('PINSPE', 'En Inspección'),    
+('PENSAM', 'En Ensamblaje'),  
 ('APROV', 'Aprobada'),         
-('RECHA', 'Rechazada'),        
-('PENDEM', 'Pendiente Embalaje'),
+('RECHA', 'Rechazada'),
 ('EMBALA', 'Embalada');         
 
 
