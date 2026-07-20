@@ -1,4 +1,4 @@
--- Active: 1783038914702@@localhost@3306@cuatro
+-- Active: 1784571729921@@127.0.0.1@3306@cuatro
 
 -- TRACEX — Estructura de base de datos
 -- Version: 2026-07-15
@@ -265,11 +265,25 @@ CREATE TABLE usuario (
   PRIMARY KEY (numero)
 );
 
-CREATE TABLE usuario_token (
-  num INT AUTO_INCREMENT PRIMARY KEY,
-  usuario INT NOT NULL,
-  token VARCHAR(100),
-  FOREIGN KEY (usuario) REFERENCES usuario(numero)
+
+
+
+DROP TABLE IF EXISTS sesion;
+#####ESTO ES PARA LOS TOKENS
+CREATE TABLE sesion (
+    id INT NOT NULL AUTO_INCREMENT,
+    usuario INT NOT NULL,
+    token CHAR(64) NOT NULL,
+    fecha_inicio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_expiracion DATETIME NOT NULL,
+
+    PRIMARY KEY (id),
+    UNIQUE (token),
+
+    CONSTRAINT fk_sesion_usuario
+        FOREIGN KEY (usuario)
+        REFERENCES usuario(numero)
+        ON DELETE CASCADE
 );
 
 -- --------------------------------------------------------
