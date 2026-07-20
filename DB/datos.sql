@@ -413,7 +413,7 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 
 
 
-
+########33PRUEBA PARA EL LOGIN
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell,rol,turno, activo)
 VALUES (
     2607029, 'Araceli', 'Marcos', 'Montes', 'ADMIN','MAT', TRUE);
