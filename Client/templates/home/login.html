@@ -1,0 +1,58 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>TraceX</title>
+
+<link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+
+<body>
+
+<div class="card">
+
+    <div class="logo-wrap">
+        <img src="{% static 'img/tracex-logo.png' %}" alt="Trace X">
+    </div>
+
+    <h1>Trace X</h1>
+    <p class="subtitle"> Conéctate a tu espacio de trabajo</p>
+
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <div class="field">
+            <input type="text" name="usuario" placeholder="Usuario" required>
+            <span class="dot"></span>
+        </div>
+
+        <div class="field">
+            <input type="password" name="contrasena" placeholder="Contraseña" id="pw" required>
+            <button  type="button" class="eye" onclick="togglePw()"> 👁</button>
+            <span class="dot"></span>
+        </div>
+
+        <button class="btn-primary" type="submit">Iniciar Sesión</button>
+
+    </form>
+</div>
+
+
+<script>
+function togglePw(){
+    const pw = document.getElementById('pw');
+    pw.type = pw.type === 'password'
+        ? 'text'
+        : 'password';
+}
+</script>
+
+
+</body>
+</html>

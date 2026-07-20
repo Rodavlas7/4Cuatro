@@ -1,0 +1,15 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<h2>Dashboard TraceX</h2>
+
+<p>Bienvenido al sistema de trazabilidad.</p>
+
+<a href="{% url 'logout' %}">
+    Cerrar sesión
+</a>
+
+{% endblock %}
