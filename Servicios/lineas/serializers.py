@@ -26,3 +26,12 @@ class EstacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Estacion
         fields = '__all__'
+
+
+class VistaLineaDetailSerializer(VistaLineaSerializer):
+    """Detalle de línea con sus estaciones anidadas."""
+    estaciones = serializers.SerializerMethodField()
+
+    def get_estaciones(self, obj):
+        estaciones = Estacion.objects.filter(linea=obj.codigo).order_by('codigo')
+        return EstacionSerializer(estaciones, many=True).data

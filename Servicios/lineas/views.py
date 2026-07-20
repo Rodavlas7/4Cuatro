@@ -34,9 +34,10 @@ class LineaListAPIView(generics.ListCreateAPIView):
 
 
 class LineaDetailAPIView(generics.RetrieveAPIView):
-    """GET: vista detallada de una línea (lee de la vista SQL vista_lineas)."""
+    """GET: vista detallada de una línea (lee de la vista SQL vista_lineas)
+    e incluye sus estaciones anidadas."""
     queryset = VistaLinea.objects.all()
-    serializer_class = VistaLineaSerializer
+    serializer_class = VistaLineaDetailSerializer
     lookup_field = 'codigo'
 
 
@@ -57,7 +58,14 @@ class EstacionListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = EstacionSerializer
 
 
-class EstacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+class EstacionDetailAPIView(generics.RetrieveAPIView):
+    """GET: vista detallada de una estación."""
+    queryset = Estacion.objects.select_related('linea').all()
+    serializer_class = EstacionSerializer
+    lookup_field = 'codigo'
+
+
+class EstacionModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
     """PUT/PATCH modifican la estación; DELETE la desactiva (activo=False)
     en lugar de borrar el registro."""
     queryset = Estacion.objects.all()
