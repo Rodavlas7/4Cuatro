@@ -8,6 +8,7 @@ from .serializers import *
 │   - EdoLinea
 │   - VistaLinea (consulta general, lee de la vista SQL vista_lineas)
 │   - Linea (crear / modificar / eliminar=desactivar)
+│   - VistaEstacion (consulta general, lee de la vista SQL vista_estaciones)
 │   - Estacion (crear / modificar / eliminar=desactivar)
 '''
 
@@ -54,14 +55,24 @@ class LineaModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
 
 
 class EstacionListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Estacion.objects.select_related('linea').all()
-    serializer_class = EstacionSerializer
+    """GET: consulta general (lee de la vista SQL vista_estaciones).
+    POST: crea una nueva estación."""
+
+    def get_queryset(self):
+        if self.request.method == 'POST':
+            return Estacion.objects.all()
+        return VistaEstacion.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return EstacionSerializer
+        return VistaEstacionSerializer
 
 
 class EstacionDetailAPIView(generics.RetrieveAPIView):
-    """GET: vista detallada de una estación."""
-    queryset = Estacion.objects.select_related('linea').all()
-    serializer_class = EstacionSerializer
+    """GET: vista detallada de una estación (lee de la vista SQL vista_estaciones)."""
+    queryset = VistaEstacion.objects.all()
+    serializer_class = VistaEstacionSerializer
     lookup_field = 'codigo'
 
 
