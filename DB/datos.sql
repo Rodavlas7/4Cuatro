@@ -1,4 +1,4 @@
--- Active: 1783038914702@@localhost@3306@cuatro
+-- Active: 1784571729921@@127.0.0.1@3306@cuatro
 
 -- TRACEX — Catálogo inicial de datos
 -- Laptop: Lenovo ThinkPad T14 Gen 5
@@ -26,7 +26,7 @@ TRUNCATE TABLE empleado_estacion;
 TRUNCATE TABLE empleado_linea;
 TRUNCATE TABLE estacion;
 TRUNCATE TABLE linea;
-TRUNCATE TABLE usuario_token;
+TRUNCATE TABLE sesion;
 TRUNCATE TABLE usuario;
 TRUNCATE TABLE empleado;
 TRUNCATE TABLE modelo_componente;
@@ -409,3 +409,19 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607026, 'EST-F1', '2026-07-15', NULL),
 (2607027, 'EST-F2', '2026-07-15', NULL);
+
+
+
+
+########33PRUEBA PARA EL LOGIN
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell,rol,turno, activo)
+VALUES (
+    2607029, 'Araceli', 'Marcos', 'Montes', 'ADMIN','MAT', TRUE);
+
+INSERT INTO usuario (usuario,contrasena,estado,empleado)
+VALUES (
+    '0001AMM',
+    'pbkdf2_sha256$720000$0o4C7xZGXMGcbTNx1oMeYv$g/MLNK/HQ5E8rtPwUt5JlHHVhMibgYlsMIKse5XHnBs=',
+    1,
+    2607029
+);
