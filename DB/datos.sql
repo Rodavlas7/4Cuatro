@@ -2,7 +2,7 @@
 
 -- TRACEX — Catálogo inicial de datos
 -- Laptop: Lenovo ThinkPad T14 Gen 5
--- Version: 2026-07-15
+-- Version: 2026-07-20
 
 
 USE cuatro;
