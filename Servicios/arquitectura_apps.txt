@@ -1,0 +1,67 @@
+----------------------------------------------------------
+ORGANIZACIÓN DE LAS APLICACIONES DEL BACKEND(SERVICES)
+----------------------------------------------------------
+
+servicios/
+
+│
+├── usuarios/
+│   Responsable de la gestión de empleados y usuarios.
+│
+│   Modelos: (6)
+│   - Empleado
+│   - Usuario
+│   - Rol
+│   - Turno
+│   - EmpleadoLinea
+│   - EmpleadoEstacion
+│
+├── lineas/ (3)
+│   Responsable de la administración de líneas de ensamblaje.
+│
+│   Modelos:
+│   - Linea
+│   - EstadoLinea
+│   - Estacion
+│
+├── produccion/ (8)
+│   Responsable del proceso de producción de laptops.
+│
+│   Modelos:
+│   - OrdenProduccion
+│   - EstadoProduccion
+│   - Laptop
+│   - ModeloLaptop
+│   - EstadoLaptop
+│   - LoteLaptop
+│   - RegistroEnsamblaje
+|   - Paro
+│
+├── componentes/ (7)
+│   Responsable del manejo de componentes utilizados en el ensamblaje.
+│
+│   Modelos:
+│   - Componente
+│   - ModeloComponente
+│   - TipoComponente
+│   - EstadoComponente
+│   - OrdenMaterial
+│   - DetalleMaterial
+│   - LoteComponente
+│
+├── calidad/(1)
+│   Responsable de las inspecciones de calidad.
+│
+│   Modelos:
+│   - InspeccionCalidad
+│
+├── embalaje/(2)
+│   Responsable del proceso de embalaje.
+│
+│   Modelos:
+│   - RegistroEmbalaje
+│   - TipoEmbalaje
+│
+└── servicios/
+    Configuración principal del proyecto Django.
+
