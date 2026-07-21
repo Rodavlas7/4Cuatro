@@ -27,10 +27,10 @@ DELIMITER $$
 --
 -- Flujo de estados (RF26):
 --   Primera laptop embalada  → orden pasa a 'En Proceso'  (PROC)
---   Todas las laptops embaladas = cant_planificda → 'Completada' (COMP)
+--   Todas las laptops embaladas = cant_planificada → 'Completada' (COMP)
 --
 -- Mejoras sobre la versión original:
---   - Usa cant_planificda (nombre real del campo en el SQL actual)
+--   - Usa cant_planificada (nombre real del campo en el SQL actual)
 --     para la comparación, no cant_producida, ya que cant_producida
 --     cuenta laptops registradas, no embaladas.
 --   - Solo actúa si la orden está en 'Pendiente' o 'En Proceso'
@@ -55,7 +55,7 @@ BEGIN
      WHERE numero = NEW.laptop;
 
     -- Obtener estado actual y cantidad planificada de esa orden
-    SELECT estado, cant_planificda
+    SELECT estado, cant_planificada
       INTO estado_orden, planificadas
       FROM orden_produccion
      WHERE folio = folio_orden;
@@ -63,12 +63,15 @@ BEGIN
     -- No actuar si la orden ya fue Cancelada o Completada manualmente
     IF estado_orden IN ('PEND', 'PROC') THEN
 
-        -- Contar laptops embaladas (estado EMBALA) en esta orden
+        -- Contar laptops embaladas (estado EMBALA) en esta orden.
+        -- Se incluye la laptop actual (NEW.laptop) aunque el trigger que la
+        -- marca como EMBALA (tg_Finalizar_Proceso_Embalaje) aún no se haya
+        -- ejecutado, para no depender del orden de disparo de los triggers.
         SELECT COUNT(*)
           INTO embaladas
           FROM laptop
-         WHERE orden  = folio_orden
-           AND estado = 'EMBALA';
+         WHERE orden = folio_orden
+           AND (estado = 'EMBALA' OR numero = NEW.laptop);
 
         IF planificadas > 0 AND embaladas >= planificadas THEN
             -- Todas las laptops planificadas fueron embaladas → Completada
