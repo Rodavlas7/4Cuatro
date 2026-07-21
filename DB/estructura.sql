@@ -20,7 +20,7 @@ CREATE TABLE componente (
   orden_material int DEFAULT NULL,
   registro_ensamblaje int DEFAULT NULL,
   modelo varchar(8) DEFAULT NULL,
-  lote varchar(8) DEFAULT NULL,
+  lote varchar(12) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
   PRIMARY KEY (numero)
 );
