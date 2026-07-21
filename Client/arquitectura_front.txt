@@ -1,0 +1,98 @@
+client/
+
+│
+├── home/
+│   ├── templates/
+│   │   ├── login.html
+│   │   ├── dashboard.html
+│   │   └── index.html
+│   └── views.py
+│
+├── usuarios/
+│   Responsable de la interfaz de empleados y usuarios.
+│
+│   ├── templates/
+│   │   └── usuarios/
+│   │       ├── lista_empleados.html
+│   │       ├── detalle_empleado.html
+│   │       ├── registrar_empleado.html
+│   │       ├── editar_empleado.html
+│   │       ├── lista_usuarios.html
+│   │       ├── registrar_usuario.html
+│   │       └── editar_usuario.html
+│   │
+│   ├── views.py
+│   └── urls.py
+│
+├── lineas/
+│   Responsable de la interfaz de líneas y estaciones.
+│
+│   ├── templates/
+│   │   └── lineas/
+│   │       ├── lista_lineas.html
+│   │       ├── detalle_linea.html
+│   │       ├── registrar_linea.html
+│   │       ├── lista_estaciones.html
+│   │       └── registrar_estacion.html
+│   │
+│   ├── views.py
+│   └── urls.py
+│
+├── produccion/
+│   ├── templates/
+│   │   └── produccion/
+│   │       ├── lista_ordenes.html
+│   │       ├── detalle_orden.html
+│   │       ├── lista_laptops.html
+│   │       ├── detalle_laptop.html
+│   │       ├── ensamblaje.html
+│   │       └── paros.html
+│   │
+│   ├── views.py
+│   └── urls.py
+│
+├── componentes/
+│   ├── templates/
+│   │   └── componentes/
+│   │       ├── lista_componentes.html
+│   │       ├── registrar_componente.html
+│   │       ├── orden_material.html
+│   │       └── lotes.html
+│   │
+│   ├── views.py
+│   └── urls.py
+│
+├── calidad/
+│   ├── templates/
+│   │   └── calidad/
+│   │       ├── inspecciones.html
+│   │       └── registrar_inspeccion.html
+│   │
+│   ├── views.py
+│   └── urls.py
+│
+├── embalaje/
+│   ├── templates/
+│   │   └── embalaje/
+│   │       ├── embalajes.html
+│   │       └── registrar_embalaje.html
+│   │
+│   ├── views.py
+│   └── urls.py
+│
+├── static/
+│   ├── css/
+│   ├── js/
+│   ├── img/
+│   └── icons/
+│
+├── templates/
+│   └── base/
+│       ├── base.html
+│       ├── navbar.html
+│       ├── sidebar.html
+│       └── footer.html
+│
+└── client/
+    settings.py
+    urls.py
