@@ -11,8 +11,10 @@ class TokenAuthentication(BaseAuthentication):
 
         auth_header = request.headers.get("Authorization")
 
+        # Si no envían Authorization, no autenticar.
+        # Las vistas con AllowAny seguirán funcionando.
         if not auth_header:
-            raise AuthenticationFailed("Token no proporcionado")
+            return None
 
         if not auth_header.startswith("Bearer "):
             raise AuthenticationFailed("Formato de token inválido")
@@ -29,5 +31,4 @@ class TokenAuthentication(BaseAuthentication):
             sesion.delete()
             raise AuthenticationFailed("La sesión ha expirado")
 
-        # DRF espera regresar (usuario, auth)
         return (sesion.usuario, token)
