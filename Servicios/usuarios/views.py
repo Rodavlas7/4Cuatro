@@ -148,7 +148,125 @@ class RegistroUsuarioAPIView(APIView):
         )           
 
 #Lista de Usuarios
+class ListaUsuariosAPIView(APIView):
 
+    permission_classes = [AllowAny]
+    #permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        usuarios = Usuario.objects.all()
+
+        serializer = serializers.ListUsuarioSerializer(
+            usuarios,
+            many=True
+        )
+
+        return Response(serializer.data)
+
+
+#Detalle usuario
+class DetailUsuarioAPIView(APIView):
+
+    permission_classes = [AllowAny]
+    #permission_classes = [IsAuthenticated]
+
+    def get(self, request, numero):
+
+        try:
+            usuario = Usuario.objects.get(
+                numero=numero
+            )
+
+        except Usuario.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje": "Usuario no encontrado"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = serializers.DetailUsuarioSerializer(
+            usuario
+        )
+
+        return Response(serializer.data)
+    
+    
+#Actualizar
+class UpdateUsuarioAPIView(APIView):
+
+    permission_classes = [AllowAny]
+    #permission_classes = [IsAuthenticated]
+
+    def put(self, request, numero):
+
+        try:
+            usuario = Usuario.objects.get(
+                numero=numero
+            )
+
+        except Usuario.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje": "Usuario no encontrado"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = serializers.UpdateUsuarioSerializer(
+            usuario,
+            data=request.data
+        )
+
+        if not serializer.is_valid():
+
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer.save()
+
+        return Response(
+            {
+                "mensaje": "Usuario actualizado correctamente"
+            }
+        )
+        
+
+#Baja(eliminar)
+class BajaUsuarioAPIView(APIView):
+
+    permission_classes = [AllowAny]
+    #permission_classes = [IsAuthenticated]
+
+    def patch(self, request, numero):
+
+        try:
+            usuario = Usuario.objects.get(
+                numero=numero
+            )
+
+        except Usuario.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje": "Usuario no encontrado"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        usuario.estado = False
+        usuario.save()
+
+        return Response(
+            {
+                "mensaje": "Usuario desactivado correctamente"
+            }
+        )
 
 #----------------------------------------------------------------------------------------------
 #           E M P L E A D O     V I E W S
