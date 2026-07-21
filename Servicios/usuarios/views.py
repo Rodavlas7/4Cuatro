@@ -1,35 +1,24 @@
-from django.shortcuts import render
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, generics
-from rest_framework.permissions import AllowAny
-from django.contrib.auth.hashers import make_password, check_password
-
-#ESTO ES PARA EL TOKEN
+from datetime import date, timedelta
 from secrets import token_hex
-from django.utils import timezone
-from datetime import timedelta
-from usuarios import models
-from usuarios import serializers
-from .models import Usuario, Sesion
-from .serializers import LoginSerializer
-from rest_framework import generics
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
+
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
-from datetime import date
+from django.utils import timezone
 
-from lineas.models import Linea, Estacion
-from rest_framework.views import APIView
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
-from . import models, serializers
+from lineas.models import Estacion, Linea
 
+from usuarios import models, serializers
+from .models import Sesion, Usuario, Empleado
+from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleadoSerializer, UpdateEmpleadoSerializer, BajaEmpleadoSerializer
 
-
+#################################
+# MARLENE MARLENE MARLENE AHORA EN POSTMAN usa "Bearer tu_token", en la parte donde tienes que poner tu token
+###########################
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
@@ -115,6 +104,9 @@ class LoginAPIView(APIView):
 #----------------------------------------------------------------------------------------------
 #           E M P L E A D O     V I E W S
 #----------------------------------------------------------------------------------------------
+
+
+#. . . . . .  . REGISTRO
 
 class RegistroEmpleadoAPIView(APIView):
     
@@ -249,3 +241,51 @@ class RegistroEmpleadoAPIView(APIView):
             },
             status=status.HTTP_201_CREATED
         )
+        
+
+#. . . . . .  . LISTA
+class ListaEmpleadosAPIView(APIView):
+
+    def get(self, request):
+
+        empleados = Empleado.objects.all()
+
+        serializer = ListEmpleadoSerializer(
+            empleados,
+            many=True
+        )
+
+        return Response(serializer.data)
+    
+#. . . . . .  . DETAIL
+class DetailEmpleadoAPIView(APIView):
+
+    def get(self, request, numero):
+
+        try:
+            empleado = Empleado.objects.get(numero=numero)
+
+        except Empleado.DoesNotExist:
+            return Response(
+                {"mensaje": "Empleado no encontrado"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = DetailEmpleadoSerializer(empleado)
+
+        return Response(serializer.data)
+    
+#. . . . . .  . DETAIL
+class UpdateEmpleadoView(generics.RetrieveUpdateAPIView):
+    queryset = Empleado.objects.all()
+    serializer_class = UpdateEmpleadoSerializer
+    lookup_field = "numero"
+    
+    
+#. . . . . .  . DELETE 
+
+# chavalines, no os preocupeis, es la desactivación de empleado, es decir, cambia el estado activo a False para conservar trazabilidad histórica
+class BajaEmpleadoView(generics.UpdateAPIView):
+    queryset = Empleado.objects.all()
+    serializer_class = BajaEmpleadoSerializer
+    lookup_field = "numero"

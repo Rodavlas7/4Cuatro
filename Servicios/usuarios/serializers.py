@@ -52,7 +52,8 @@ class ListEmpleadoSerializer(serializers.ModelSerializer):
             "primerapell",
             "segundoapell",
             "rol",
-            "turno"
+            "turno",
+            "activo"
         )
 
 
@@ -78,6 +79,13 @@ class UpdateEmpleadoSerializer(serializers.ModelSerializer):
             "turno"
         )
         
+class BajaEmpleadoSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Empleado
+        fields = (
+            "activo",
+        )
         
 #----------------------------------------------------------------------------------------------
 #           U S U A R I O S     S E R I A L I Z E R S
