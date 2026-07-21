@@ -26,5 +26,5 @@ urlpatterns = [
  
     # Detalle de material (renglones de una orden)
     path("detalles/", DetalleMaterialListCreateAPIView.as_view(), name="detalle-material-list-create"),
-    path("detalles/mod/<int:pk>/", DetalleMaterialModifyAPIView.as_view(), name="detalle-material-modify"),
+    path("detalles/mod/<int:orden>/<str:modelo>/", DetalleMaterialModifyAPIView.as_view(), name="detalle-material-modify"),
 ]

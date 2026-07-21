@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from .models import *
 from .serializers import *
@@ -102,9 +103,19 @@ class DetalleMaterialListCreateAPIView(generics.ListCreateAPIView):
  
  
 class DetalleMaterialModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
-    queryset = DetalleMaterial.objects.all()
+    """PUT/PATCH modifican la cantidad; DELETE borra el renglón.
+    Se direcciona por la llave compuesta (orden, modelo), ya que la tabla
+    detalle_material no tiene un id simple."""
     serializer_class = DetalleMaterialSerializer
-    lookup_field = 'pk'
+
+    def get_object(self):
+        obj = get_object_or_404(
+            DetalleMaterial,
+            orden=self.kwargs['orden'],
+            modelo=self.kwargs['modelo'],
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
  
  
 # Vistas de COMPONENTE
