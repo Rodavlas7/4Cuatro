@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import LoginAPIView, ListaEmpleadosAPIView, DetailEmpleadoAPIView, UpdateEmpleadoView, BajaEmpleadoView,RegistroEmpleadoAPIView, RegistroUsuarioAPIView, UpdateUsuarioAPIView, BajaUsuarioAPIView, ListaUsuariosAPIView, DetailUsuarioAPIView
-from usuarios import views #este y lo podemos borrar, no ya que lo andamos dividiendo por aplicaiones
+from .views import LoginAPIView, ListaEmpleadosAPIView, DetailEmpleadoAPIView, UpdateEmpleadoView, BajaEmpleadoView,RegistroEmpleadoAPIView, RegistroUsuarioAPIView, UpdateUsuarioAPIView, BajaUsuarioAPIView, ListaUsuariosAPIView, DetailUsuarioAPIView,ReactivarUsuarioAPIView
+from usuarios import views #este y lo podemos borrar, ya que lo andamos dividiendo por aplicaiones
 
 #################################
 # MARLENE MARLENE MARLENE AHORA EN POSTMAN usa "Bearer tu_token", en la parte donde tienes que poner tu token
@@ -14,9 +14,10 @@ urlpatterns = [
     path("Empleado/Detalle/<int:numero>/", DetailEmpleadoAPIView.as_view(), name="detalle_empleado"),
     path("Empleado/Actualizar/<int:numero>/", UpdateEmpleadoView.as_view(), name="update_empleado"),
     path("Empleado/Desactivar/<int:numero>/", BajaEmpleadoView.as_view(), name="desactivar_empleado"),
-    path("Registrar/", RegistroUsuarioAPIView.as_view(), name="registro_usuario"),
-    path("Listar/", ListaUsuariosAPIView.as_view(), name="lista_usuarios"),
-    path("Actualizar/<int:numero>/", UpdateUsuarioAPIView.as_view(), name="actualizar_usuario"),
-    path("Detalle/<int:numero>/", DetailUsuarioAPIView.as_view(), name="detalle_empleado"),
-    path("Desactivar/<int:numero>/", BajaUsuarioAPIView.as_view(), name="desactivar_usuario"),
+    path("Usuario/Registrar/", RegistroUsuarioAPIView.as_view(), name="registro_usuario"),
+    path("Usuario/Listar/", ListaUsuariosAPIView.as_view(), name="lista_usuarios"),
+    path("Usuario/Detalle/<int:numero>/", DetailUsuarioAPIView.as_view(), name="detalle_empleado"),
+    path("Usuario/Actualizar/<int:numero>/", UpdateUsuarioAPIView.as_view(), name="actualizar_usuario"),
+    path("Usuario/Desactivar/<int:numero>/", BajaUsuarioAPIView.as_view(), name="desactivar_usuario"),
+    path("Usuario/Reactivar/<int:numero>/", views.ReactivarUsuarioAPIView.as_view(), name="reactivar_usuario"),
 ]
