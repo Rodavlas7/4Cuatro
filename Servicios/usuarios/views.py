@@ -63,28 +63,36 @@ class LoginAPIView(APIView):
         try:
             usuario_db = Usuario.objects.get(usuario=usuario)
 
-
         except Usuario.DoesNotExist:
             return Response(
                 {"mensaje": "Usuario o contraseña incorrectos"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
+
+        if not usuario_db.estado:
+            return Response(
+                {
+                    "mensaje": "El usuario se encuentra desactivado"
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+
         if not check_password(contrasena, usuario_db.contrasena):
             return Response(
                 {"mensaje": "Usuario o contraseña incorrectos"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+            
         # SE GENERA EL TOKEN
         Sesion.objects.filter(usuario=usuario_db).delete() #SOLO UNA SESIÓN ACTIVA
         token = token_hex(32)
 
-        # Calcular expiración (8 horas)
-        expiracion = timezone.now() + timedelta(hours=10)
 
         # Guardar la sesión
-        ahora = timezone.now()
-        expiracion = ahora + timedelta(hours=10)
+        ahora = timezone.now() #variable para guardar eltime
+        expiracion = ahora + timedelta(hours=10) #calcular la expiracion en 8 horas
 
         Sesion.objects.create(
             usuario=usuario_db,
@@ -105,7 +113,8 @@ class LoginAPIView(APIView):
 # Registrar usuario
 class RegistroUsuarioAPIView(APIView):
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    #permission_classes = [AllowAny]
 
     def post(self, request):
 
@@ -154,8 +163,8 @@ class RegistroUsuarioAPIView(APIView):
 # . . . . . . . . LISTAR
 class ListaUsuariosAPIView(APIView):
 
-    permission_classes = [AllowAny]
-    # permission_classes = [IsAuthenticated]
+    #permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
 
@@ -173,8 +182,8 @@ class ListaUsuariosAPIView(APIView):
 #Detalle usuario
 class DetailUsuarioAPIView(APIView):
 
-    permission_classes = [AllowAny]
-    #permission_classes = [IsAuthenticated]
+    #permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, numero):
 
@@ -202,8 +211,8 @@ class DetailUsuarioAPIView(APIView):
 # . . . . . .  . . . Actualizar
 class UpdateUsuarioAPIView(APIView):
 
-    permission_classes = [AllowAny]
-    #permission_classes = [IsAuthenticated]
+    #permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def put(self, request, numero):
 
@@ -245,7 +254,8 @@ class UpdateUsuarioAPIView(APIView):
 # . . . . . .  . . . BAJA LOGICA
 class BajaUsuarioAPIView(APIView):
 
-    permission_classes = [AllowAny]
+    #permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, numero):
 
@@ -283,7 +293,8 @@ class BajaUsuarioAPIView(APIView):
 # . . . . . .  . . .  REACTIVAR USURAIO
 class ReactivarUsuarioAPIView(APIView):
 
-    permission_classes = [AllowAny]
+    #permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, numero):
 
