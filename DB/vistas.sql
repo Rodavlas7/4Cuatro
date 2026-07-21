@@ -8,6 +8,8 @@ USE cuatro;
 DROP VIEW IF EXISTS vista_lineas;
 DROP VIEW IF EXISTS vista_estaciones;
 DROP VIEW IF EXISTS vista_ordenes_produccion;
+DROP VIEW IF EXISTS vista_paros;
+DROP VIEW IF EXISTS vista_laptops;
 
 
 -- VISTA: vista_lineas
@@ -77,3 +79,49 @@ SELECT
 FROM orden_produccion op
 LEFT JOIN modelo_laptop ml ON ml.codigo = op.modelo_laptop
 LEFT JOIN edo_produccion ep ON ep.codigo = op.estado;
+
+
+-- VISTA: vista_paros
+--
+-- Objetivo : Consulta general de paros — une el paro con el nombre de
+--            su línea y calcula si sigue abierto (fecha_fin nula).
+
+CREATE VIEW vista_paros AS
+SELECT
+    p.numero,
+    p.razon,
+    p.fecha_inicio,
+    p.hora_inicio,
+    p.fecha_fin,
+    p.hora_fin,
+    p.linea                                          AS linea_codigo,
+    l.nombre                                          AS linea_nombre,
+    CASE WHEN p.fecha_fin IS NULL THEN 1 ELSE 0 END   AS abierto
+FROM paro p
+LEFT JOIN linea l ON l.codigo = p.linea;
+
+
+-- VISTA: vista_laptops
+--
+-- Objetivo : Consulta general de laptops — une la laptop con los nombres
+--            de su modelo (modelo_laptop), su estado (edo_laptop) y su
+--            línea (linea), para no resolver esos joins en cada consulta
+--            desde el backend.
+
+CREATE VIEW vista_laptops AS
+SELECT
+    lap.numero,
+    lap.num_serie,
+    lap.descripcion,
+    lap.orden      AS orden_folio,
+    lap.modelo     AS modelo_codigo,
+    ml.nombre       AS modelo_nombre,
+    lap.estado      AS estado_codigo,
+    el.nombre        AS estado_nombre,
+    lap.linea        AS linea_codigo,
+    l.nombre          AS linea_nombre,
+    lap.lote          AS lote_codigo
+FROM laptop lap
+LEFT JOIN modelo_laptop ml ON ml.codigo = lap.modelo
+LEFT JOIN edo_laptop    el ON el.codigo = lap.estado
+LEFT JOIN linea         l  ON l.codigo  = lap.linea;
