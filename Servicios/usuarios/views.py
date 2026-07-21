@@ -9,9 +9,19 @@ from django.contrib.auth.hashers import make_password, check_password
 from secrets import token_hex
 from django.utils import timezone
 from datetime import timedelta
-
-from .models import Usuario,Sesion
+from usuarios import models
+from usuarios import serializers
+from .models import Usuario, Sesion
 from .serializers import LoginSerializer
+from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.db import transaction
+from datetime import date
+
+
+
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
@@ -92,5 +102,145 @@ class LoginAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
-                
-      
+              
+
+#----------------------------------------------------------------------------------------------
+#           E M P L E A D O     V I E W S
+#----------------------------------------------------------------------------------------------
+from datetime import date
+
+from django.db import transaction
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+from lineas.models import Linea, Estacion
+
+from . import serializers
+
+
+class RegistroEmpleadoAPIView(APIView):
+
+    @transaction.atomic
+    def post(self, request):
+        
+        linea_id = request.data.get("linea")
+        estacion_id = request.data.get("estacion")
+        
+        if not linea_id or not estacion_id:
+            return Response(
+                {
+                    "mensaje": "Debe seleccionar una línea y una estación"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            linea = Linea.objects.get(
+                pk=linea_id
+            )
+            estacion = Estacion.objects.get(
+                pk=estacion_id
+            )
+
+        except Linea.DoesNotExist:
+            return Response(
+                {
+                    "mensaje": "La línea seleccionada no existe"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        except Estacion.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje": "La estación seleccionada no existe"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if estacion.linea_id != linea.codigo:
+            return Response(
+                {
+                    "mensaje": "La estación no pertenece a la línea seleccionada"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+#registrar empleado
+
+        empleado_serializer = serializers.CreateEmpleadoSerializer(
+            data=request.data
+        )
+
+
+        if not empleado_serializer.is_valid():
+
+            return Response(
+                empleado_serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        empleado = empleado_serializer.save()
+
+#asignar linea
+        linea_data = {
+
+            "empleado": empleado.numero,
+
+            "linea": linea.codigo,
+
+            "fecha_inicio": date.today()
+
+        }
+
+
+        linea_serializer = serializers.CreateEmpleadoLineaSerializer(
+            data=linea_data
+        )
+
+
+        if not linea_serializer.is_valid():
+
+            return Response(
+                linea_serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        linea_serializer.save()
+        
+#asignar estacion  
+        estacion_data = {
+
+            "empleado": empleado.numero,
+
+            "estacion": estacion.numero,
+
+            "fecha_inicio": date.today()
+
+        }
+        
+        estacion_serializer = serializers.CreateEmpleadoEstacionSerializer(
+            data=estacion_data
+        )
+
+
+        if not estacion_serializer.is_valid():
+
+            return Response(
+                estacion_serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estacion_serializer.save()
+
+        return Response(
+            {
+                "mensaje": "Empleado registrado correctamente",
+                "empleado": empleado.numero,
+                "linea": linea.nombre,
+                "estacion": estacion.nombre
+            },
+            status=status.HTTP_201_CREATED
+        )
