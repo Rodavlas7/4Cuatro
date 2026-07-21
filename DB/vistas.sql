@@ -8,6 +8,7 @@ USE cuatro;
 DROP VIEW IF EXISTS vista_lineas;
 DROP VIEW IF EXISTS vista_estaciones;
 DROP VIEW IF EXISTS vista_ordenes_produccion;
+DROP VIEW IF EXISTS vista_componentes;
 
 
 -- VISTA: vista_lineas
@@ -77,3 +78,31 @@ SELECT
 FROM orden_produccion op
 LEFT JOIN modelo_laptop ml ON ml.codigo = op.modelo_laptop
 LEFT JOIN edo_produccion ep ON ep.codigo = op.estado;
+
+
+-- VISTA: vista_componentes
+--
+-- Objetivo : Consulta general del módulo de componentes — une el
+--            componente con el nombre de su línea, el nombre de su
+--            modelo (y fabricante) y el nombre de su estado, para no
+--            resolver esos joins en cada consulta desde el backend.
+
+CREATE VIEW vista_componentes AS
+SELECT
+    c.numero,
+    c.num_serie,
+    c.descripcion,
+    c.linea             AS linea_codigo,
+    l.nombre             AS linea_nombre,
+    c.orden_material,
+    c.registro_ensamblaje,
+    c.modelo             AS modelo_codigo,
+    mc.nombre            AS modelo_nombre,
+    mc.fabricante        AS modelo_fabricante,
+    c.lote                AS lote_codigo,
+    c.estado              AS estado_codigo,
+    ec.nombre              AS estado_nombre
+FROM componente c
+LEFT JOIN linea             l  ON l.codigo  = c.linea
+LEFT JOIN modelo_componente mc ON mc.codigo = c.modelo
+LEFT JOIN edo_componente    ec ON ec.codigo = c.estado;
