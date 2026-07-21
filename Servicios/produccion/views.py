@@ -7,9 +7,9 @@ from .serializers import *
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
 │   - EdoProduccion (catálogo, solo lectura)
-│   - ModeloLaptop (catálogo, solo lectura)
+│   - ModeloLaptop (catálogo, crear)
 │   - EdoLaptop (catálogo, solo lectura)
-│   - LoteLaptop (catálogo, solo lectura)
+│   - LoteLaptop (catálogo, crear)
 │   - VistaOrdenProduccion (consulta general, lee de la vista SQL vista_ordenes_produccion)
 │   - OrdenProduccion (crear / modificar / eliminar=cancelar)
 │   - VistaParo (consulta general, lee de la vista SQL vista_paros)
@@ -26,7 +26,7 @@ class EdoProduccionListAPIView(generics.ListAPIView):
     serializer_class = EdoProduccionSerializer
 
 
-class ModeloLaptopListAPIView(generics.ListAPIView):
+class ModeloLaptopListAPIView(generics.ListCreateAPIView):
     queryset = ModeloLaptop.objects.all()
     serializer_class = ModeloLaptopSerializer
 
@@ -36,7 +36,7 @@ class EdoLaptopListAPIView(generics.ListAPIView):
     serializer_class = EdoLaptopSerializer
 
 
-class LoteLaptopListAPIView(generics.ListAPIView):
+class LoteLaptopListAPIView(generics.ListCreateAPIView):
     queryset = LoteLaptop.objects.all()
     serializer_class = LoteLaptopSerializer
 
