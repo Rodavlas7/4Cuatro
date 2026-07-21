@@ -20,6 +20,14 @@ from rest_framework import status
 from django.db import transaction
 from datetime import date
 
+from lineas.models import Linea, Estacion
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+
+from . import models, serializers
+
 
 
 
@@ -107,19 +115,10 @@ class LoginAPIView(APIView):
 #----------------------------------------------------------------------------------------------
 #           E M P L E A D O     V I E W S
 #----------------------------------------------------------------------------------------------
-from datetime import date
-
-from django.db import transaction
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-
-from lineas.models import Linea, Estacion
-
-from . import serializers
-
 
 class RegistroEmpleadoAPIView(APIView):
+    
+    permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request):
@@ -138,17 +137,22 @@ class RegistroEmpleadoAPIView(APIView):
             linea = Linea.objects.get(
                 pk=linea_id
             )
+
+
             estacion = Estacion.objects.get(
                 pk=estacion_id
             )
 
+
         except Linea.DoesNotExist:
+
             return Response(
                 {
                     "mensaje": "La línea seleccionada no existe"
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
+
 
         except Estacion.DoesNotExist:
 
@@ -160,6 +164,7 @@ class RegistroEmpleadoAPIView(APIView):
             )
 
         if estacion.linea_id != linea.codigo:
+
             return Response(
                 {
                     "mensaje": "La estación no pertenece a la línea seleccionada"
@@ -215,7 +220,7 @@ class RegistroEmpleadoAPIView(APIView):
 
             "empleado": empleado.numero,
 
-            "estacion": estacion.numero,
+            "estacion": estacion.codigo,
 
             "fecha_inicio": date.today()
 
