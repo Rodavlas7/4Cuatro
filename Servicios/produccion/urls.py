@@ -5,6 +5,7 @@ urlpatterns = [
     path("", OrdenProduccionListAPIView.as_view(), name="orden-list-create"),
     path("estados/", EdoProduccionListAPIView.as_view(), name="edo-produccion-list"),
     path("modelos/", ModeloLaptopListAPIView.as_view(), name="modelo-laptop-list"),
+    path("modelos/<str:codigo>/", ModeloLaptopDetailAPIView.as_view(), name="modelo-laptop-detail"),
     path("estados-laptop/", EdoLaptopListAPIView.as_view(), name="edo-laptop-list"),
     path("lotes/", LoteLaptopListAPIView.as_view(), name="lote-laptop-list"),
     path("lotes/<str:codigo>/", LoteLaptopDetailAPIView.as_view(), name="lote-laptop-detail"),

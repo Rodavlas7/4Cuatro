@@ -42,7 +42,7 @@ class LineaDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'codigo'
 
 
-class LineaModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class LineaModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la línea; DELETE la desactiva (activo=False)
     en lugar de borrar el registro."""
     queryset = Linea.objects.all()
@@ -76,7 +76,7 @@ class EstacionDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'codigo'
 
 
-class EstacionModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class EstacionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la estación; DELETE la desactiva (activo=False)
     en lugar de borrar el registro."""
     queryset = Estacion.objects.all()

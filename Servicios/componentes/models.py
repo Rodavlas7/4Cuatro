@@ -8,6 +8,7 @@ from lineas.models import Linea
 │    EdoComponente
 │    LoteComp
 │    ModeloComponente
+│    ModeloLaptopComponente  (tabla puente M a M: qué componentes lleva un modelo de laptop)
 │    OrdenMaterial
 │    DetalleMaterial
 │    Componente
@@ -57,8 +58,20 @@ class ModeloComponente(models.Model):
     class Meta:
         managed = False
         db_table = 'modelo_componente'
- 
- 
+
+
+# MODELOLAPTOPCOMPONENTE
+class ModeloLaptopComponente(models.Model):
+    pk = models.CompositePrimaryKey('modelo_laptop', 'modelo_componente')
+    modelo_laptop = models.ForeignKey('produccion.ModeloLaptop', models.DO_NOTHING, db_column='modelo_laptop')
+    modelo_componente = models.ForeignKey(ModeloComponente, models.DO_NOTHING, db_column='modelo_componente')
+    capacidad = models.IntegerField(blank=True, null=True, default=1)
+
+    class Meta:
+        managed = False
+        db_table = 'modelo_laptop_componente'
+
+
 # ORDENMATERIAL
 class OrdenMaterial(models.Model):
     numero = models.AutoField(primary_key=True)

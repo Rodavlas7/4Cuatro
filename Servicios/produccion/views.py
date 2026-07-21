@@ -31,6 +31,14 @@ class ModeloLaptopListAPIView(generics.ListCreateAPIView):
     serializer_class = ModeloLaptopSerializer
 
 
+class ModeloLaptopDetailAPIView(generics.RetrieveAPIView):
+    """GET: detalle del modelo de laptop con los componentes que lleva
+    (lista de materiales) anidados."""
+    queryset = ModeloLaptop.objects.all()
+    serializer_class = ModeloLaptopDetailSerializer
+    lookup_field = 'codigo'
+
+
 class EdoLaptopListAPIView(generics.ListAPIView):
     queryset = EdoLaptop.objects.all()
     serializer_class = EdoLaptopSerializer
@@ -70,7 +78,7 @@ class OrdenProduccionDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'folio'
 
 
-class OrdenProduccionModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class OrdenProduccionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la orden; DELETE la cancela (estado=CANC)
     en lugar de borrar el registro."""
     queryset = OrdenProduccion.objects.all()
@@ -104,7 +112,7 @@ class ParoDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
 
 
-class ParoModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class ParoModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el paro; DELETE lo cierra (fecha_fin/hora_fin = ahora)
     en lugar de borrar el registro."""
     queryset = Paro.objects.all()
@@ -141,7 +149,7 @@ class LaptopDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
 
 
-class LaptopModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class LaptopModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la laptop; DELETE la rechaza (estado=RECHA)
     en lugar de borrar el registro."""
     queryset = Laptop.objects.all()
@@ -165,7 +173,7 @@ class RegistroEnsamblajeDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
 
 
-class RegistroEnsamblajeModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class RegistroEnsamblajeModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el registro; DELETE lo cierra (fecha_fin/hora_fin = ahora)
     en lugar de borrar el registro."""
     queryset = RegistroEnsamblaje.objects.all()
