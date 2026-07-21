@@ -13,6 +13,7 @@ DROP TRIGGER IF EXISTS tg_Finalizar_Proceso_Embalaje;
 DROP TRIGGER IF EXISTS tg_Bloquear_Componentes_Laptop_Finalizada;
 DROP TRIGGER IF EXISTS tg_Actualizar_Estado_Laptop_Inspeccion_Calidad;
 DROP TRIGGER IF EXISTS tg_Control_Componentes_Duplicados;
+DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente;
 
 DELIMITER $$
 
@@ -322,6 +323,93 @@ BEGIN
     IF registros_cerrados > 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Control_Componentes_Duplicados: la laptop ya tiene un ensamblaje registrado y cerrado, no se puede abrir uno nuevo';
+    END IF;
+END$$
+
+
+
+
+-- TRIGGER 7: tg_Validar_Capacidad_Componente
+--
+-- Evento   : BEFORE INSERT en componente
+-- Objetivo : Impedir instalar en una laptop más componentes de un mismo
+--            TIPO de los que permite el BOM (Bill of Materials / Lista de
+--            Materiales) del modelo de esa laptop.
+--
+-- Lógica:
+--   - Solo aplica cuando el componente se está asignando a un ensamblaje
+--     (NEW.registro_ensamblaje no nulo); si es inventario libre, no valida.
+--   - Del registro de ensamblaje se obtiene la laptop y su modelo.
+--   - Del componente nuevo se obtiene su tipo (modelo_componente.tipo_componente).
+--   - La capacidad permitida para ese tipo se toma del BOM
+--     (modelo_laptop_componente) del modelo de la laptop.
+--   - Se cuentan los componentes del MISMO tipo ya instalados en esa laptop
+--     (se excluyen los mermados EDC004, que liberan espacio).
+--   - Si al agregar el nuevo se excede la capacidad, se cancela el INSERT.
+--   - Si el tipo no está en el BOM, no es compatible con el modelo → se bloquea.
+--
+-- NOTA: valida en INSERT (cuando el componente se crea ya asignado). Si en
+--   la app un componente se asigna después vía UPDATE (registro_ensamblaje
+--   pasa de NULL a un valor), habría que replicar esta lógica en un
+--   BEFORE UPDATE.
+
+
+CREATE TRIGGER tg_Validar_Capacidad_Componente
+BEFORE INSERT ON componente
+FOR EACH ROW
+BEGIN
+    DECLARE v_laptop        INT;
+    DECLARE v_modelo_laptop VARCHAR(8);
+    DECLARE v_tipo          VARCHAR(8);
+    DECLARE v_capacidad     INT;
+    DECLARE v_instalados    INT;
+
+    IF NEW.registro_ensamblaje IS NOT NULL AND NEW.modelo IS NOT NULL THEN
+
+        -- Laptop y su modelo, a partir del registro de ensamblaje
+        SELECT re.laptop, l.modelo
+          INTO v_laptop, v_modelo_laptop
+          FROM registro_ensamblaje re
+          JOIN laptop l ON l.numero = re.laptop
+         WHERE re.numero = NEW.registro_ensamblaje;
+
+        -- Tipo del componente que se quiere instalar
+        SELECT mc.tipo_componente
+          INTO v_tipo
+          FROM modelo_componente mc
+         WHERE mc.codigo = NEW.modelo;
+
+        -- Capacidad permitida para ese tipo, según el BOM del modelo de laptop
+        SELECT MAX(mlc.capacidad)
+          INTO v_capacidad
+          FROM modelo_laptop_componente mlc
+          JOIN modelo_componente mc2 ON mc2.codigo = mlc.modelo_componente
+         WHERE mlc.modelo_laptop   = v_modelo_laptop
+           AND mc2.tipo_componente = v_tipo;
+
+        -- Si el tipo no está en el BOM, no es compatible con el modelo
+        IF v_capacidad IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: el tipo de componente no es compatible con el modelo de la laptop';
+        END IF;
+
+        -- Componentes del mismo tipo ya instalados en esa laptop
+        -- (se excluyen los mermados EDC004)
+        SELECT COUNT(*)
+          INTO v_instalados
+          FROM componente c
+          JOIN registro_ensamblaje re2 ON re2.numero = c.registro_ensamblaje
+          JOIN modelo_componente   mc3 ON mc3.codigo = c.modelo
+         WHERE re2.laptop          = v_laptop
+           AND mc3.tipo_componente = v_tipo
+           AND (c.estado IS NULL OR c.estado <> 'EDC004');
+
+        -- ¿El nuevo excedería la capacidad de ese tipo?
+        IF v_instalados + 1 > v_capacidad THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: se excede la capacidad de ese tipo de componente para el modelo de la laptop';
+        END IF;
+
     END IF;
 END$$
 
