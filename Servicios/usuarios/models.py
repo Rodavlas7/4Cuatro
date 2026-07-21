@@ -1,4 +1,6 @@
 from django.db import models
+from lineas.models import Estacion, Linea
+
 
 ''' AQUI ESTAN LOS MODELS DE:
 │   - Empleado
@@ -6,8 +8,8 @@ from django.db import models
 │   - Rol
 │   - Turno
 │   - Sesion
-│   - EmpleadoLinea   (FALTA PONER ESTE)
-│   - EmpleadoEstacion (FALTA PONER ESTE)
+│   - EmpleadoLinea  
+│   - EmpleadoEstacion 
 '''
 # Create your models here.
 
@@ -40,10 +42,35 @@ class Empleado(models.Model):
     segundoapell = models.CharField(db_column='segundoApell', max_length=32, blank=True, null=True)
     rol = models.ForeignKey(Rol, models.DO_NOTHING, db_column='rol', blank=True, null=True)
     turno = models.ForeignKey(Turno, models.DO_NOTHING, db_column='turno', blank=True, null=True)
+    activo = models.BooleanField(default=True)
 
     class Meta:
         managed = False
         db_table = 'empleado'
+    
+
+class EmpleadoEstacion(models.Model):
+    pk = models.CompositePrimaryKey('empleado', 'estacion', 'fecha_inicio')
+    empleado = models.ForeignKey(Empleado, models.DO_NOTHING, db_column='empleado')
+    estacion = models.ForeignKey('lineas.Estacion', models.DO_NOTHING, db_column='estacion')
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'empleado_estacion'
+
+
+class EmpleadoLinea(models.Model):
+    pk = models.CompositePrimaryKey('empleado', 'linea', 'fecha_inicio')
+    empleado = models.ForeignKey(Empleado, models.DO_NOTHING, db_column='empleado')
+    linea = models.ForeignKey('lineas.Linea', models.DO_NOTHING, db_column='linea')
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'empleado_linea'
         
 #------------------ USUARIO--------------------
 class Usuario(models.Model):
@@ -56,6 +83,10 @@ class Usuario(models.Model):
     class Meta:
         managed = False
         db_table = 'usuario'
+        
+    @property
+    def is_authenticated(self):
+        return True
         
         
 #------------------ SESION--------------------        
