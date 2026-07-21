@@ -82,7 +82,12 @@ class VistaLaptopDetailSerializer(VistaLaptopSerializer):
         return RegistroEnsamblajeSerializer(registros, many=True).data
 
     def get_componentes(self, obj):
-        componentes = Componente.objects.filter(registro_ensamblaje__laptop=obj.numero).order_by('numero')
+        registro_ids = RegistroEnsamblaje.objects.filter(
+            laptop=obj.numero
+        ).values_list('numero', flat=True)
+        componentes = Componente.objects.filter(
+            registro_ensamblaje__in=list(registro_ids)
+        ).order_by('numero')
         return ComponenteSerializer(componentes, many=True).data
 
 

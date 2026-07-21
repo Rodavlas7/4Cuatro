@@ -71,16 +71,17 @@ class OrdenMaterial(models.Model):
         db_table = 'orden_material'
  
  
-# DETALLEMATERIAL — detalle (línea de pedido) de una orden de material
+# DETALLEMATERIAL — detalle (línea de pedido) de una orden de material.
+# La tabla tiene PRIMARY KEY (orden, modelo) y NO tiene columna id, falto declararla compuesta
 class DetalleMaterial(models.Model):
+    pk = models.CompositePrimaryKey('orden', 'modelo')
     orden = models.ForeignKey(OrdenMaterial, models.DO_NOTHING, db_column='orden')
     modelo = models.ForeignKey(ModeloComponente, models.DO_NOTHING, db_column='modelo')
     cantidad = models.IntegerField(blank=True, null=True)
- 
+
     class Meta:
         managed = False
         db_table = 'detalle_material'
-        unique_together = (('orden', 'modelo'),)
  
  
 # COMPONENTE

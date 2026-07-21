@@ -40,7 +40,9 @@ class OrdenMaterialSerializer(serializers.ModelSerializer):
 class DetalleMaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = DetalleMaterial
-        fields = '__all__'
+        # Se listan los campos explícitamente para no exponer el campo
+        # virtual 'pk' (la llave compuesta orden+modelo se ve en sus columnas).
+        fields = ['orden', 'modelo', 'cantidad']
  
  
 class OrdenMaterialDetailSerializer(OrdenMaterialSerializer):
