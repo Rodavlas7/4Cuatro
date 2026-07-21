@@ -27,6 +27,28 @@ class ModeloComponenteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModeloComponente
         fields = '__all__'
+
+
+# Tabla puente modelo_laptop <-> modelo_componente
+
+class ModeloLaptopComponenteSerializer(serializers.ModelSerializer):
+    """Para crear/editar renglones de la lista de materiales (BOM)."""
+    class Meta:
+        model = ModeloLaptopComponente
+        # se listan explícitos para no exponer el campo virtual 'pk'
+        fields = ['modelo_laptop', 'modelo_componente', 'capacidad']
+
+
+class ModeloLaptopComponenteDetalleSerializer(serializers.ModelSerializer):
+    """Solo lectura: el componente con su nombre/tipo y la capacidad,
+    para anidarlo en el detalle de un modelo de laptop."""
+    componente_codigo = serializers.CharField(source='modelo_componente.codigo', read_only=True)
+    componente_nombre = serializers.CharField(source='modelo_componente.nombre', read_only=True)
+    componente_tipo = serializers.CharField(source='modelo_componente.tipo_componente_id', read_only=True)
+
+    class Meta:
+        model = ModeloLaptopComponente
+        fields = ['componente_codigo', 'componente_nombre', 'componente_tipo', 'capacidad']
  
  
 # Ordenes de material

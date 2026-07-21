@@ -19,6 +19,10 @@ urlpatterns = [
     path("modelos/mod/<str:codigo>/", ModeloComponenteModifyAPIView.as_view(), name="modelo-componente-modify"),
     path("modelos/<str:codigo>/", ModeloComponenteDetailAPIView.as_view(), name="modelo-componente-detail"),
  
+    # Lista de materiales (qué componentes lleva un modelo de laptop)
+    path("compatibilidad/", ModeloLaptopComponenteListCreateAPIView.as_view(), name="mlc-list-create"),
+    path("compatibilidad/mod/<str:modelo_laptop>/<str:modelo_componente>/", ModeloLaptopComponenteModifyAPIView.as_view(), name="mlc-modify"),
+
     # Ordenes de material
     path("ordenes/", OrdenMaterialListCreateAPIView.as_view(), name="orden-material-list-create"),
     path("ordenes/mod/<int:numero>/", OrdenMaterialModifyAPIView.as_view(), name="orden-material-modify"),

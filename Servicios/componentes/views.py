@@ -44,7 +44,7 @@ class LoteCompDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'codigo'
  
  
-class LoteCompModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class LoteCompModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = LoteComp.objects.all()
     serializer_class = LoteCompSerializer
     lookup_field = 'codigo'
@@ -63,12 +63,44 @@ class ModeloComponenteDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'codigo'
  
  
-class ModeloComponenteModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class ModeloComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ModeloComponente.objects.all()
     serializer_class = ModeloComponenteSerializer
     lookup_field = 'codigo'
- 
- 
+
+
+# Vistas de MODELO_LAPTOP_COMPONENTE (tabla puente / lista de materiales)
+
+class ModeloLaptopComponenteListCreateAPIView(generics.ListCreateAPIView):
+    """GET: todos los renglones. Filtra por modelo de laptop con
+    ?modelo_laptop=<codigo>.  POST: agrega un componente (con su capacidad)
+    a un modelo de laptop."""
+    serializer_class = ModeloLaptopComponenteSerializer
+
+    def get_queryset(self):
+        queryset = ModeloLaptopComponente.objects.all()
+        modelo_laptop = self.request.query_params.get('modelo_laptop')
+        if modelo_laptop is not None:
+            queryset = queryset.filter(modelo_laptop=modelo_laptop)
+        return queryset
+
+
+class ModeloLaptopComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Modifica/borra un renglón del BOM. Se direcciona por la llave
+    compuesta (modelo_laptop, modelo_componente)."""
+    serializer_class = ModeloLaptopComponenteSerializer
+
+    def get_object(self):
+        obj = get_object_or_404(
+            ModeloLaptopComponente,
+            modelo_laptop=self.kwargs['modelo_laptop'],
+            modelo_componente=self.kwargs['modelo_componente'],
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+
+
 # Vistas de ORDEN_MATERIAL / DETALLE_MATERIAL
  
 class OrdenMaterialListCreateAPIView(generics.ListCreateAPIView):
@@ -83,7 +115,7 @@ class OrdenMaterialDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
  
  
-class OrdenMaterialModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class OrdenMaterialModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = OrdenMaterial.objects.all()
     serializer_class = OrdenMaterialSerializer
     lookup_field = 'numero'
@@ -102,7 +134,7 @@ class DetalleMaterialListCreateAPIView(generics.ListCreateAPIView):
         return queryset
  
  
-class DetalleMaterialModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class DetalleMaterialModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la cantidad; DELETE borra el renglón.
     Se direcciona por la llave compuesta (orden, modelo), ya que la tabla
     detalle_material no tiene un id simple."""
@@ -142,7 +174,7 @@ class ComponenteDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
  
  
-class ComponenteModifyAPIView(generics.UpdateAPIView, generics.DestroyAPIView):
+class ComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el componente; DELETE lo marca como Mermado (EDC004)
     en lugar de borrar el registro físicamente."""
     queryset = Componente.objects.all()

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import *
-from componentes.models import Componente
-from componentes.serializers import ComponenteSerializer
+from componentes.models import Componente, ModeloLaptopComponente
+from componentes.serializers import ComponenteSerializer, ModeloLaptopComponenteDetalleSerializer
 
 
 # Produccion Serializers
@@ -16,6 +16,18 @@ class ModeloLaptopSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModeloLaptop
         fields = '__all__'
+
+
+class ModeloLaptopDetailSerializer(ModeloLaptopSerializer):
+    """Detalle del modelo con los componentes que puede llevar (BOM) y
+    la capacidad de cada uno, tomados de la tabla puente."""
+    componentes = serializers.SerializerMethodField()
+
+    def get_componentes(self, obj):
+        filas = ModeloLaptopComponente.objects.filter(
+            modelo_laptop=obj.codigo
+        ).select_related('modelo_componente')
+        return ModeloLaptopComponenteDetalleSerializer(filas, many=True).data
 
 
 class OrdenProduccionSerializer(serializers.ModelSerializer):
