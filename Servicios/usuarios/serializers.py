@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from django.contrib.auth.hashers import make_password
 from .models import Usuario, Rol, Turno, Empleado,  EmpleadoEstacion, EmpleadoLinea
 
@@ -125,10 +126,9 @@ class CreateUsuarioSerializer(serializers.ModelSerializer):
         fields = (
             "usuario",
             "contrasena",
-            "estado",
             "empleado"
         )
-        
+
         extra_kwargs = {
             "contrasena": {
                 "write_only": True
@@ -139,6 +139,8 @@ class CreateUsuarioSerializer(serializers.ModelSerializer):
         validated_data["contrasena"] = make_password(
             validated_data["contrasena"]
         )
+
+        validated_data["estado"] = True
 
         return Usuario.objects.create(**validated_data)
     
@@ -176,12 +178,12 @@ class DetailUsuarioSerializer(serializers.ModelSerializer):
         
         
 class UpdateUsuarioSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Usuario
         fields = (
             "usuario",
             "contrasena",
-            "estado",
         )
 
         extra_kwargs = {
@@ -191,12 +193,33 @@ class UpdateUsuarioSerializer(serializers.ModelSerializer):
             }
         }
 
+    def validate_contrasena(self, value):
+
+        if value == "":
+            raise serializers.ValidationError(
+                "La contraseña no puede estar vacía."
+            )
+
+        if len(value) < 8:
+            raise serializers.ValidationError(
+                "La contraseña debe tener mínimo 8 caracteres."
+            )
+
+        return value
+
+
     def update(self, instance, validated_data):
+
         if "contrasena" in validated_data:
+
             instance.contrasena = make_password(
                 validated_data.pop("contrasena")
             )
-        return super().update(instance, validated_data)
+
+        return super().update(
+            instance,
+            validated_data
+        )
     
 
 #----------------------------------------------------------------------------------------------

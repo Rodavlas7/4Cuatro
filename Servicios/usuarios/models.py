@@ -77,7 +77,7 @@ class Usuario(models.Model):
     numero = models.AutoField(primary_key=True)
     usuario = models.CharField(unique=True, max_length=32, blank=True, null=True)
     contrasena = models.CharField(max_length=128, blank=True, null=True)
-    estado = models.BooleanField(blank=True, null=True)
+    estado = models.BooleanField(default=True)
     empleado = models.OneToOneField(Empleado, models.DO_NOTHING, db_column='empleado', blank=True, null=True)
 
     class Meta:

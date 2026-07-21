@@ -101,6 +101,7 @@ class LoginAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
+# . . . . . . . . REGISTRAR
 # Registrar usuario
 class RegistroUsuarioAPIView(APIView):
 
@@ -138,24 +139,29 @@ class RegistroUsuarioAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer.save()
+        usuario = serializer.save()
 
         return Response(
             {
-                "mensaje": "Usuario registrado correctamente"
+                "mensaje": "Usuario registrado correctamente",
+                "usuario": {
+                    "numero": usuario.numero,
+                    "usuario": usuario.usuario
+                }
             },
             status=status.HTTP_201_CREATED
-        )           
-
-#Lista de Usuarios
+        )
+# . . . . . . . . LISTAR
 class ListaUsuariosAPIView(APIView):
 
     permission_classes = [AllowAny]
-    #permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get(self, request):
 
-        usuarios = Usuario.objects.all()
+        usuarios = Usuario.objects.filter(
+            estado=True
+        )
 
         serializer = serializers.ListUsuarioSerializer(
             usuarios,
@@ -163,7 +169,6 @@ class ListaUsuariosAPIView(APIView):
         )
 
         return Response(serializer.data)
-
 
 #Detalle usuario
 class DetailUsuarioAPIView(APIView):
@@ -194,7 +199,7 @@ class DetailUsuarioAPIView(APIView):
         return Response(serializer.data)
     
     
-#Actualizar
+# . . . . . .  . . . Actualizar
 class UpdateUsuarioAPIView(APIView):
 
     permission_classes = [AllowAny]
@@ -227,7 +232,6 @@ class UpdateUsuarioAPIView(APIView):
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         serializer.save()
 
         return Response(
@@ -237,11 +241,11 @@ class UpdateUsuarioAPIView(APIView):
         )
         
 
-#Baja(eliminar)
+
+# . . . . . .  . . . BAJA LOGICA
 class BajaUsuarioAPIView(APIView):
 
     permission_classes = [AllowAny]
-    #permission_classes = [IsAuthenticated]
 
     def patch(self, request, numero):
 
@@ -259,12 +263,58 @@ class BajaUsuarioAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        if not usuario.estado:
+            return Response(
+                {
+                    "mensaje": "El usuario ya se encuentra desactivado"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         usuario.estado = False
         usuario.save()
 
         return Response(
             {
                 "mensaje": "Usuario desactivado correctamente"
+            }
+        )
+        
+# . . . . . .  . . .  REACTIVAR USURAIO
+class ReactivarUsuarioAPIView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def patch(self, request, numero):
+
+        try:
+            usuario = Usuario.objects.get(
+                numero=numero
+            )
+
+        except Usuario.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje": "Usuario no encontrado"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if usuario.estado:
+            return Response(
+                {
+                    "mensaje": "El usuario ya se encuentra activo"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        usuario.estado = True
+        usuario.save()
+
+        return Response(
+            {
+                "mensaje": "Usuario reactivado correctamente"
             }
         )
 
