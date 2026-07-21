@@ -42,6 +42,7 @@ class Empleado(models.Model):
     segundoapell = models.CharField(db_column='segundoApell', max_length=32, blank=True, null=True)
     rol = models.ForeignKey(Rol, models.DO_NOTHING, db_column='rol', blank=True, null=True)
     turno = models.ForeignKey(Turno, models.DO_NOTHING, db_column='turno', blank=True, null=True)
+    activo = models.BooleanField(default=True)
 
     class Meta:
         managed = False
@@ -82,6 +83,10 @@ class Usuario(models.Model):
     class Meta:
         managed = False
         db_table = 'usuario'
+        
+    @property
+    def is_authenticated(self):
+        return True
         
         
 #------------------ SESION--------------------        
