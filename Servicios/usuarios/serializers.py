@@ -302,3 +302,14 @@ class UpdateEmpleadoEstacionSerializer(serializers.ModelSerializer):
         fields = (
             "fecha_fin",
         )
+        
+class CreateEmpleadoEstacionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = EmpleadoEstacion
+
+        fields = (
+            "empleado",
+            "estacion",
+            "fecha_inicio",
+        )
