@@ -36,6 +36,7 @@ from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleado
 #           U S U A R I O S     V I E W S
 #----------------------------------------------------------------------------------------------
 
+#Login
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request):
@@ -99,7 +100,55 @@ class LoginAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
-              
+
+# Registrar usuario
+class RegistroUsuarioAPIView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        serializer = serializers.CreateUsuarioSerializer(
+            data=request.data
+        )
+
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        empleado = serializer.validated_data["empleado"]
+
+        if Usuario.objects.filter(empleado=empleado).exists():
+            return Response(
+                {
+                    "mensaje": "El empleado ya tiene un usuario asignado"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if Usuario.objects.filter(
+            usuario=serializer.validated_data["usuario"]
+        ).exists():
+            return Response(
+                {
+                    "mensaje": "El nombre de usuario ya existe"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer.save()
+
+        return Response(
+            {
+                "mensaje": "Usuario registrado correctamente"
+            },
+            status=status.HTTP_201_CREATED
+        )           
+
+#Lista de Usuarios
+
 
 #----------------------------------------------------------------------------------------------
 #           E M P L E A D O     V I E W S
@@ -289,3 +338,4 @@ class BajaEmpleadoView(generics.UpdateAPIView):
     queryset = Empleado.objects.all()
     serializer_class = BajaEmpleadoSerializer
     lookup_field = "numero"
+    
