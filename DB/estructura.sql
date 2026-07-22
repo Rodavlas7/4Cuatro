@@ -7,7 +7,7 @@ DROP DATABASE IF EXISTS cuatro;
 CREATE DATABASE IF NOT EXISTS cuatro;
 USE cuatro;
 
--- --------------------------------------------------------
+-- -------------------------------------mysql-------------------
 -- ESTRUCTURA DE TABLAS
 -- --------------------------------------------------------
 
