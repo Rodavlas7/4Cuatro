@@ -75,4 +75,3 @@ class VistaEstacion(models.Model):
     class Meta:
         managed = False
         db_table = 'vista_estaciones'
-

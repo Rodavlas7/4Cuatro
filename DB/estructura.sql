@@ -389,3 +389,13 @@ CREATE UNIQUE INDEX IUK_usuario_empleado ON usuario(empleado);
 
 CREATE UNIQUE INDEX IUK_serie_laptop ON laptop(num_serie);
 
+
+# Editar la PK de los empleados
+
+#Modificar el default de los usuarios al registrarlos
+ALTER TABLE usuario
+MODIFY estado TINYINT(1) NOT NULL DEFAULT 1;
+
+
+ALTER TABLE empleado
+MODIFY COLUMN numero INT NOT NULL AUTO_INCREMENT;

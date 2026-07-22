@@ -147,10 +147,10 @@ STATIC_URL = 'static/'
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'usuarios.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-        """'rest_framework.permissions.AllowAny',"""
+        #'rest_framework.permissions.AllowAny',
     ],
 }
