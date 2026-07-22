@@ -20,7 +20,7 @@ CREATE TABLE componente (
   orden_material int DEFAULT NULL,
   registro_ensamblaje int DEFAULT NULL,
   modelo varchar(8) DEFAULT NULL,
-  lote varchar(8) DEFAULT NULL,
+  lote varchar(12) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
   PRIMARY KEY (numero)
 );
@@ -167,6 +167,16 @@ CREATE TABLE modelo_laptop (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
   PRIMARY KEY (codigo)
+);
+
+-- Tabla puente (M a M): qué componentes puede llevar un modelo de laptop
+-- y cuántos de cada uno (capacidad). Ej: 1 procesador, 2 módulos de RAM.
+DROP TABLE IF EXISTS modelo_laptop_componente;
+CREATE TABLE modelo_laptop_componente (
+  modelo_laptop varchar(8) NOT NULL,
+  modelo_componente varchar(8) NOT NULL,
+  capacidad int DEFAULT 1,
+  PRIMARY KEY (modelo_laptop, modelo_componente)
 );
 
 DROP TABLE IF EXISTS orden_material;
@@ -334,6 +344,10 @@ ALTER TABLE linea ADD CONSTRAINT FK_linea_estado FOREIGN KEY (estado) REFERENCES
 
 -- Llaves foráneas para la tabla modelo_componente
 ALTER TABLE modelo_componente ADD CONSTRAINT FK_modelo_componente_tipo_componente FOREIGN KEY (tipo_componente) REFERENCES tipo_comp(codigo);
+
+-- Llaves foráneas para la tabla puente modelo_laptop_componente
+ALTER TABLE modelo_laptop_componente ADD CONSTRAINT FK_mlc_modelo_laptop FOREIGN KEY (modelo_laptop) REFERENCES modelo_laptop(codigo);
+ALTER TABLE modelo_laptop_componente ADD CONSTRAINT FK_mlc_modelo_componente FOREIGN KEY (modelo_componente) REFERENCES modelo_componente(codigo);
 
 -- Llaves foráneas para la tabla orden_material
 ALTER TABLE orden_material ADD CONSTRAINT FK_orden_material_linea FOREIGN KEY (linea) REFERENCES linea(codigo);
