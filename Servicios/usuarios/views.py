@@ -15,6 +15,7 @@ from lineas.models import Estacion, Linea
 from usuarios import models, serializers
 from .models import Sesion, Usuario, Empleado
 from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleadoSerializer, UpdateEmpleadoSerializer, BajaEmpleadoSerializer
+from usuarios.permissions import TienePermisoModulo
 
 #################################
 # MARLENE MARLENE MARLENE AHORA EN POSTMAN usa "Bearer tu_token", en la parte donde tienes que poner tu token
@@ -35,9 +36,9 @@ from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleado
 #----------------------------------------------------------------------------------------------
 #           U S U A R I O S     V I E W S
 #----------------------------------------------------------------------------------------------
-
 #Login
 class LoginAPIView(APIView):
+
     permission_classes = [AllowAny]
     def get(self, request):
         return Response(
@@ -45,10 +46,11 @@ class LoginAPIView(APIView):
                 "mensaje": "Utiliza el método POST para iniciar sesión."
             }
         )
-    
-    def post(self, request):
 
-        serializer = LoginSerializer(data=request.data)
+    def post(self, request):
+        serializer = LoginSerializer(
+            data=request.data
+        )
 
         if not serializer.is_valid():
             return Response(
@@ -60,16 +62,21 @@ class LoginAPIView(APIView):
         contrasena = serializer.validated_data['contrasena']
 
 
+        # Buscar usuario
         try:
-            usuario_db = Usuario.objects.get(usuario=usuario)
 
+            usuario_db = Usuario.objects.get(
+                usuario=usuario
+            )
         except Usuario.DoesNotExist:
             return Response(
-                {"mensaje": "Usuario o contraseña incorrectos"},
+                {
+                    "mensaje": "Usuario o contraseña incorrectos"
+                },
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-
+        # Verificar estado del usuario
         if not usuario_db.estado:
             return Response(
                 {
@@ -78,32 +85,96 @@ class LoginAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-
-        if not check_password(contrasena, usuario_db.contrasena):
+        # Verificar contraseña
+        if not check_password(
+            contrasena,
+            usuario_db.contrasena
+        ):
             return Response(
-                {"mensaje": "Usuario o contraseña incorrectos"},
+                {
+                    "mensaje": "Usuario o contraseña incorrectos"
+                },
                 status=status.HTTP_401_UNAUTHORIZED
             )
-            
-        # SE GENERA EL TOKEN
-        Sesion.objects.filter(usuario=usuario_db).delete() #SOLO UNA SESIÓN ACTIVA
+
+        # ==================================================
+        # VALIDAR EMPLEADO Y ROL
+        # ==================================================
+        try:
+            empleado = usuario_db.empleado
+        except Empleado.DoesNotExist:
+            return Response(
+                {
+                    "mensaje": "El usuario no tiene un empleado asignado"
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not empleado.rol:
+            return Response(
+                {
+                    "mensaje": "El empleado no tiene un rol asignado"
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Obtener código del rol
+        rol = empleado.rol.codigo
+
+        # ==================================================
+        # ROLES QUE PUEDEN USAR EL SISTEMA
+        # ==================================================
+        roles_permitidos = [
+            "ADMIN",
+            "SUPER",
+            "OPCALI"
+        ]
+        if rol not in roles_permitidos:
+            return Response(
+                {
+                    "mensaje": "Este rol no tiene acceso al sistema"
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # ==================================================
+        # GENERAR TOKEN
+        # ==================================================
+        # Eliminar sesiones anteriores
+        Sesion.objects.filter(
+            usuario=usuario_db
+        ).delete()
+
         token = token_hex(32)
+        
+        ahora = timezone.now()
 
-
-        # Guardar la sesión
-        ahora = timezone.now() #variable para guardar eltime
-        expiracion = ahora + timedelta(hours=10) #calcular la expiracion en 8 horas
-
+        expiracion = ahora + timedelta(
+            hours=10
+        )
+        
+        # Crear nueva sesión
         Sesion.objects.create(
             usuario=usuario_db,
             token=token,
             fecha_inicio=ahora,
             fecha_expiracion=expiracion
         )
+
+        # ==================================================
+        # RESPUESTA
+        # ==================================================
         return Response(
             {
                 "mensaje": "Inicio de sesión exitoso",
                 "usuario": usuario_db.usuario,
+                "empleado": empleado.numero,
+                "nombre": (
+                    empleado.nombrepila
+                    + " "
+                    + empleado.primerapell
+                ),
+                "rol": rol,
                 "token": token
             },
             status=status.HTTP_200_OK
@@ -113,9 +184,12 @@ class LoginAPIView(APIView):
 # Registrar usuario
 class RegistroUsuarioAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
-    #permission_classes = [AllowAny]
-
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+    modulo = "usuarios"
+     
     def post(self, request):
 
         serializer = serializers.CreateUsuarioSerializer(
@@ -163,8 +237,11 @@ class RegistroUsuarioAPIView(APIView):
 # . . . . . . . . LISTAR
 class ListaUsuariosAPIView(APIView):
 
-    #permission_classes = [AllowAny]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+            IsAuthenticated,
+            TienePermisoModulo
+        ]
+    modulo = "usuarios" 
 
     def get(self, request):
 
@@ -182,8 +259,11 @@ class ListaUsuariosAPIView(APIView):
 #Detalle usuario
 class DetailUsuarioAPIView(APIView):
 
-    #permission_classes = [AllowAny]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+            IsAuthenticated,
+            TienePermisoModulo
+        ]
+    modulo = "usuarios" 
 
     def get(self, request, numero):
 
@@ -211,8 +291,11 @@ class DetailUsuarioAPIView(APIView):
 # . . . . . .  . . . Actualizar
 class UpdateUsuarioAPIView(APIView):
 
-    #permission_classes = [AllowAny]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+            IsAuthenticated,
+            TienePermisoModulo
+        ]
+    modulo = "usuarios" 
 
     def put(self, request, numero):
 
@@ -254,8 +337,11 @@ class UpdateUsuarioAPIView(APIView):
 # . . . . . .  . . . BAJA LOGICA
 class BajaUsuarioAPIView(APIView):
 
-    #permission_classes = [AllowAny]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+            IsAuthenticated,
+            TienePermisoModulo
+        ]
+    modulo = "usuarios" 
 
     def patch(self, request, numero):
 
@@ -293,8 +379,11 @@ class BajaUsuarioAPIView(APIView):
 # . . . . . .  . . .  REACTIVAR USURAIO
 class ReactivarUsuarioAPIView(APIView):
 
-    #permission_classes = [AllowAny]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+            IsAuthenticated,
+            TienePermisoModulo
+        ]
+    modulo = "usuarios" 
 
     def patch(self, request, numero):
 
@@ -338,7 +427,11 @@ class ReactivarUsuarioAPIView(APIView):
 
 class RegistroEmpleadoAPIView(APIView):
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+            IsAuthenticated,
+            TienePermisoModulo
+        ]
+    modulo = "empleados" 
 
     @transaction.atomic
     def post(self, request):
@@ -473,6 +566,11 @@ class RegistroEmpleadoAPIView(APIView):
 
 #. . . . . .  . LISTA
 class ListaEmpleadosAPIView(APIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "empleados" 
 
     def get(self, request):
 
@@ -487,6 +585,11 @@ class ListaEmpleadosAPIView(APIView):
     
 #. . . . . .  . DETAIL
 class DetailEmpleadoAPIView(APIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "empleados" 
 
     def get(self, request, numero):
 
@@ -503,8 +606,13 @@ class DetailEmpleadoAPIView(APIView):
 
         return Response(serializer.data)
     
-#. . . . . .  . DETAIL
+#. . . . . .  . Update
 class UpdateEmpleadoView(generics.RetrieveUpdateAPIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "empleados" 
     queryset = Empleado.objects.all()
     serializer_class = UpdateEmpleadoSerializer
     lookup_field = "numero"
@@ -514,6 +622,11 @@ class UpdateEmpleadoView(generics.RetrieveUpdateAPIView):
 
 # chavalines, no os preocupeis, es la desactivación de empleado, es decir, cambia el estado activo a False para conservar trazabilidad histórica
 class BajaEmpleadoView(generics.UpdateAPIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "empleados" 
     queryset = Empleado.objects.all()
     serializer_class = BajaEmpleadoSerializer
     lookup_field = "numero"

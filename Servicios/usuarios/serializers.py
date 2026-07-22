@@ -134,6 +134,20 @@ class CreateUsuarioSerializer(serializers.ModelSerializer):
                 "write_only": True
             }
         }
+    
+    def validate_contrasena(self, value):
+    
+            if value == "":
+                raise serializers.ValidationError(
+                    "La contraseña no puede estar vacía."
+                )
+    
+            if len(value) < 8:
+                raise serializers.ValidationError(
+                    "La contraseña debe tener mínimo 8 caracteres."
+                )
+    
+            return value
 
     def create(self, validated_data):
         validated_data["contrasena"] = make_password(
