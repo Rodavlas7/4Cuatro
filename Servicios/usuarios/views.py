@@ -121,9 +121,7 @@ class LoginAPIView(APIView):
         # Obtener código del rol
         rol = empleado.rol.codigo
 
-        # ==================================================
         # ROLES QUE PUEDEN USAR EL SISTEMA
-        # ==================================================
         roles_permitidos = [
             "ADMIN",
             "SUPER",
@@ -137,9 +135,7 @@ class LoginAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # ==================================================
         # GENERAR TOKEN
-        # ==================================================
         # Eliminar sesiones anteriores
         Sesion.objects.filter(
             usuario=usuario_db
@@ -148,10 +144,7 @@ class LoginAPIView(APIView):
         token = token_hex(32)
         
         ahora = timezone.now()
-
-        expiracion = ahora + timedelta(
-            hours=10
-        )
+        expiracion = ahora + timedelta(hours=10)
         
         # Crear nueva sesión
         Sesion.objects.create(
@@ -161,19 +154,13 @@ class LoginAPIView(APIView):
             fecha_expiracion=expiracion
         )
 
-        # ==================================================
-        # RESPUESTA
-        # ==================================================
+        # YA CUANDO INICIA SESION CHIDO
         return Response(
             {
                 "mensaje": "Inicio de sesión exitoso",
                 "usuario": usuario_db.usuario,
                 "empleado": empleado.numero,
-                "nombre": (
-                    empleado.nombrepila
-                    + " "
-                    + empleado.primerapell
-                ),
+                "nombre": f"{empleado.nombrepila} {empleado.primerapell}",      
                 "rol": rol,
                 "token": token
             },
@@ -181,7 +168,7 @@ class LoginAPIView(APIView):
         )
 
 # . . . . . . . . REGISTRAR
-# Registrar usuario
+
 class RegistroUsuarioAPIView(APIView):
 
     permission_classes = [
@@ -418,9 +405,9 @@ class ReactivarUsuarioAPIView(APIView):
             }
         )
 
-#----------------------------------------------------------------------------------------------
-#           E M P L E A D O     V I E W S
-#----------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------        E M P L E A D O     V I E W S       -------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 #. . . . . .  . REGISTRO

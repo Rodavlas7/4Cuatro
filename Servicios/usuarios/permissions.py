@@ -52,7 +52,7 @@ PERMISOS_ROL = {
 # ==================================================
 
 class TienePermisoModulo(BasePermission):
-
+    message = "No cuenta con las credenciales para acceder."
 
     def has_permission(self, request, view):
         # Verifica que tenga sesión/token
