@@ -2,7 +2,7 @@
 
 -- TRACEX — Catálogo inicial de datos
 -- Laptop: Lenovo ThinkPad T14 Gen 5
--- Version: 2026-07-15
+-- Version: 2026-07-20
 
 
 USE cuatro;
@@ -12,6 +12,7 @@ USE cuatro;
 SET FOREIGN_KEY_CHECKS = 0;
  
 TRUNCATE TABLE componente;
+TRUNCATE TABLE modelo_laptop_componente;
 TRUNCATE TABLE detalle_material;
 TRUNCATE TABLE inspeccion_calidad;
 TRUNCATE TABLE registro_embalaje;
@@ -72,11 +73,9 @@ INSERT INTO edo_linea (codigo, nombre, descripcion) VALUES
 
 INSERT INTO edo_laptop (codigo, nombre) VALUES
 ('REGIS', 'Registrada'),       
-('PENSAM', 'En Ensamblaje'),    
-('PINSPE', 'En Inspección'),    
+('PENSAM', 'En Ensamblaje'),  
 ('APROV', 'Aprobada'),         
-('RECHA', 'Rechazada'),        
-('PENDEM', 'Pendiente Embalaje'),
+('RECHA', 'Rechazada'),
 ('EMBALA', 'Embalada');         
 
 
@@ -183,7 +182,21 @@ INSERT INTO modelo_componente (codigo, nombre, tipo_componente) VALUES
 ('MC031', 'Harman 2x2W Speaker T14G5',      'TC015');
 
 
--- 11. LÍNEAS DE ENSAMBLAJE 
+-- 10.1 COMPATIBILIDAD — BOM (Bill of Materials / Lista de Materiales)
+-- modelos de componente registrados como compatibles con él.
+-- La capacidad indica cuántos puede llevar
+
+INSERT INTO modelo_laptop_componente (modelo_laptop, modelo_componente, capacidad)
+SELECT 'ML001', mc.codigo,
+       CASE mc.tipo_componente
+           WHEN 'TC002' THEN 2   -- Memoria RAM: hasta 2 módulos
+           WHEN 'TC003' THEN 2   -- Almacenamiento SSD: hasta 2 unidades
+           ELSE 1
+       END
+FROM modelo_componente mc;
+
+
+-- 11. LÍNEAS DE ENSAMBLAJE
 -- 5 normales y una de embalaje
 
 INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
