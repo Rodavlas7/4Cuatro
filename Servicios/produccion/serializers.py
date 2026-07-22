@@ -35,6 +35,11 @@ class OrdenProduccionSerializer(serializers.ModelSerializer):
         model = OrdenProduccion
         fields = '__all__'
 
+    def validate_cant_planificada(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("cant_planificada no puede ser menor a 0.")
+        return value
+
 
 class VistaOrdenProduccionSerializer(serializers.ModelSerializer):
     class Meta:
