@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.hashers import make_password
-from .models import Usuario, Rol, Turno, Empleado,  EmpleadoEstacion, EmpleadoLinea
+from .models import Usuario, Rol, Turno, Empleado,  EmpleadoEstacion, EmpleadoLinea, VistaEmpleado, VistaUsuario
+
 
 #----------------------------------------------------------------------------------------------
 #           R O L
@@ -42,31 +43,22 @@ class CreateEmpleadoSerializer(serializers.ModelSerializer):
 
 class ListEmpleadoSerializer(serializers.ModelSerializer):
 
-    rol = serializers.CharField(source="rol.nombre", read_only=True)
-    turno = serializers.CharField(source="turno.nombre", read_only=True)
-
     class Meta:
-        model = Empleado
+        model = VistaEmpleado
         fields = (
             "numero",
-            "nombrepila",
-            "primerapell",
-            "segundoapell",
-            "rol",
-            "turno",
-            "activo"
+            "nombre_completo",
+            "rol_nombre",
+            "turno_nombre",
+            "estado_usuario",
+            "estado_empleado",
         )
-
 
 class DetailEmpleadoSerializer(serializers.ModelSerializer):
 
-    rol = RolSerializer(read_only=True)
-    turno = TurnoSerializer(read_only=True)
-
     class Meta:
-        model = Empleado
+        model = VistaEmpleado
         fields = "__all__"
-
 
 class UpdateEmpleadoSerializer(serializers.ModelSerializer):
 
@@ -160,35 +152,23 @@ class CreateUsuarioSerializer(serializers.ModelSerializer):
     
     
 class ListUsuarioSerializer(serializers.ModelSerializer):
-    empleado = serializers.SerializerMethodField()
-    def get_empleado(self,obj):
-
-        return (
-            f"{obj.empleado.nombrepila} "
-            f"{obj.empleado.primerapell}"
-        )
 
     class Meta:
-        model = Usuario
+        model = VistaUsuario
         fields = (
             "numero",
             "usuario",
-            "estado",
-            "empleado",
+            "empleado_nombre",
+            "rol_nombre",
+            "estado_usuario",
         )
         
         
 class DetailUsuarioSerializer(serializers.ModelSerializer):
-    empleado = DetailEmpleadoSerializer(read_only=True)
 
     class Meta:
-        model = Usuario
-        fields = (
-            "numero",
-            "usuario",
-            "estado",
-            "empleado",
-        )
+        model = VistaUsuario
+        fields = "__all__"
         
         
 class UpdateUsuarioSerializer(serializers.ModelSerializer):
