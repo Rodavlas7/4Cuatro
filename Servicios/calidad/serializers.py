@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import InspeccionCalidad
+from .models import InspeccionCalidad, VistaInspeccionCalidad
 
 
 
@@ -60,7 +60,26 @@ class DetailInspeccionCalidadSerializer(serializers.ModelSerializer):
     class Meta:
         model = InspeccionCalidad
         fields = "__all__"
+        
+        
+#---------------------------------------------------------------------------
+class ListVistaInspeccionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VistaInspeccionCalidad
+        fields = (
+            "numero", 
+            "resultado_nombre", 
+            "fecha", 
+            "laptop_numero",
+            "empleado_nombre", 
+            "linea_nombre"
+        )
 
+class DetailVistaInspeccionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VistaInspeccionCalidad
+        fields = "__all__"
+#----------------------------------------------------------------------------
 
 
 

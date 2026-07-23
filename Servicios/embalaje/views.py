@@ -6,7 +6,7 @@ from rest_framework import status
 
 from rest_framework.permissions import IsAuthenticated
 from usuarios.permissions import TienePermisoModulo
-from .models import RegistroEmbalaje
+from .models import RegistroEmbalaje, VistaRegistroEmbalaje
 from . import serializers
 
 
@@ -147,7 +147,7 @@ class RegistroEmbalajeAPIView(APIView):
 
 
 
-
+'''
 # . . . . . .  . LISTA
 
 class ListaRegistroEmbalajeAPIView(APIView):
@@ -223,8 +223,72 @@ class DetailRegistroEmbalajeAPIView(APIView):
         return Response(
             serializer.data
         )
+'''
+# Recuerda importar tu nuevo modelo en views.py:
+# from .models import RegistroEmbalaje, VistaRegistroEmbalaje
 
 
+# . . . . . .  . LISTA
+
+class ListaRegistroEmbalajeAPIView(APIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "embalaje"
+
+    def get(self, request):
+
+        embalajes = VistaRegistroEmbalaje.objects.all()
+
+        serializer = serializers.ListVistaRegistroEmbalajeSerializer(
+            embalajes,
+            many=True
+        )
+
+        return Response(
+            serializer.data
+        )
+
+
+# . . . . . .  . DETAIL
+
+class DetailRegistroEmbalajeAPIView(APIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "embalaje"
+
+    def get(self, request, numero):
+
+        try:
+
+            embalaje = VistaRegistroEmbalaje.objects.get(
+                numero=numero
+            )
+
+        except VistaRegistroEmbalaje.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje":
+                    "Registro de embalaje no encontrado"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = serializers.DetailVistaRegistroEmbalajeSerializer(
+            embalaje
+        )
+
+        return Response(
+            serializer.data
+        )
 
 
 
