@@ -5,11 +5,11 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from rest_framework.permissions import IsAuthenticated
-
+from usuarios.permissions import TienePermisoModulo
 from .models import RegistroEmbalaje
 from . import serializers
 
-from usuarios.permissions import TienePermisoModulo
+
 
 from calidad.models import InspeccionCalidad
 
