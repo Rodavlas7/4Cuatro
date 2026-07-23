@@ -3,6 +3,8 @@ from rest_framework import generics
 
 from .models import *
 from .serializers import *
+from rest_framework.permissions import IsAuthenticated
+from usuarios.permissions import TienePermisoModulo
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
@@ -22,11 +24,21 @@ from .serializers import *
 # Vistas de PRODUCCION
 
 class EdoProduccionListAPIView(generics.ListAPIView):
+    permission_classes = [
+                        IsAuthenticated,
+                        TienePermisoModulo
+                    ]
+    modulo = "orden_produccion"
     queryset = EdoProduccion.objects.all()
     serializer_class = EdoProduccionSerializer
 
 
 class ModeloLaptopListAPIView(generics.ListCreateAPIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "laptops"
     queryset = ModeloLaptop.objects.all()
     serializer_class = ModeloLaptopSerializer
 
@@ -34,23 +46,43 @@ class ModeloLaptopListAPIView(generics.ListCreateAPIView):
 class ModeloLaptopDetailAPIView(generics.RetrieveAPIView):
     """GET: detalle del modelo de laptop con los componentes que lleva
     (lista de materiales) anidados."""
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+    modulo = "laptops"
     queryset = ModeloLaptop.objects.all()
     serializer_class = ModeloLaptopDetailSerializer
     lookup_field = 'codigo'
 
 
 class EdoLaptopListAPIView(generics.ListAPIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "laptops"
     queryset = EdoLaptop.objects.all()
     serializer_class = EdoLaptopSerializer
 
 
 class LoteLaptopListAPIView(generics.ListCreateAPIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "laptops"
     queryset = LoteLaptop.objects.all()
     serializer_class = LoteLaptopSerializer
 
 
 class LoteLaptopDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de un lote, con sus laptops anidadas."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "laptops"
     queryset = LoteLaptop.objects.all()
     serializer_class = LoteLaptopDetailSerializer
     lookup_field = 'codigo'
@@ -59,6 +91,11 @@ class LoteLaptopDetailAPIView(generics.RetrieveAPIView):
 class OrdenProduccionListAPIView(generics.ListCreateAPIView):
     """GET: consulta general del módulo (lee de la vista SQL vista_ordenes_produccion).
     POST: crea una nueva orden de producción."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "orden_produccion"
 
     def get_queryset(self):
         if self.request.method == 'POST':
@@ -73,6 +110,11 @@ class OrdenProduccionListAPIView(generics.ListCreateAPIView):
 
 class OrdenProduccionDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de una orden (lee de la vista SQL vista_ordenes_produccion)."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "orden_produccion"
     queryset = VistaOrdenProduccion.objects.all()
     serializer_class = VistaOrdenProduccionSerializer
     lookup_field = 'folio'
@@ -81,6 +123,11 @@ class OrdenProduccionDetailAPIView(generics.RetrieveAPIView):
 class OrdenProduccionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la orden; DELETE la cancela (estado=CANC)
     en lugar de borrar el registro."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "orden_produccion"
     queryset = OrdenProduccion.objects.all()
     serializer_class = OrdenProduccionSerializer
     lookup_field = 'folio'
@@ -93,6 +140,11 @@ class OrdenProduccionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
 class ParoListCreateAPIView(generics.ListCreateAPIView):
     """GET: consulta general (lee de la vista SQL vista_paros).
     POST: crea un nuevo paro."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "paro"
 
     def get_queryset(self):
         if self.request.method == 'POST':
@@ -107,6 +159,11 @@ class ParoListCreateAPIView(generics.ListCreateAPIView):
 
 class ParoDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de un paro (lee de la vista SQL vista_paros)."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "paro"
     queryset = VistaParo.objects.all()
     serializer_class = VistaParoSerializer
     lookup_field = 'numero'
@@ -115,6 +172,11 @@ class ParoDetailAPIView(generics.RetrieveAPIView):
 class ParoModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el paro; DELETE lo cierra (fecha_fin/hora_fin = ahora)
     en lugar de borrar el registro."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "paro"
     queryset = Paro.objects.all()
     serializer_class = ParoSerializer
     lookup_field = 'numero'
@@ -129,6 +191,11 @@ class ParoModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
 class LaptopListAPIView(generics.ListCreateAPIView):
     """GET: consulta general (lee de la vista SQL vista_laptops).
     POST: crea una nueva laptop."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "laptops"
 
     def get_queryset(self):
         if self.request.method == 'POST':
@@ -144,6 +211,11 @@ class LaptopListAPIView(generics.ListCreateAPIView):
 class LaptopDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de una laptop (lee de la vista SQL vista_laptops)
     e incluye sus registros de ensamblaje y componentes anidados."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "laptops"
     queryset = VistaLaptop.objects.all()
     serializer_class = VistaLaptopDetailSerializer
     lookup_field = 'numero'
@@ -152,6 +224,11 @@ class LaptopDetailAPIView(generics.RetrieveAPIView):
 class LaptopModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la laptop; DELETE la rechaza (estado=RECHA)
     en lugar de borrar el registro."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "laptops"
     queryset = Laptop.objects.all()
     serializer_class = LaptopSerializer
     lookup_field = 'numero'
@@ -162,12 +239,22 @@ class LaptopModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class RegistroEnsamblajeListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "ensamblaje"
     queryset = RegistroEnsamblaje.objects.select_related('laptop', 'linea').all()
     serializer_class = RegistroEnsamblajeSerializer
 
 
 class RegistroEnsamblajeDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de un registro de ensamblaje."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "ensamblaje"
     queryset = RegistroEnsamblaje.objects.select_related('laptop', 'linea').all()
     serializer_class = RegistroEnsamblajeSerializer
     lookup_field = 'numero'
@@ -176,6 +263,11 @@ class RegistroEnsamblajeDetailAPIView(generics.RetrieveAPIView):
 class RegistroEnsamblajeModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el registro; DELETE lo cierra (fecha_fin/hora_fin = ahora)
     en lugar de borrar el registro."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "ensamblaje"
     queryset = RegistroEnsamblaje.objects.all()
     serializer_class = RegistroEnsamblajeSerializer
     lookup_field = 'numero'
