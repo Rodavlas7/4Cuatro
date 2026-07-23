@@ -9,8 +9,9 @@ from rest_framework.permissions import IsAuthenticated
 from .models import RegistroEmbalaje
 from . import serializers
 
-
 from usuarios.permissions import TienePermisoModulo
+
+from calidad.models import InspeccionCalidad
 
 
 
@@ -18,45 +19,117 @@ from usuarios.permissions import TienePermisoModulo
 #           R E G I S T R O   E M B A L A J E     V I E W S
 #----------------------------------------------------------------------------------------------
 
+
 # . . . . . .  . REGISTRO
+
 class RegistroEmbalajeAPIView(APIView):
+
     permission_classes = [
         IsAuthenticated,
         TienePermisoModulo
     ]
+
     modulo = "embalaje"
 
+
+
     def post(self, request):
+
         serializer = serializers.CreateRegistroEmbalajeSerializer(
             data=request.data
         )
+
+
         if not serializer.is_valid():
+
             return Response(
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            embalaje = serializer.save()
-        except OperationalError as e:
-            mensaje = str(e)
-            if "ya fue embalada previamente" in mensaje:
-                return Response(
-                    {
-                        "mensaje": "No es posible registrar el embalaje. La laptop seleccionada ya fue embalada previamente."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+
+        laptop = serializer.validated_data["laptop"]
+
+
+
+        # ==================================================
+        # VALIDAR CALIDAD
+        # ==================================================
+
+        aprobada = InspeccionCalidad.objects.filter(
+            laptop=laptop,
+            resultado=1
+        ).exists()
+
+
+        if not aprobada:
+
             return Response(
                 {
-                    "mensaje": "No fue posible registrar el embalaje."
+                    "mensaje":
+                    "No es posible registrar el embalaje. La laptop no cuenta con una inspección de calidad aprobada."
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+
+        rechazada = InspeccionCalidad.objects.filter(
+            laptop=laptop,
+            resultado=0
+        ).exists()
+
+
+        if rechazada:
+
+            return Response(
+                {
+                    "mensaje":
+                    "No es posible registrar el embalaje. La laptop fue rechazada en calidad."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+
+        try:
+
+            embalaje = serializer.save()
+
+
+        except OperationalError as e:
+
+
+            mensaje = str(e)
+
+
+            if "ya fue embalada previamente" in mensaje:
+
+                return Response(
+                    {
+                        "mensaje":
+                        "No es posible registrar el embalaje. La laptop seleccionada ya fue embalada previamente."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+
+            return Response(
+                {
+                    "mensaje":
+                    "No fue posible registrar el embalaje."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+
         return Response(
             {
-                "mensaje": "Embalaje registrado correctamente",
-                "numero": embalaje.numero
+                "mensaje":
+                "Embalaje registrado correctamente",
+                "numero":
+                embalaje.numero
             },
             status=status.HTTP_201_CREATED
         )
@@ -66,19 +139,29 @@ class RegistroEmbalajeAPIView(APIView):
 
 
 # . . . . . .  . LISTA
+
 class ListaRegistroEmbalajeAPIView(APIView):
+
     permission_classes = [
         IsAuthenticated,
         TienePermisoModulo
     ]
+
     modulo = "embalaje"
 
+
+
     def get(self, request):
+
         embalajes = RegistroEmbalaje.objects.all()
+
+
         serializer = serializers.ListRegistroEmbalajeSerializer(
             embalajes,
             many=True
         )
+
+
         return Response(
             serializer.data
         )
@@ -95,99 +178,166 @@ class DetailRegistroEmbalajeAPIView(APIView):
         IsAuthenticated,
         TienePermisoModulo
     ]
+
     modulo = "embalaje"
 
 
+
     def get(self, request, numero):
+
         try:
+
             embalaje = RegistroEmbalaje.objects.get(
                 numero=numero
             )
+
+
         except RegistroEmbalaje.DoesNotExist:
+
+
             return Response(
                 {
-                    "mensaje": "Registro de embalaje no encontrado"
+                    "mensaje":
+                    "Registro de embalaje no encontrado"
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+
         serializer = serializers.DetailRegistroEmbalajeSerializer(
             embalaje
         )
+
+
         return Response(
             serializer.data
         )
 
 
+
+
+
 # . . . . . .  . UPDATE
+
 class UpdateRegistroEmbalajeAPIView(APIView):
+
     permission_classes = [
         IsAuthenticated,
         TienePermisoModulo
     ]
+
     modulo = "embalaje"
 
+
+
     def put(self, request, numero):
+
         try:
+
             embalaje = RegistroEmbalaje.objects.get(
                 numero=numero
             )
+
+
         except RegistroEmbalaje.DoesNotExist:
+
+
             return Response(
                 {
-                    "mensaje": "Registro de embalaje no encontrado"
+                    "mensaje":
+                    "Registro de embalaje no encontrado"
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+
         serializer = serializers.UpdateRegistroEmbalajeSerializer(
             embalaje,
             data=request.data
         )
+
+
         if not serializer.is_valid():
+
             return Response(
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+
         try:
+
             serializer.save()
+
+
         except OperationalError:
+
+
             return Response(
                 {
-                    "mensaje": "No fue posible actualizar el registro de embalaje."
+                    "mensaje":
+                    "No fue posible actualizar el registro de embalaje."
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+
         return Response(
             {
-                "mensaje": "Registro de embalaje actualizado correctamente"
+                "mensaje":
+                "Registro de embalaje actualizado correctamente"
             }
         )
 
 
+
+
+
 # . . . . . .  . DELETE
+
 class DeleteRegistroEmbalajeAPIView(APIView):
+
     permission_classes = [
         IsAuthenticated,
         TienePermisoModulo
     ]
+
     modulo = "embalaje"
-    
+
+
+
     def delete(self, request, numero):
+
         try:
+
             embalaje = RegistroEmbalaje.objects.get(
                 numero=numero
             )
+
+
         except RegistroEmbalaje.DoesNotExist:
+
+
             return Response(
                 {
-                    "mensaje": "Registro de embalaje no encontrado"
+                    "mensaje":
+                    "Registro de embalaje no encontrado"
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
 
+
+
         embalaje.delete()
+
 
         return Response(
             {
-                "mensaje": "Registro de embalaje eliminado correctamente"
+                "mensaje":
+                "Registro de embalaje eliminado correctamente"
             }
         )

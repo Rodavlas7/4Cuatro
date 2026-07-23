@@ -251,34 +251,60 @@ END$$
 --     de asignar el número de serie automáticamente.
 
 
-CREATE TRIGGER tg_Actualizar_Estado_Laptop_Inspeccion_Calidad
+CREATE  or replace TRIGGER tg_Actualizar_Estado_Laptop_Inspeccion_Calidad
 AFTER INSERT ON inspeccion_calidad
 FOR EACH ROW
 BEGIN
     DECLARE estado_laptop VARCHAR(8);
 
     SELECT estado
-      INTO estado_laptop
-      FROM laptop
-     WHERE numero = NEW.laptop;
+    INTO estado_laptop
+    FROM laptop
+    WHERE numero = NEW.laptop;
 
     IF estado_laptop = 'PENSAM' THEN
-        -- Laptop en ensamblaje: estado válido para inspección
+
+        -- Resultado: Aprobada
         IF NEW.resultado = 1 THEN
-            UPDATE laptop SET estado = 'APROV' WHERE numero = NEW.laptop;
+
+            UPDATE laptop
+            SET estado = 'APROV'
+            WHERE numero = NEW.laptop;
+
+        -- Resultado: Rechazada
+        ELSEIF NEW.resultado = 0 THEN
+
+            UPDATE laptop
+            SET estado = 'RECHA'
+            WHERE numero = NEW.laptop;
+
+        -- Resultado: Continúa en ensamblaje
+        ELSEIF NEW.resultado = 2 THEN
+
+            UPDATE laptop
+            SET estado = 'PENSAM'
+            WHERE numero = NEW.laptop;
+
         ELSE
-            UPDATE laptop SET estado = 'RECHA' WHERE numero = NEW.laptop;
+
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Inspeccion_Calidad: resultado de inspección no válido';
+
         END IF;
 
-    ELSEIF estado_laptop IN ('APROV', 'RECHA') THEN
+    ELSEIF estado_laptop IN ('APROV', 'RECHA', 'EMBALA') THEN
+
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error tg_Inspeccion_Calidad: la laptop ya cuenta con una inspección registrada';
+            SET MESSAGE_TEXT = 'Error tg_Inspeccion_Calidad: la laptop ya finalizó el proceso de inspección';
 
     ELSE
+
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Inspeccion_Calidad: la laptop no está en estado de ensamblaje para ser inspeccionada';
+
     END IF;
-END$$
+
+END;
 
 
 
