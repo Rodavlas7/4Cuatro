@@ -155,3 +155,46 @@ FROM componente c
 LEFT JOIN linea             l  ON l.codigo  = c.linea
 LEFT JOIN modelo_componente mc ON mc.codigo = c.modelo
 LEFT JOIN edo_componente    ec ON ec.codigo = c.estado;
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW vista_empleados AS
+SELECT
+    e.numero,
+    CONCAT(e.nombrePila, ' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS nombre_completo,
+    e.rol AS rol_codigo,
+    r.nombre AS rol_nombre,
+    e.turno AS turno_codigo,
+    t.nombre AS turno_nombre,
+    u.usuario,
+    CASE
+        WHEN u.numero IS NULL THEN 'Sin usuario'
+        WHEN u.estado = 1 THEN 'Activo'
+        ELSE 'Inactivo'
+    END AS estado_usuario,
+    CASE
+        WHEN e.activo = 1 THEN 'Activo'
+        ELSE 'Inactivo'
+    END AS estado_empleado
+FROM empleado e
+
+LEFT JOIN rol r ON r.codigo = e.rol
+LEFT JOIN turno t ON t.codigo = e.turno
+LEFT JOIN usuario u ON u.empleado = e.numero;
+
+----------------------------------------------------------------------------------------------------------------------------------
+CREATE VIEW vista_usuarios AS
+SELECT
+    u.numero,
+    u.usuario,
+    e.numero AS empleado_numero,
+    CONCAT( e.nombrePila,' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS empleado_nombre,
+    r.nombre AS rol_nombre,
+    CASE WHEN u.estado = 1 THEN 'Activo'
+        ELSE 'Inactivo'
+    END AS estado_usuario
+FROM usuario u
+LEFT JOIN empleado e ON e.numero = u.empleado
+LEFT JOIN rol r ON r.codigo = e.rol;
