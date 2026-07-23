@@ -2,6 +2,8 @@ from rest_framework import generics
 
 from .models import *
 from .serializers import *
+from rest_framework.permissions import IsAuthenticated
+from usuarios.permissions import TienePermisoModulo
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
@@ -15,6 +17,11 @@ from .serializers import *
 # Vistas de LINEAS
 
 class EdoLineaListAPIView(generics.ListAPIView):
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "lineas"
     queryset = EdoLinea.objects.all()
     serializer_class = EdoLineaSerializer
 
@@ -22,6 +29,11 @@ class EdoLineaListAPIView(generics.ListAPIView):
 class LineaListAPIView(generics.ListCreateAPIView):
     """GET: consulta general del módulo (lee de la vista SQL vista_lineas).
     POST: crea una nueva línea."""
+    permission_classes = [
+                    IsAuthenticated,
+                    TienePermisoModulo
+                ]
+    modulo = "lineas"
 
     def get_queryset(self):
         if self.request.method == 'POST':
@@ -37,6 +49,11 @@ class LineaListAPIView(generics.ListCreateAPIView):
 class LineaDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de una línea (lee de la vista SQL vista_lineas)
     e incluye sus estaciones anidadas."""
+    permission_classes = [
+                    IsAuthenticated,
+                    TienePermisoModulo
+                ]
+    modulo = "lineas"
     queryset = VistaLinea.objects.all()
     serializer_class = VistaLineaDetailSerializer
     lookup_field = 'codigo'
@@ -45,6 +62,11 @@ class LineaDetailAPIView(generics.RetrieveAPIView):
 class LineaModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la línea; DELETE la desactiva (activo=False)
     en lugar de borrar el registro."""
+    permission_classes = [
+                    IsAuthenticated,
+                    TienePermisoModulo
+                ]
+    modulo = "lineas"
     queryset = Linea.objects.all()
     serializer_class = LineaSerializer
     lookup_field = 'codigo'
@@ -57,6 +79,11 @@ class LineaModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
 class EstacionListCreateAPIView(generics.ListCreateAPIView):
     """GET: consulta general (lee de la vista SQL vista_estaciones).
     POST: crea una nueva estación."""
+    permission_classes = [
+                    IsAuthenticated,
+                    TienePermisoModulo
+                ]
+    modulo = "estaciones"
 
     def get_queryset(self):
         if self.request.method == 'POST':
@@ -71,6 +98,11 @@ class EstacionListCreateAPIView(generics.ListCreateAPIView):
 
 class EstacionDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de una estación (lee de la vista SQL vista_estaciones)."""
+    permission_classes = [
+                        IsAuthenticated,
+                        TienePermisoModulo
+                    ]
+    modulo = "estaciones"
     queryset = VistaEstacion.objects.all()
     serializer_class = VistaEstacionSerializer
     lookup_field = 'codigo'
@@ -79,6 +111,11 @@ class EstacionDetailAPIView(generics.RetrieveAPIView):
 class EstacionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la estación; DELETE la desactiva (activo=False)
     en lugar de borrar el registro."""
+    permission_classes = [
+                        IsAuthenticated,
+                        TienePermisoModulo
+                    ]
+    modulo = "estaciones"
     queryset = Estacion.objects.all()
     serializer_class = EstacionSerializer
     lookup_field = 'codigo'
