@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from embalaje.models import TipoEmbalaje, RegistroEmbalaje
+from embalaje.models import RegistroEmbalaje
 
 
 #----------------------------------------------------------------------------------------------

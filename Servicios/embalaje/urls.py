@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegistroEmbalajeAPIView, ListaRegistroEmbalajeAPIView, DetailRegistroEmbalajeAPIView, UpdateRegistroEmbalajeAPIView, DeleteRegistroEmbalajeAPIView
+from .views import RegistroEmbalajeAPIView, ListaRegistroEmbalajeAPIView, DetailRegistroEmbalajeAPIView, UpdateRegistroEmbalajeAPIView, DeleteRegistroEmbalajeAPIView, BuscarRegistroEmbalajeView
 
 
 urlpatterns = [
@@ -8,5 +8,6 @@ urlpatterns = [
     path("Embalaje/Detalle/<int:numero>/", DetailRegistroEmbalajeAPIView.as_view(), name="detalle_embalaje"),
     path("Embalaje/Actualizar/<int:numero>/", UpdateRegistroEmbalajeAPIView.as_view(), name="actualizar_embalaje"),
     path("Embalaje/Eliminar/<int:numero>/", DeleteRegistroEmbalajeAPIView.as_view(), name="eliminar_embalaje"),
+    path("Embalaje/Buscar/", BuscarRegistroEmbalajeView.as_view(), name="buscar_embalaje"),
 
 ]
