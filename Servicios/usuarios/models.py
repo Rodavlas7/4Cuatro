@@ -104,3 +104,36 @@ class Sesion(models.Model):
     class Meta:
         managed = False
         db_table = "sesion"
+        
+        
+#--------------------- VISTA EMPLEADO----------------------------------------------------
+
+class VistaEmpleado(models.Model):
+
+    numero = models.IntegerField(primary_key=True)
+    nombre_completo = models.CharField(max_length=116, blank=True, null=True)
+    rol_codigo = models.CharField(max_length=8, blank=True, null=True)
+    rol_nombre = models.CharField(max_length=32, blank=True, null=True)
+    turno_codigo = models.CharField(max_length=8, blank=True, null=True)
+    turno_nombre = models.CharField(max_length=32, blank=True, null=True)
+    usuario = models.CharField(max_length=32, blank=True, null=True)
+    estado_usuario = models.CharField(max_length=11, blank=True, null=True)
+    estado_empleado = models.CharField(max_length=9, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "vista_empleados"
+        
+        
+#--------------- VISTA USUARIO-------------------------------------------------------
+class VistaUsuario(models.Model):
+
+    numero = models.IntegerField(primary_key=True)
+    usuario = models.CharField(max_length=32, blank=True, null=True)
+    empleado_numero = models.IntegerField(blank=True, null=True)
+    empleado_nombre = models.CharField(max_length=116, blank=True, null=True)
+    rol_nombre = models.CharField(max_length=32, blank=True, null=True)
+    estado_usuario = models.CharField(max_length=9, blank=True, null=True)
+    class Meta:
+        managed = False
+        db_table = "vista_usuarios"

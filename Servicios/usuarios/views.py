@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from lineas.models import Estacion, Linea
 
 from usuarios import models, serializers
-from .models import Sesion, Usuario, Empleado
+from .models import Sesion, Usuario, Empleado, VistaEmpleado, VistaUsuario
 from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleadoSerializer, UpdateEmpleadoSerializer, BajaEmpleadoSerializer
 from usuarios.permissions import TienePermisoModulo
 
@@ -225,16 +225,15 @@ class RegistroUsuarioAPIView(APIView):
 class ListaUsuariosAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
-        ]
-    modulo = "usuarios" 
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "usuarios"
 
     def get(self, request):
 
-        usuarios = Usuario.objects.filter(
-            estado=True
-        )
+        usuarios = VistaUsuario.objects.all()
 
         serializer = serializers.ListUsuarioSerializer(
             usuarios,
@@ -247,19 +246,18 @@ class ListaUsuariosAPIView(APIView):
 class DetailUsuarioAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
-        ]
-    modulo = "usuarios" 
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "usuarios"
 
     def get(self, request, numero):
 
         try:
-            usuario = Usuario.objects.get(
-                numero=numero
-            )
+            usuario = VistaUsuario.objects.get(numero=numero)
 
-        except Usuario.DoesNotExist:
+        except VistaUsuario.DoesNotExist:
 
             return Response(
                 {
@@ -268,12 +266,9 @@ class DetailUsuarioAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer = serializers.DetailUsuarioSerializer(
-            usuario
-        )
+        serializer = serializers.DetailUsuarioSerializer(usuario)
 
         return Response(serializer.data)
-    
     
 # . . . . . .  . . . Actualizar
 class UpdateUsuarioAPIView(APIView):
@@ -554,14 +549,14 @@ class RegistroEmpleadoAPIView(APIView):
 #. . . . . .  . LISTA
 class ListaEmpleadosAPIView(APIView):
     permission_classes = [
-                IsAuthenticated,
-                TienePermisoModulo
-            ]
-    modulo = "empleados" 
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+    modulo = "empleados"
 
     def get(self, request):
 
-        empleados = Empleado.objects.all()
+        empleados = VistaEmpleado.objects.all()
 
         serializer = ListEmpleadoSerializer(
             empleados,
@@ -569,21 +564,20 @@ class ListaEmpleadosAPIView(APIView):
         )
 
         return Response(serializer.data)
-    
 #. . . . . .  . DETAIL
 class DetailEmpleadoAPIView(APIView):
     permission_classes = [
-                IsAuthenticated,
-                TienePermisoModulo
-            ]
-    modulo = "empleados" 
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+    modulo = "empleados"
 
     def get(self, request, numero):
 
         try:
-            empleado = Empleado.objects.get(numero=numero)
+            empleado = VistaEmpleado.objects.get(numero=numero)
 
-        except Empleado.DoesNotExist:
+        except VistaEmpleado.DoesNotExist:
             return Response(
                 {"mensaje": "Empleado no encontrado"},
                 status=status.HTTP_404_NOT_FOUND
