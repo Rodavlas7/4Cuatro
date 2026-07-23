@@ -15,12 +15,18 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+
+from Servicios.views import api_index, not_found
 
 urlpatterns = [
+    path('', api_index, name='api-index'),
     path('admin/', admin.site.urls),
     path("api/usuarios/", include("usuarios.urls")),
     path("api/lineas/", include("lineas.urls")),
     path("api/produccion/", include("produccion.urls")),
     path("api/componentes/", include("componentes.urls")),
+    # Catch-all: cualquier URL que no exista muestra el índice (con aviso 404).
+    # Debe ir al final para no opacar las rutas reales.
+    re_path(r'^.*$', not_found, name='not-found'),
 ]

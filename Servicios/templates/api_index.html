@@ -1,0 +1,394 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>TraceX API — Referencia de endpoints</title>
+
+<link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+<style>
+  /* --- La hoja compartida centra el login con flex; para la documentación
+         usamos flujo normal de página, alineado arriba. --- */
+  body{
+    display: block;
+    align-items: initial;
+    justify-content: initial;
+    padding: 0;
+  }
+
+  .api-page{
+    --verde:  #22C55E;
+    --ambar:  #F59E0B;
+    --rojo:   #EF4444;
+    --cyan:   #38BDF8;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    color: var(--blanco);
+  }
+
+  .api-topbar{
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-bottom: 8px;
+    background: rgba(13,27,42,0.72);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .topbar-inner{
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .api-topbar .brand{
+    display: flex;
+    flex-direction: column;
+    color: azure;
+    line-height: 1.15;
+  }
+
+  .api-topbar .brand .name{
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .api-topbar .brand .tag{
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .api-topbar .logo-right{
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59,130,246,0.28), transparent 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .api-topbar .logo-right img{
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+  }
+
+  /* Aviso cuando se llega desde una URL inexistente (404). */
+  .notfound-banner{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+    margin-top: 24px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: rgba(245,158,11,0.10);
+    border: 1px solid rgba(245,158,11,0.35);
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.75);
+  }
+  .notfound-banner strong{ color: var(--ambar); }
+  .notfound-banner code{
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    color: var(--blanco);
+    background: rgba(0,0,0,0.25);
+    padding: 2px 7px;
+    border-radius: 6px;
+    word-break: break-all;
+  }
+
+  .api-hero{
+    padding: 40px 4px 28px;
+  }
+
+  .api-hero h1{
+    text-align: left;
+    font-size: 34px;
+    margin: 0 0 10px;
+  }
+
+  .api-hero .lead{
+    color: rgba(255,255,255,0.6);
+    font-size: 15px;
+    max-width: 640px;
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+
+  .meta-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .chip{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: rgba(13,27,42,0.55);
+    border: 1px solid rgba(255,255,255,0.10);
+    font-size: 13px;
+  }
+
+  .chip .k{ color: rgba(255,255,255,0.45); }
+  .chip code{
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    color: var(--azul-glow);
+    font-size: 12.5px;
+  }
+  .chip.auth code{ color: var(--ambar); }
+
+  .stats{
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
+  .stat{
+    text-align: center;
+    padding: 8px 16px;
+    border-radius: 10px;
+    background: rgba(47,58,70,0.35);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .stat .num{ font-size: 20px; font-weight: 700; }
+  .stat .lbl{ font-size: 11px; color: rgba(255,255,255,0.5); }
+
+  .module{
+    background: rgba(47,58,70,0.40);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 4px 0 8px;
+    margin-top: 26px;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.30);
+  }
+
+  .module-head{
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .module-head .title-row{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .module-head h2{
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .module-head .base{
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--azul-glow);
+    background: rgba(59,130,246,0.10);
+    border: 1px solid rgba(59,130,246,0.22);
+    padding: 3px 9px;
+    border-radius: 7px;
+  }
+
+  .module-head p{
+    margin: 8px 0 0;
+    color: rgba(255,255,255,0.55);
+    font-size: 13.5px;
+  }
+
+  .endpoint{
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 16px;
+    align-items: start;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background .15s ease;
+  }
+  .endpoint:last-child{ border-bottom: none; }
+  .endpoint:hover{ background: rgba(59,130,246,0.05); }
+
+  .methods{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .m{
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 7px;
+    border-radius: 6px;
+    line-height: 1;
+  }
+  .m-GET    { color: var(--cyan);  background: rgba(56,189,248,0.14);  border: 1px solid rgba(56,189,248,0.30); }
+  .m-POST   { color: var(--verde); background: rgba(34,197,94,0.14);   border: 1px solid rgba(34,197,94,0.30); }
+  .m-PUT    { color: var(--ambar); background: rgba(245,158,11,0.14);  border: 1px solid rgba(245,158,11,0.30); }
+  .m-PATCH  { color: var(--ambar); background: rgba(245,158,11,0.14);  border: 1px solid rgba(245,158,11,0.30); }
+  .m-DELETE { color: var(--rojo);  background: rgba(239,68,68,0.14);   border: 1px solid rgba(239,68,68,0.30); }
+
+  .endpoint .path{
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: var(--blanco);
+    cursor: copy;
+    word-break: break-all;
+  }
+  .endpoint .path .var{ color: var(--azul-glow); }
+  .endpoint .path:hover{ text-decoration: underline dotted rgba(255,255,255,0.35); }
+  .endpoint .path.copied::after{
+    content: " ✓ copiado";
+    color: var(--verde);
+    font-size: 11px;
+  }
+
+  .endpoint .desc{
+    margin: 5px 0 0;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .api-footer{
+    text-align: center;
+    margin-top: 40px;
+    color: rgba(255,255,255,0.4);
+    font-size: 12.5px;
+  }
+
+  @media (max-width: 560px){
+    .endpoint{ grid-template-columns: 1fr; gap: 8px; }
+    .stats{ margin-left: 0; width: 100%; }
+    .api-hero h1{ font-size: 27px; }
+  }
+</style>
+</head>
+
+<body>
+
+<header class="api-topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <span class="name">Trace X</span>
+            <span class="tag">API Reference</span>
+        </div>
+        <div class="logo-right">
+            <img src="{% static 'img/tracex-logo.png' %}" alt="Trace X">
+        </div>
+    </div>
+</header>
+
+<div class="api-page">
+
+    {% if not_found %}
+    <!-- Aviso: se llegó desde una URL que no existe -->
+    <div class="notfound-banner">
+        <strong>404 · Ruta no encontrada.</strong>
+        <span>La ruta <code>{{ attempted_path }}</code> no existe. Estas son las rutas disponibles:</span>
+    </div>
+    {% endif %}
+
+    <!-- Hero -->
+    <section class="api-hero">
+        <h1>Referencia de la API</h1>
+        <p class="lead">
+            Índice de los endpoints ya establecidos en el backend de TraceX.
+            Todas las rutas cuelgan de este host y, salvo el login, requieren
+            un token de acceso.
+        </p>
+
+        <div class="meta-row">
+            <span class="chip">
+                <span class="k">Base URL</span>
+                <code>{{ base_url }}</code>
+            </span>
+            <span class="chip auth">
+                <span class="k">Autenticación</span>
+                <code>Authorization: Bearer &lt;token&gt;</code>
+            </span>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="num">{{ total_modules }}</div>
+                    <div class="lbl">Módulos</div>
+                </div>
+                <div class="stat">
+                    <div class="num">{{ total_endpoints }}</div>
+                    <div class="lbl">Endpoints</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Módulos -->
+    {% for module in modules %}
+    <section class="module">
+        <div class="module-head">
+            <div class="title-row">
+                <h2>{{ module.nombre }}</h2>
+                <span class="base">{{ module.base }}</span>
+            </div>
+            <p>{{ module.descripcion }}</p>
+        </div>
+
+        {% for ep in module.endpoints %}
+        <div class="endpoint">
+            <div class="methods">
+                {% for metodo in ep.metodos %}
+                <span class="m m-{{ metodo }}">{{ metodo }}</span>
+                {% endfor %}
+            </div>
+            <div>
+                <span class="path" data-full="{{ base_url }}{{ module.base }}{{ ep.ruta }}">{{ module.base }}{{ ep.ruta }}</span>
+                <p class="desc">{{ ep.desc }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endfor %}
+
+    <footer class="api-footer">
+        TraceX · Referencia generada desde las rutas del backend (Servicios).
+    </footer>
+
+</div>
+
+
+<script>
+// Clic en una ruta -> copia la URL completa al portapapeles.
+document.querySelectorAll('.path').forEach(function (el) {
+    el.addEventListener('click', function () {
+        const full = el.getAttribute('data-full') || el.textContent;
+        navigator.clipboard.writeText(full).then(function () {
+            el.classList.add('copied');
+            setTimeout(function () { el.classList.remove('copied'); }, 1200);
+        });
+    });
+});
+</script>
+
+</body>
+</html>
