@@ -26,7 +26,6 @@ urlpatterns = [
     path("api/lineas/", include("lineas.urls")),
     path("api/produccion/", include("produccion.urls")),
     path("api/componentes/", include("componentes.urls")),
-    # Catch-all: cualquier URL que no exista muestra el índice (con aviso 404).
-    # Debe ir al final para no opacar las rutas reales.
-    re_path(r'^.*$', not_found, name='not-found'),
+    path("api/embalaje/", include("embalaje.urls")),
+    path("api/calidad/", include("calidad.urls")),
 ]

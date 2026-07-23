@@ -155,3 +155,83 @@ FROM componente c
 LEFT JOIN linea             l  ON l.codigo  = c.linea
 LEFT JOIN modelo_componente mc ON mc.codigo = c.modelo
 LEFT JOIN edo_componente    ec ON ec.codigo = c.estado;
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW vista_empleados AS
+SELECT
+    e.numero,
+    CONCAT(e.nombrePila, ' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS nombre_completo,
+    e.rol AS rol_codigo,
+    r.nombre AS rol_nombre,
+    e.turno AS turno_codigo,
+    t.nombre AS turno_nombre,
+    u.usuario,
+    CASE
+        WHEN u.numero IS NULL THEN 'Sin usuario'
+        WHEN u.estado = 1 THEN 'Activo'
+        ELSE 'Inactivo'
+    END AS estado_usuario,
+    CASE
+        WHEN e.activo = 1 THEN 'Activo'
+        ELSE 'Inactivo'
+    END AS estado_empleado
+FROM empleado e
+
+LEFT JOIN rol r ON r.codigo = e.rol
+LEFT JOIN turno t ON t.codigo = e.turno
+LEFT JOIN usuario u ON u.empleado = e.numero;
+
+----------------------------------------------------------------------------------------------------------------------------------
+CREATE VIEW vista_usuarios AS
+SELECT
+    u.numero,
+    u.usuario,
+    e.numero AS empleado_numero,
+    CONCAT( e.nombrePila,' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS empleado_nombre,
+    r.nombre AS rol_nombre,
+    CASE WHEN u.estado = 1 THEN 'Activo'
+        ELSE 'Inactivo'
+    END AS estado_usuario
+FROM usuario u
+LEFT JOIN empleado e ON e.numero = u.empleado
+LEFT JOIN rol r ON r.codigo = e.rol;
+---------------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW vista_inspeccion_calidad AS
+SELECT 
+    ic.numero,
+    ic.resultado,
+    CASE 
+        WHEN ic.resultado = 1 THEN 'Aprobada'
+        WHEN ic.resultado = 0 THEN 'Rechazada'
+        WHEN ic.resultado = 2 THEN 'Continuar ensamblaje'
+    END AS resultado_nombre,
+    ic.observaciones,
+    ic.fecha,
+    ic.hora,
+    ic.laptop AS numero_laptop,
+    ic.empleado AS numero_empleado,
+    CONCAT( e.nombrePila,' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS empleado_nombre,
+    ic.linea AS linea_codigo,
+    l.nombre AS linea_nombre
+FROM inspeccion_calidad ic
+LEFT JOIN empleado e ON e.numero = ic.empleado
+LEFT JOIN linea l ON l.codigo = ic.linea;
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW vista_registro_embalaje AS
+SELECT 
+    re.numero,
+    re.fecha,
+    re.hora,
+    re.laptop AS laptop_numero,
+    l.num_serie AS laptop_num_serie,
+    re.tipo AS tipo_codigo,
+    te.nombre AS tipo_nombre
+FROM registro_embalaje re
+LEFT JOIN tipo_embalaje te ON te.codigo = re.tipo
+LEFT JOIN laptop l ON l.numero = re.laptop;
