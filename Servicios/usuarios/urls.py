@@ -20,4 +20,8 @@ urlpatterns = [
     path("Usuario/Actualizar/<int:numero>/", UpdateUsuarioAPIView.as_view(), name="actualizar_usuario"),
     path("Usuario/Desactivar/<int:numero>/", BajaUsuarioAPIView.as_view(), name="desactivar_usuario"),
     path("Usuario/Reactivar/<int:numero>/", views.ReactivarUsuarioAPIView.as_view(), name="reactivar_usuario"),
+    path("Empleado/Buscar/", views.BuscarUsuarioView.as_view(), name="buscar_empleado"),
+    path("Usuario/Buscar/", views.BuscarUsuarioView.as_view(), name="buscar_usuario"),
+    path("Empleado/Linea/Buscar/", views.BuscarEmpleadoLineaView.as_view(), name="buscar_empleado-linea"),
+    path("Empleado/Estacion/Buscar/", views.BuscarEmpleadoEstacionView.as_view(), name="buscar_empleado-estacion")
 ]

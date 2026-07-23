@@ -13,10 +13,12 @@ from rest_framework.views import APIView
 from lineas.models import Estacion, Linea
 
 from usuarios import models, serializers
-from .models import Sesion, Usuario, Empleado, VistaEmpleado, VistaUsuario
+
+from .models import Sesion, Usuario, Empleado, VistaEmpleado, VistaUsuario, EmpleadoEstacion, EmpleadoLinea
 from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleadoSerializer, UpdateEmpleadoSerializer, BajaEmpleadoSerializer
 from usuarios.permissions import TienePermisoModulo
 
+from django.db.models import Q
 #################################
 # MARLENE MARLENE MARLENE AHORA EN POSTMAN usa "Bearer tu_token", en la parte donde tienes que poner tu token
 ###########################
@@ -588,15 +590,115 @@ class DetailEmpleadoAPIView(APIView):
         return Response(serializer.data)
     
 #. . . . . .  . Update
-class UpdateEmpleadoView(generics.RetrieveUpdateAPIView):
+class UpdateEmpleadoAPIView(APIView):
+
     permission_classes = [
-                IsAuthenticated,
-                TienePermisoModulo
-            ]
-    modulo = "empleados" 
-    queryset = Empleado.objects.all()
-    serializer_class = UpdateEmpleadoSerializer
-    lookup_field = "numero"
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "empleados"
+
+
+    def put(self, request, numero):
+
+        try:
+            empleado = Empleado.objects.get(
+                numero=numero
+            )
+
+        except Empleado.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje": "Empleado no encontrado"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+        serializer = serializers.UpdateEmpleadoSerializer(
+            empleado,
+            data=request.data,
+            partial=True
+        )
+
+
+        if not serializer.is_valid():
+
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        # Guardar datos normales del empleado
+        empleado = serializer.save()
+
+
+
+        # ===============================
+        # CAMBIO DE LINEA
+        # ===============================
+
+        linea = request.data.get("linea")
+
+
+        if linea:
+
+            # Cerrar línea actual
+            EmpleadoLinea.objects.filter(
+                empleado=empleado,
+                fecha_fin__isnull=True
+            ).update(
+                fecha_fin=timezone.now().date()
+            )
+
+
+            # Crear nueva asignación
+
+            EmpleadoLinea.objects.create(
+                empleado=empleado,
+                linea_id=linea,
+                fecha_inicio=timezone.now().date()
+            )
+
+
+
+        # ===============================
+        # CAMBIO DE ESTACION
+        # ===============================
+
+        estacion = request.data.get("estacion")
+
+
+        if estacion:
+
+            # Cerrar estación actual
+
+            EmpleadoEstacion.objects.filter(
+                empleado=empleado,
+                fecha_fin__isnull=True
+            ).update(
+                fecha_fin=timezone.now().date()
+            )
+
+
+            # Crear nueva asignación
+
+            EmpleadoEstacion.objects.create(
+                empleado=empleado,
+                estacion_id=estacion,
+                fecha_inicio=timezone.now().date()
+            )
+
+
+        return Response(
+            {
+                "mensaje": "Empleado actualizado correctamente"
+            },
+            status=status.HTTP_200_OK
+        )
     
     
 #. . . . . .  . DELETE 
@@ -612,3 +714,153 @@ class BajaEmpleadoView(generics.UpdateAPIView):
     serializer_class = BajaEmpleadoSerializer
     lookup_field = "numero"
     
+#
+
+
+
+#Buscar empleado
+class BuscarEmpleadoView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "empleados"
+
+    serializer_class = serializers.ListEmpleadoSerializer
+
+
+    def get_queryset(self):
+
+        queryset = Empleado.objects.all()
+
+        buscar = self.request.GET.get("buscar")
+
+
+        if buscar:
+
+            queryset = queryset.filter(
+
+                Q(numero__icontains=buscar) |
+                Q(nombrepila__icontains=buscar) |
+                Q(primerapell__icontains=buscar) |
+                Q(segundoapell__icontains=buscar) |
+                Q(rol__nombre__icontains=buscar) |
+                Q(turno__nombre__icontains=buscar)
+
+            )
+
+
+        return queryset
+    
+    
+#buscar usuario
+class BuscarUsuarioView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "usuarios"
+
+
+    serializer_class = serializers.ListUsuarioSerializer
+
+
+    def get_queryset(self):
+
+        queryset = Usuario.objects.all()
+
+        buscar = self.request.GET.get("buscar")
+
+
+        if buscar:
+
+            queryset = queryset.filter(
+
+                Q(numero__icontains=buscar) |
+                Q(usuario__icontains=buscar) |
+                Q(empleado__nombrepila__icontains=buscar) |
+                Q(empleado__primerapell__icontains=buscar)
+
+            )
+
+
+        return queryset
+    
+    
+    
+#Buscar empleados lineas
+class BuscarEmpleadoLineaView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "usuarios"
+
+    serializer_class = serializers.ListEmpleadoLineaSerializer
+
+
+    def get_queryset(self):
+
+        queryset = EmpleadoLinea.objects.filter(
+            fecha_fin__isnull=True
+        )
+
+        buscar = self.request.GET.get("buscar")
+
+
+        if buscar:
+
+            queryset = queryset.filter(
+
+                Q(empleado__nombrepila__icontains=buscar) |
+                Q(empleado__primerapell__icontains=buscar) |
+                Q(linea__nombre__icontains=buscar)
+
+            )
+
+
+        return queryset
+    
+    
+#buscar empleado estacion
+class BuscarEmpleadoEstacionView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "usuarios"
+
+
+    serializer_class = serializers.ListEmpleadoEstacionSerializer
+
+
+    def get_queryset(self):
+
+        queryset = EmpleadoEstacion.objects.filter(
+            fecha_fin__isnull=True
+        )
+
+
+        buscar = self.request.GET.get("buscar")
+
+
+        if buscar:
+
+            queryset = queryset.filter(
+
+                Q(empleado__nombrepila__icontains=buscar) |
+                Q(empleado__primerapell__icontains=buscar) |
+                Q(estacion__nombre__icontains=buscar)
+
+            )
+
+
+        return queryset
