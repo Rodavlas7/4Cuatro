@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 from django.utils import timezone
 
-from .models import InspeccionCalidad
+from .models import InspeccionCalidad, VistaInspeccionCalidad
 from . import serializers
 
 from usuarios.permissions import TienePermisoModulo
@@ -140,7 +140,7 @@ class RegistroInspeccionCalidadAPIView(APIView):
 
 
 
-
+'''
 # . . . . . .  . LISTA
 
 class ListaInspeccionCalidadAPIView(APIView):
@@ -206,7 +206,75 @@ class DetailInspeccionCalidadAPIView(APIView):
             serializer.data
         )
 
+'''
 
+# Asegúrate de importar el nuevo modelo:
+# from .models import InspeccionCalidad, VistaInspeccionCalidad
+
+
+# . . . . . .  . LISTA con la vista
+
+class ListaInspeccionCalidadAPIView(APIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "calidad"
+
+    def get(self, request):
+
+        inspecciones = VistaInspeccionCalidad.objects.all()
+
+        # Usamos el serializer de lista (ligero)
+        serializer = serializers.ListVistaInspeccionSerializer(
+            inspecciones,
+            many=True
+        )
+
+        return Response(
+            serializer.data
+        )
+
+
+# . . . . . .  . DETAIL
+
+class DetailInspeccionCalidadAPIView(APIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "calidad"
+
+    def get(self, request, numero):
+
+        try:
+            
+            inspeccion = VistaInspeccionCalidad.objects.get(
+                numero=numero
+            )
+
+        except VistaInspeccionCalidad.DoesNotExist:
+
+            return Response(
+                {
+                    "mensaje":
+                    "Inspección de calidad no encontrada"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Usamos el serializer de detalle (completo)
+        serializer = serializers.DetailVistaInspeccionSerializer(
+            inspeccion
+        )
+
+        return Response(
+            serializer.data
+        )
 
 
 # . . . . . .  . UPDATE

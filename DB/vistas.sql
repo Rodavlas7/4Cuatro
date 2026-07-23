@@ -198,3 +198,40 @@ SELECT
 FROM usuario u
 LEFT JOIN empleado e ON e.numero = u.empleado
 LEFT JOIN rol r ON r.codigo = e.rol;
+---------------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW vista_inspeccion_calidad AS
+SELECT 
+    ic.numero,
+    ic.resultado,
+    CASE 
+        WHEN ic.resultado = 1 THEN 'Aprobada'
+        WHEN ic.resultado = 0 THEN 'Rechazada'
+        WHEN ic.resultado = 2 THEN 'Continuar ensamblaje'
+    END AS resultado_nombre,
+    ic.observaciones,
+    ic.fecha,
+    ic.hora,
+    ic.laptop AS numero_laptop,
+    ic.empleado AS numero_empleado,
+    CONCAT( e.nombrePila,' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS empleado_nombre,
+    ic.linea AS linea_codigo,
+    l.nombre AS linea_nombre
+FROM inspeccion_calidad ic
+LEFT JOIN empleado e ON e.numero = ic.empleado
+LEFT JOIN linea l ON l.codigo = ic.linea;
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW vista_registro_embalaje AS
+SELECT 
+    re.numero,
+    re.fecha,
+    re.hora,
+    re.laptop AS laptop_numero,
+    l.num_serie AS laptop_num_serie,
+    re.tipo AS tipo_codigo,
+    te.nombre AS tipo_nombre
+FROM registro_embalaje re
+LEFT JOIN tipo_embalaje te ON te.codigo = re.tipo
+LEFT JOIN laptop l ON l.numero = re.laptop;

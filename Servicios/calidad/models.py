@@ -25,3 +25,23 @@ class InspeccionCalidad(models.Model):
     class Meta:
         managed = False
         db_table = 'inspeccion_calidad'
+        
+        
+#-------------------------------------VISTA INSPECCION CALIDAD---------------------------------------------
+
+class VistaInspeccionCalidad(models.Model):
+    numero = models.IntegerField(primary_key=True)
+    resultado = models.IntegerField(blank=True, null=True)
+    resultado_nombre = models.CharField(max_length=50, blank=True, null=True)
+    observaciones = models.CharField(max_length=256, blank=True, null=True)
+    fecha = models.DateField(blank=True, null=True)
+    hora = models.TimeField(blank=True, null=True)
+    laptop_numero = models.IntegerField(blank=True, null=True)
+    empleado_id = models.IntegerField(blank=True, null=True)
+    empleado_nombre = models.CharField(max_length=256, blank=True, null=True)
+    linea_codigo = models.CharField(max_length=50, blank=True, null=True)
+    linea_nombre = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'vista_inspeccion_calidad'

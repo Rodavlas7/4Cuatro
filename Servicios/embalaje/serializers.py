@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from embalaje.models import RegistroEmbalaje
+from embalaje.models import RegistroEmbalaje, VistaRegistroEmbalaje
 
 
 #----------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ class CreateRegistroEmbalajeSerializer(serializers.ModelSerializer):
 
 
 
-# . . . . . .  . LISTAR
+'''# . . . . . .  . LISTAR
 class ListRegistroEmbalajeSerializer(serializers.ModelSerializer):
     laptop = serializers.CharField(
         source="laptop.num_serie",
@@ -48,7 +48,27 @@ class DetailRegistroEmbalajeSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegistroEmbalaje
 
+        fields = "__all__"'''
+        
+#--------------------------------------------------------------------------------------------------
+class ListVistaRegistroEmbalajeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VistaRegistroEmbalaje
+        # Ponemos los equivalentes exactos a los que tenías
+        fields = (
+            "numero",
+            "fecha",
+            "hora",
+            "laptop_num_serie", 
+            "tipo_nombre",
+        )
+
+# . . . . . .  . DETAIL
+class DetailVistaRegistroEmbalajeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VistaRegistroEmbalaje
         fields = "__all__"
+#---------------------------------------------------------------------------------------------------------
 
 
 # . . . . . .  . UPDATE
