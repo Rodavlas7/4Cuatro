@@ -17,6 +17,12 @@ from usuarios.models import EmpleadoLinea
 from django.db import OperationalError
 
 
+
+
+from django.db.models import Q
+
+
+
 #----------------------------------------------------------------------------------------------
 #           I N S P E C C I O N   C A L I D A D     V I E W S
 #----------------------------------------------------------------------------------------------
@@ -264,3 +270,45 @@ class DeleteInspeccionCalidadAPIView(APIView):
                 "Inspección de calidad eliminada correctamente"
             }
         )
+        
+       
+#busqueda 
+class BuscarInspeccionCalidadView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "calidad"
+
+    serializer_class = serializers.ListInspeccionCalidadSerializer
+
+
+    def get_queryset(self):
+
+        queryset = InspeccionCalidad.objects.all()
+
+        buscar = self.request.GET.get("buscar")
+
+
+        if buscar:
+
+            queryset = queryset.filter(
+
+                Q(numero__icontains=buscar) |
+
+                Q(laptop__numero__icontains=buscar) |
+
+                Q(empleado__nombrepila__icontains=buscar) |
+
+                Q(empleado__primerapell__icontains=buscar) |
+
+                Q(linea__nombre__icontains=buscar) |
+
+                Q(observaciones__icontains=buscar)
+
+            )
+
+
+        return queryset.order_by("-fecha", "-hora")

@@ -14,6 +14,16 @@ from . import serializers
 from calidad.models import InspeccionCalidad
 
 
+from rest_framework import generics
+
+
+from django.db.models import Q
+
+
+
+
+
+
 
 #----------------------------------------------------------------------------------------------
 #           R E G I S T R O   E M B A L A J E     V I E W S
@@ -340,4 +350,46 @@ class DeleteRegistroEmbalajeAPIView(APIView):
                 "mensaje":
                 "Registro de embalaje eliminado correctamente"
             }
+        )
+        
+        
+        
+#busqueda
+class BuscarRegistroEmbalajeView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+
+    modulo = "embalaje"
+
+
+    serializer_class = serializers.ListRegistroEmbalajeSerializer
+
+
+    def get_queryset(self):
+
+        queryset = RegistroEmbalaje.objects.all()
+
+
+        buscar = self.request.GET.get("buscar")
+
+
+        if buscar:
+
+            queryset = queryset.filter(
+
+                Q(numero__icontains=buscar) |
+
+                Q(laptop__num_serie__icontains=buscar) |
+
+                Q(tipo__nombre__icontains=buscar)
+
+            )
+
+
+        return queryset.order_by(
+            "-fecha",
+            "-hora"
         )
