@@ -251,7 +251,7 @@ END$$
 --     de asignar el número de serie automáticamente.
 
 
-CREATE  or replace TRIGGER tg_Actualizar_Estado_Laptop_Inspeccion_Calidad
+CREATE TRIGGER tg_Actualizar_Estado_Laptop_Inspeccion_Calidad
 AFTER INSERT ON inspeccion_calidad
 FOR EACH ROW
 BEGIN

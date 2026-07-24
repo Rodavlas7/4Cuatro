@@ -1,4 +1,4 @@
--- Active: 1784571729921@@127.0.0.1@3306@cuatro
+-- Active: 1783038914702@@localhost@3306@cuatro
 
 -- TRACEX — Estructura de base de datos
 -- Version: 2026-07-15
@@ -65,7 +65,7 @@ CREATE TABLE edo_produccion (
 
 DROP TABLE IF EXISTS empleado;
 CREATE TABLE empleado (
-  numero int NOT NULL,
+  numero int NOT NULL AUTO_INCREMENT,
   nombrePila varchar(50) DEFAULT NULL,
   primerApell varchar(32) DEFAULT NULL,
   segundoApell varchar(32) DEFAULT NULL,
@@ -396,6 +396,3 @@ CREATE UNIQUE INDEX IUK_serie_laptop ON laptop(num_serie);
 ALTER TABLE usuario
 MODIFY estado TINYINT(1) NOT NULL DEFAULT 1;
 
-
-ALTER TABLE empleado
-MODIFY COLUMN numero INT NOT NULL AUTO_INCREMENT;
