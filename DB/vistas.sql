@@ -158,7 +158,15 @@ LEFT JOIN edo_componente    ec ON ec.codigo = c.estado;
 
 
 
---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+-- VISTA: vista_empleados
+--
+-- Objetivo : Consulta general del módulo de empleados — une el empleado
+--            con su nombre completo, el nombre de su rol y turno, su
+--            usuario y el estado (empleado y usuario), para no resolver
+--            esos joins en cada consulta desde el backend.
 
 CREATE VIEW vista_empleados AS
 SELECT
@@ -184,7 +192,14 @@ LEFT JOIN rol r ON r.codigo = e.rol
 LEFT JOIN turno t ON t.codigo = e.turno
 LEFT JOIN usuario u ON u.empleado = e.numero;
 
-----------------------------------------------------------------------------------------------------------------------------------
+
+
+-- VISTA: vista_usuarios
+--
+-- Objetivo : Consulta general del módulo de usuarios — une la cuenta con
+--            el nombre de su empleado, el nombre de su rol y su estado,
+--            para no resolver esos joins en cada consulta desde el backend.
+
 CREATE VIEW vista_usuarios AS
 SELECT
     u.numero,
@@ -198,7 +213,13 @@ SELECT
 FROM usuario u
 LEFT JOIN empleado e ON e.numero = u.empleado
 LEFT JOIN rol r ON r.codigo = e.rol;
----------------------------------------------------------------------------------------------------------------------------------
+
+-- VISTA: vista_inspeccion_calidad
+--
+-- Objetivo : Consulta general del módulo de calidad — une la inspección
+--            con el nombre de su resultado, el nombre del empleado que la
+--            realizó y el nombre de su línea, para no resolver esos joins
+--            en cada consulta desde el backend.
 
 CREATE VIEW vista_inspeccion_calidad AS
 SELECT 
@@ -212,8 +233,8 @@ SELECT
     ic.observaciones,
     ic.fecha,
     ic.hora,
-    ic.laptop AS numero_laptop,
-    ic.empleado AS numero_empleado,
+    ic.laptop AS laptop_numero,
+    ic.empleado AS empleado_id,
     CONCAT( e.nombrePila,' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS empleado_nombre,
     ic.linea AS linea_codigo,
     l.nombre AS linea_nombre
@@ -221,7 +242,15 @@ FROM inspeccion_calidad ic
 LEFT JOIN empleado e ON e.numero = ic.empleado
 LEFT JOIN linea l ON l.codigo = ic.linea;
 
---------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+-- VISTA: vista_registro_embalaje
+--
+-- Objetivo : Consulta general del módulo de embalaje — une el registro
+--            con el número de serie de su laptop y el nombre de su tipo
+--            de embalaje, para no resolver esos joins en cada consulta
+--            desde el backend.
 
 CREATE VIEW vista_registro_embalaje AS
 SELECT 
