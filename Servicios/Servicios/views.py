@@ -28,6 +28,10 @@ API_MODULES = [
             {"metodos": ["PUT"], "ruta": "Usuario/Actualizar/<numero>/", "desc": "Actualiza una cuenta de usuario."},
             {"metodos": ["PATCH"], "ruta": "Usuario/Desactivar/<numero>/", "desc": "Desactiva una cuenta de usuario."},
             {"metodos": ["PATCH"], "ruta": "Usuario/Reactivar/<numero>/", "desc": "Reactiva una cuenta de usuario dada de baja."},
+            {"metodos": ["GET"], "ruta": "Empleado/Buscar/", "desc": "Busca empleados con ?buscar=<texto>."},
+            {"metodos": ["GET"], "ruta": "Usuario/Buscar/", "desc": "Busca cuentas de usuario con ?buscar=<texto>."},
+            {"metodos": ["GET"], "ruta": "Empleado/Linea/Buscar/", "desc": "Busca empleados por línea asignada."},
+            {"metodos": ["GET"], "ruta": "Empleado/Estacion/Buscar/", "desc": "Busca empleados por estación asignada."},
         ],
     },
     {
@@ -92,6 +96,32 @@ API_MODULES = [
             {"metodos": ["PUT", "DELETE"], "ruta": "ordenes/mod/<numero>/", "desc": "Modifica o elimina una orden de material."},
             {"metodos": ["GET", "POST"], "ruta": "detalles/", "desc": "Renglones de material; alta de un renglón en una orden."},
             {"metodos": ["PUT", "DELETE"], "ruta": "detalles/mod/<orden>/<modelo>/", "desc": "Modifica la cantidad o elimina un renglón de material."},
+        ],
+    },
+    {
+        "nombre": "Calidad",
+        "base": "/api/calidad/",
+        "descripcion": "Inspecciones de calidad de las laptops.",
+        "endpoints": [
+            {"metodos": ["POST"], "ruta": "Inspeccion/Registrar/", "desc": "Registra una nueva inspección de calidad."},
+            {"metodos": ["GET"], "ruta": "Inspeccion/Listar/", "desc": "Lista todas las inspecciones (vista SQL)."},
+            {"metodos": ["GET"], "ruta": "Inspeccion/Detalle/<numero>/", "desc": "Detalle de una inspección."},
+            {"metodos": ["PUT", "PATCH"], "ruta": "Inspeccion/Actualizar/<numero>/", "desc": "Actualiza una inspección."},
+            {"metodos": ["DELETE"], "ruta": "Inspeccion/Eliminar/<numero>/", "desc": "Elimina una inspección."},
+            {"metodos": ["GET"], "ruta": "Inspeccion/Buscar/", "desc": "Busca inspecciones con ?buscar=<texto>."},
+        ],
+    },
+    {
+        "nombre": "Embalaje",
+        "base": "/api/embalaje/",
+        "descripcion": "Registros de embalaje de las laptops terminadas.",
+        "endpoints": [
+            {"metodos": ["POST"], "ruta": "Embalaje/Registrar/", "desc": "Registra un nuevo embalaje."},
+            {"metodos": ["GET"], "ruta": "Embalaje/Listar/", "desc": "Lista todos los registros de embalaje (vista SQL)."},
+            {"metodos": ["GET"], "ruta": "Embalaje/Detalle/<numero>/", "desc": "Detalle de un registro de embalaje."},
+            {"metodos": ["PUT", "PATCH"], "ruta": "Embalaje/Actualizar/<numero>/", "desc": "Actualiza un registro de embalaje."},
+            {"metodos": ["DELETE"], "ruta": "Embalaje/Eliminar/<numero>/", "desc": "Elimina un registro de embalaje."},
+            {"metodos": ["GET"], "ruta": "Embalaje/Buscar/", "desc": "Busca registros de embalaje con ?buscar=<texto>."},
         ],
     },
 ]
