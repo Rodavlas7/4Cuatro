@@ -1,0 +1,29 @@
+  /* ====================================================================================================================
+   SIDEBAR SUBMENUS HOVER
+============================================================================================================================ */
+
+
+/* Submenú */
+
+.submenu{
+    margin-left: 20px;
+    border-left: 2px solid #495057;
+    padding-left: 10px;
+}
+
+.submenu .nav-link{
+    font-size: .90rem;
+    color: #ced4da !important;
+}
+
+.submenu .nav-link:hover{
+    background: #495057;
+    border-radius: 6px;
+    color: white !important;
+}
+
+/* Chevron */
+
+.chevron{
+    transition: transform .25s ease;
+}
