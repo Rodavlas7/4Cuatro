@@ -16,7 +16,7 @@ def dashboardView(request):
 
     return render(
         request,
-        'home/dashboard.html'
+        'dashboard/dashboard.html'
     )
 
 '''def dashboardView(request):
