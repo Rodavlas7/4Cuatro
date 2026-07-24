@@ -11,6 +11,10 @@ DROP VIEW IF EXISTS vista_ordenes_produccion;
 DROP VIEW IF EXISTS vista_componentes;
 DROP VIEW IF EXISTS vista_paros;
 DROP VIEW IF EXISTS vista_laptops;
+DROP VIEW IF EXISTS vista_empleados;
+DROP VIEW IF EXISTS vista_usuarios;
+DROP VIEW IF EXISTS vista_inspeccion_calidad;
+DROP VIEW IF EXISTS vista_registro_embalaje;
 
 
 
