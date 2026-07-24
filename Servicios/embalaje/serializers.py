@@ -20,7 +20,7 @@ class CreateRegistroEmbalajeSerializer(serializers.ModelSerializer):
 
 
 
-'''# . . . . . .  . LISTAR
+# . . . . . .  . LISTAR
 class ListRegistroEmbalajeSerializer(serializers.ModelSerializer):
     laptop = serializers.CharField(
         source="laptop.num_serie",
@@ -48,8 +48,8 @@ class DetailRegistroEmbalajeSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegistroEmbalaje
 
-        fields = "__all__"'''
-        
+        fields = "__all__"
+
 #--------------------------------------------------------------------------------------------------
 class ListVistaRegistroEmbalajeSerializer(serializers.ModelSerializer):
     class Meta:
