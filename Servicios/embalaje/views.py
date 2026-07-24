@@ -429,7 +429,7 @@ class BuscarRegistroEmbalajeView(generics.ListAPIView):
     modulo = "embalaje"
 
 
-    serializer_class = serializers.ListRegistroEmbalajeSerializer
+    serializer_class = serializers.ListVistaRegistroEmbalajeSerializer
 
 
     def get_queryset(self):
