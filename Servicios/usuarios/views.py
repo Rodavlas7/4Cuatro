@@ -138,16 +138,19 @@ class LoginAPIView(APIView):
             )
 
         # GENERAR TOKEN
-        # Eliminar sesiones anteriores
-        Sesion.objects.filter(
-            usuario=usuario_db
-        ).delete()
-
         token = token_hex(32)
-        
+
         ahora = timezone.now()
         expiracion = ahora + timedelta(hours=10)
-        
+
+        # Limpiar sólo las sesiones ya vencidas: si se borraran todas, iniciar
+        # sesión en la API tumbaría el token que el cliente ya tenía guardado
+        # (y al revés), porque ambos usan este mismo endpoint.
+        Sesion.objects.filter(
+            usuario=usuario_db,
+            fecha_expiracion__lt=ahora
+        ).delete()
+
         # Crear nueva sesión
         Sesion.objects.create(
             usuario=usuario_db,

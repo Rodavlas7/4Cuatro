@@ -5,6 +5,12 @@ from django.utils import timezone
 from .models import Sesion
 
 
+# Cookie de host compartida entre el cliente (:8001) y la API (:8000).
+# Las cookies no distinguen puerto, así que el token que guarda el cliente al
+# iniciar sesión llega también hasta aquí y no hace falta loguearse dos veces.
+TOKEN_COOKIE = "token_4cuatro"
+
+
 class TokenAuthentication(BaseAuthentication):
 
     def authenticate(self, request):
@@ -17,10 +23,10 @@ class TokenAuthentication(BaseAuthentication):
                 raise AuthenticationFailed("Formato de token inválido")
             token = auth_header.split(" ")[1]
         else:
-            # Permite navegar la API sin pegar el Bearer a mano.
-            token = getattr(request, "session", {}).get("token")
+            # Navegador: token en la cookie que comparten cliente y API
+            token = request.COOKIES.get(TOKEN_COOKIE)
 
-        # Sin token en ningún lado -> no autenticar (las vistas AllowAny siguen ok).
+        # Sin token en ningún lado
         if not token:
             return None
 

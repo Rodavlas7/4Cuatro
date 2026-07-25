@@ -3,13 +3,22 @@
 
 Flujo web:
   - url /            -> formulario de login (copiado del cliente).
-  - al iniciar sesión guarda el token en la sesión del navegador y redirige al índice.
+  - al iniciar sesión guarda el token en una cookie y redirige al índice.
   - url /index/      -> índice de endpoints (requiere haber iniciado sesión).
-Con el token en la sesión, la API se puede navegar sin pegar el Bearer a mano
-(ver usuarios/authentication.py).
+El token vive en una cookie de host (TOKEN_COOKIE) en vez de en la sesión de
+Django: como las cookies no distinguen puerto, la que pone el cliente en :8001
+llega hasta la API en :8000, así que iniciar sesión en el cliente basta para
+navegar la API sin pegar el Bearer a mano (ver usuarios/authentication.py).
 """
 import requests
 from django.shortcuts import render, redirect
+from django.utils import timezone
+
+from usuarios.authentication import TOKEN_COOKIE
+from usuarios.models import Sesion
+
+# El token dura 10 horas (ver LoginAPIView); la cookie vence a la par.
+TOKEN_COOKIE_MAX_AGE = 10 * 60 * 60
 
 
 # Inventario de endpoints agrupados por módulo (base = prefijo del include en urls.py).
@@ -131,12 +140,27 @@ API_MODULES = [
 ]
 
 
+def _sesion_activa(request):
+    """Sesión (fila de la tabla sesion) que corresponde al token de la cookie,
+    o None si no hay cookie, el token no existe o ya venció. Sirve tanto para
+    el login hecho aquí como para el hecho en el cliente."""
+    token = request.COOKIES.get(TOKEN_COOKIE)
+    if not token:
+        return None
+
+    sesion = Sesion.objects.filter(token=token).first()
+    if sesion is None or sesion.fecha_expiracion < timezone.now():
+        return None
+
+    return sesion
+
+
 def login_view(request):
     """Formulario de login en la raíz (/). Copiado del cliente: envía las
-    credenciales al endpoint de login de la API, guarda el token en la sesión
-    del navegador y redirige al índice."""
-    # Si ya hay sesión iniciada, directo al índice.
-    if request.session.get("token"):
+    credenciales al endpoint de login de la API, guarda el token en la cookie
+    compartida y redirige al índice."""
+    # Si ya hay sesión iniciada (aquí o en el cliente), directo al índice.
+    if _sesion_activa(request):
         return redirect("api-index")
 
     if request.method == "POST":
@@ -154,11 +178,15 @@ def login_view(request):
                           {"error": "No se pudo conectar con la API."})
 
         if respuesta.status_code == 200:
-            request.session["token"] = datos.get("token")
-            request.session["usuario"] = datos.get("usuario")
-            request.session["rol"] = datos.get("rol")
-            request.session["nombre"] = datos.get("nombre")
-            return redirect("api-index")
+            respuesta_http = redirect("api-index")
+            respuesta_http.set_cookie(
+                TOKEN_COOKIE,
+                datos.get("token"),
+                max_age=TOKEN_COOKIE_MAX_AGE,
+                httponly=True,
+                samesite="Lax",
+            )
+            return respuesta_http
 
         return render(request, "login.html",
                       {"error": datos.get("mensaje", "Credenciales inválidas.")})
@@ -167,14 +195,20 @@ def login_view(request):
 
 
 def logout_view(request):
-    """Cierra la sesión web y vuelve al login."""
-    request.session.flush()
-    return redirect("/")
+    """Cierra la sesión web (aquí y en el cliente, porque la cookie es la
+    misma) y vuelve al login."""
+    respuesta_http = redirect("/")
+    respuesta_http.delete_cookie(TOKEN_COOKIE)
+    return respuesta_http
 
 
-def _render_index(request, *, status=200, not_found=False):
-    """Renderiza el índice de endpoints. Reutilizado por el índice y por el 404."""
+def _render_index(request, sesion, *, status=200, not_found=False):
+    """Renderiza el índice de endpoints. Reutilizado por el índice y por el 404.
+    Los datos del usuario salen de la sesión de la BD, no de la sesión de
+    Django, para que funcione igual si el login se hizo en el cliente."""
     total_endpoints = sum(len(m["endpoints"]) for m in API_MODULES)
+    empleado = getattr(sesion.usuario, "empleado", None)
+    rol = empleado.rol.codigo if empleado and empleado.rol else None
     return render(
         request,
         'api_index.html',
@@ -185,24 +219,26 @@ def _render_index(request, *, status=200, not_found=False):
             "total_endpoints": total_endpoints,
             "not_found": not_found,
             "attempted_path": request.path,
-            "usuario": request.session.get("usuario"),
-            "rol": request.session.get("rol"),
-            "token": request.session.get("token"),
+            "usuario": sesion.usuario.usuario,
+            "rol": rol,
+            "token": sesion.token,
         },
         status=status,
     )
 
 
 def api_index(request):
-    """Índice de endpoints. Requiere haber iniciado sesión en / (login)."""
-    if not request.session.get("token"):
+    """Índice de endpoints. Requiere haber iniciado sesión, aquí o en el cliente."""
+    sesion = _sesion_activa(request)
+    if sesion is None:
         return redirect("/")
-    return _render_index(request)
+    return _render_index(request, sesion)
 
 
 def not_found(request, unknown=None):
     """Cualquier URL inexistente lleva al índice con un aviso (estado 404).
     Si no hay sesión, primero manda al login."""
-    if not request.session.get("token"):
+    sesion = _sesion_activa(request)
+    if sesion is None:
         return redirect("/")
-    return _render_index(request, status=404, not_found=True)
+    return _render_index(request, sesion, status=404, not_found=True)
