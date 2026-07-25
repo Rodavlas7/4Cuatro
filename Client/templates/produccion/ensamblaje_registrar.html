@@ -1,0 +1,392 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Registrar Ensamblaje{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Registrar Ensamblaje</h2>
+</div>
+
+<!-- ...................................................................
+     PASO 1 — Elegir línea y laptop (al cambiar, se cargan los componentes)
+     La línea define de qué stock se surte: cada línea solo tiene los tipos
+     que instalan sus estaciones.
+...................................................................... -->
+<form method="GET" id="formLaptop" class="card p-3 mb-3 bg-white">
+    <div class="row g-3 align-items-end">
+
+        <div class="col-md-5">
+            <label class="form-label fw-semibold">
+                Línea <span class="text-danger">*</span>
+            </label>
+            <select name="linea" class="form-select" onchange="document.getElementById('formLaptop').submit();">
+                <option value="">— Selecciona una línea —</option>
+                {% for li in lineas %}
+                <option value="{{ li.codigo }}" {% if linea_sel == li.codigo %}selected{% endif %}>
+                    {{ li.codigo }} — {{ li.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+            <div class="form-text">
+                Como admin no se asigna sola: el stock mostrado es el de esta línea.
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <label class="form-label fw-semibold">
+                Laptop a ensamblar <span class="text-danger">*</span>
+            </label>
+            <select name="laptop" class="form-select" onchange="document.getElementById('formLaptop').submit();">
+                <option value="">— Selecciona una laptop —</option>
+                {% for l in laptops %}
+                <option value="{{ l.numero }}" {% if laptop_sel == l.numero|stringformat:"s" %}selected{% endif %}>
+                    #{{ l.numero }} · {{ l.num_serie|default:"sin serie" }} — {{ l.modelo_nombre|default:"?" }} ({{ l.estado_nombre }})
+                </option>
+                {% endfor %}
+            </select>
+            <div class="form-text">
+                Solo laptops que no están embaladas ni aprobadas para embalaje.
+            </div>
+        </div>
+
+    </div>
+</form>
+
+{% if not laptop_obj %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-1"></i>
+    Selecciona <strong>línea</strong> y <strong>laptop</strong> para ver los componentes compatibles y su stock.
+</div>
+{% endif %}
+
+
+{% if laptop_obj %}
+<!-- ...................................................................
+     PASO 2 — Componentes compatibles con el modelo de esa laptop
+...................................................................... -->
+<form method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="laptop" value="{{ laptop_obj.numero }}">
+    <input type="hidden" name="linea" value="{{ linea_sel }}">
+
+    <div class="card p-3 mb-3 bg-white">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Modelo</label>
+                <input type="text" class="form-control" value="{{ laptop_obj.modelo_nombre }} ({{ laptop_obj.modelo_codigo }})" disabled>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Línea (surte el stock)</label>
+                <input type="text" class="form-control" value="{{ linea_sel }}" disabled>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Estado actual</label>
+                <input type="text" class="form-control" value="{{ laptop_obj.estado_nombre }}" disabled>
+            </div>
+        </div>
+    </div>
+
+    {% if registro %}
+    <div class="alert alert-secondary py-2">
+        <i class="bi bi-clock-history me-1"></i>
+        Continúa el ensamblaje <strong>#{{ registro.numero }}</strong> de esta laptop —
+        iniciado el {{ registro.fecha_inicio|default:"(sin fecha)" }}
+        a las {{ registro.hora_inicio|default:"(sin hora)" }}.
+    </div>
+    {% endif %}
+
+    <div class="card bg-white mb-3">
+        <div class="card-header bg-white">
+            <strong>Componentes compatibles</strong>
+            <span class="text-muted small ms-2">
+                según <code>modelo_laptop_componente</code> · marca los que lleva y ajusta la cantidad
+            </span>
+        </div>
+
+        {% if componentes %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:52px;"></th>
+                        <th>Componente</th>
+                        <th>Tipo</th>
+                        <th class="text-center">Capacidad</th>
+                        <th class="text-center">Montado</th>
+                        <th class="text-center">Stock en {{ linea_sel }}</th>
+                        <th style="width:150px;">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in componentes %}
+                    <tr class="{% if c.sin_stock or c.tipo_lleno %}table-secondary{% endif %}">
+
+                        <td class="text-center">
+                            <input
+                                class="form-check-input chk-comp"
+                                type="checkbox"
+                                name="comp_{{ c.codigo }}"
+                                id="chk_{{ c.codigo }}"
+                                data-codigo="{{ c.codigo }}"
+                                data-tipo="{{ c.tipo_codigo }}"
+                                data-cap-tipo="{{ c.capacidad_tipo }}"
+                                {% if c.sin_stock or c.tipo_lleno %}disabled{% endif %}>
+                        </td>
+
+                        <td>
+                            <label class="form-check-label" for="chk_{{ c.codigo }}">
+                                <strong>{{ c.nombre|default:c.codigo }}</strong>
+                                <span class="text-muted small d-block">{{ c.codigo }}</span>
+                            </label>
+                        </td>
+
+                        <td><span class="badge text-bg-light">{{ c.tipo|default:"—" }}</span></td>
+
+                        <td class="text-center">
+                            <span class="badge text-bg-primary">{{ c.capacidad }}</span>
+                        </td>
+
+                        <td class="text-center">
+                            {% if c.montado %}
+                                <span class="badge text-bg-dark">{{ c.montado }} ✓</span>
+                            {% elif c.tipo_lleno %}
+                                <span class="text-muted small">tipo lleno</span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if c.sin_stock %}
+                                <span class="badge text-bg-danger">Sin stock</span>
+                            {% else %}
+                                <span class="badge text-bg-success">{{ c.disponibles }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if c.capacidad > 1 %}
+                                <!-- Puede llevar más de uno: caja numérica topada por la capacidad -->
+                                <input
+                                    type="number"
+                                    class="form-control form-control-sm cant-comp"
+                                    name="cant_{{ c.codigo }}"
+                                    id="cant_{{ c.codigo }}"
+                                    value="1"
+                                    min="1"
+                                    max="{{ c.maximo }}"
+                                    data-max-modelo="{{ c.maximo }}"
+                                    data-tipo="{{ c.tipo_codigo }}"
+                                    data-capacidad="{{ c.capacidad }}"
+                                    disabled>
+                                <div class="form-text small">máx. {{ c.maximo }}</div>
+                            {% else %}
+                                <span class="text-muted small">1 (única)</span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="card-body">
+            <div class="alert alert-warning mb-0">
+                Este modelo de laptop no tiene componentes registrados en
+                <code>modelo_laptop_componente</code>.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {{ tipos_info|json_script:"tiposData" }}
+
+    <div class="d-flex justify-content-end align-items-center gap-2">
+        <span id="avanceTipos" class="text-muted small me-auto"></span>
+
+        <a href="{% url 'ensamblaje-registrar' %}" class="btn btn-outline-secondary">Cancelar</a>
+
+        <button type="submit" name="accion" value="registrar"
+                class="btn btn-primary" {% if not componentes %}disabled{% endif %}>
+            <i class="bi bi-check2-circle me-1"></i> Registrar ensamblaje
+        </button>
+
+        <!-- Aparece solo cuando la laptop queda con todos sus tipos cubiertos -->
+        <button type="submit" name="accion" value="terminar"
+                id="btnTerminar" class="btn btn-danger d-none">
+            <i class="bi bi-flag-fill me-1"></i> Registrar y Terminar Ensamblaje
+        </button>
+    </div>
+
+</form>
+{% endif %}
+
+
+<script>
+// ---------------------------------------------------------------------------
+// El tope real es POR TIPO, no por modelo: una laptop con 1 socket de teclado
+// lleva UN teclado, da igual cuántos modelos de teclado sean compatibles.
+// Al llenarse las ranuras de un tipo se bloquean los demás checks de ese tipo.
+// ---------------------------------------------------------------------------
+var datosTipos = document.getElementById('tiposData');
+// { TC001: {nombre, capacidad, montado} }  -> "montado" son las piezas que ya
+// trae puestas este ensamblaje de antes; cuentan para llenar las ranuras.
+var TIPOS = datosTipos ? JSON.parse(datosTipos.textContent) : {};
+
+var porTipo = {};
+
+document.querySelectorAll('.chk-comp').forEach(function (chk) {
+    // Los que ya venían deshabilitados (sin stock o tipo lleno) no se re-habilitan.
+    chk.dataset.sinStock = chk.disabled ? '1' : '0';
+    (porTipo[chk.dataset.tipo] = porTipo[chk.dataset.tipo] || []).push(chk);
+});
+
+function montadoDe(tipo) {
+    return (TIPOS[tipo] && TIPOS[tipo].montado) || 0;
+}
+
+function cantidadDe(chk) {
+    if (!chk.checked) return 0;
+    var caja = document.getElementById('cant_' + chk.dataset.codigo);
+    if (!caja) return 1;                        // capacidad 1: no tiene caja
+    var v = parseInt(caja.value, 10);
+    return isNaN(v) ? 1 : v;
+}
+
+function refrescarTipo(tipo) {
+    var lista = porTipo[tipo] || [];
+    if (!lista.length) return;
+
+    var cap = parseInt(lista[0].dataset.capTipo, 10) || 1;
+    // Lo ya montado ocupa ranura igual que lo que se está marcando ahora.
+    var usado = montadoDe(tipo) +
+                lista.reduce(function (s, c) { return s + cantidadDe(c); }, 0);
+    var quedan = cap - usado;
+
+    lista.forEach(function (chk) {
+        var fila = chk.closest('tr');
+        if (chk.dataset.sinStock === '1') return;   // sin stock: se queda bloqueado
+
+        if (!chk.checked) {
+            // Ya no hay ranuras libres de este tipo -> no se puede marcar otro.
+            chk.disabled = quedan <= 0;
+            if (fila) fila.classList.toggle('opacity-50', quedan <= 0);
+        } else if (fila) {
+            fila.classList.remove('opacity-50');
+        }
+
+        // Ajusta el máximo de la caja según lo que ocupen los OTROS del mismo tipo.
+        var caja = document.getElementById('cant_' + chk.dataset.codigo);
+        if (caja && chk.checked) {
+            var otros = usado - cantidadDe(chk);
+            var tope = Math.min(parseInt(caja.dataset.maxModelo, 10), cap - otros);
+            caja.max = tope;
+            if (parseInt(caja.value, 10) > tope) caja.value = tope;
+        }
+    });
+}
+
+// Marcar / desmarcar
+document.querySelectorAll('.chk-comp').forEach(function (chk) {
+    chk.addEventListener('change', function () {
+        var caja = document.getElementById('cant_' + chk.dataset.codigo);
+        if (caja) {
+            caja.disabled = !chk.checked;
+            if (chk.checked && !caja.value) caja.value = 1;
+        }
+        refrescarTipo(chk.dataset.tipo);
+        refrescarCierre();
+    });
+});
+
+// Cambiar cantidad: respeta el modelo, el inventario y las ranuras del tipo.
+document.querySelectorAll('.cant-comp').forEach(function (caja) {
+    caja.addEventListener('input', function () {
+        var max = parseInt(caja.max, 10);
+        var min = parseInt(caja.min, 10) || 1;
+        var val = parseInt(caja.value, 10);
+
+        if (!isNaN(val)) {
+            if (val > max) caja.value = max;
+            if (val < min) caja.value = min;
+        }
+        refrescarTipo(caja.dataset.tipo);
+        refrescarCierre();
+    });
+});
+
+
+// ---------------------------------------------------------------------------
+// Cierre del ensamblaje: el botón rojo aparece cuando TODOS los tipos quedan
+// cubiertos (al menos una pieza de cada uno, contando lo ya montado antes).
+// ---------------------------------------------------------------------------
+var btnTerminar = document.getElementById('btnTerminar');
+
+function seleccionPorTipo() {
+    var acc = {};
+    document.querySelectorAll('.chk-comp').forEach(function (chk) {
+        if (!chk.checked) return;
+        acc[chk.dataset.tipo] = (acc[chk.dataset.tipo] || 0) + cantidadDe(chk);
+    });
+    return acc;
+}
+
+function refrescarCierre() {
+    if (!btnTerminar) return;
+
+    var sel = seleccionPorTipo();
+    var tipos = Object.keys(TIPOS);
+    var cubiertos = 0;
+    var faltantes = [];
+
+    tipos.forEach(function (t) {
+        var total = (TIPOS[t].montado || 0) + (sel[t] || 0);
+        if (total >= 1) cubiertos++;
+        var falta = TIPOS[t].capacidad - total;
+        if (falta > 0) {
+            faltantes.push({
+                nombre: TIPOS[t].nombre, falta: falta,
+                total: total, cap: TIPOS[t].capacidad
+            });
+        }
+    });
+
+    var completo = tipos.length > 0 && cubiertos === tipos.length;
+    btnTerminar.classList.toggle('d-none', !completo);
+    btnTerminar.dataset.faltantes = JSON.stringify(faltantes);
+
+    var avance = document.getElementById('avanceTipos');
+    if (avance) {
+        avance.textContent = 'Tipos cubiertos: ' + cubiertos + ' de ' + tipos.length;
+    }
+}
+
+if (btnTerminar) {
+    btnTerminar.addEventListener('click', function (e) {
+        var faltantes = JSON.parse(btnTerminar.dataset.faltantes || '[]');
+        var msg;
+
+        if (faltantes.length) {
+            msg = 'Vas a TERMINAR el ensamblaje, pero quedan ranuras sin llenar:\n\n';
+            faltantes.forEach(function (f) {
+                msg += '   • ' + f.nombre + ': falta ' + f.falta +
+                       '  (lleva ' + f.total + ' de ' + f.cap + ')\n';
+            });
+            msg += '\n¿Terminar de todos modos? Se guardará la fecha y hora de fin.';
+        } else {
+            msg = 'Todo quedó ensamblado.\n\n¿Terminar el ensamblaje? ' +
+                  'Se guardará la fecha y hora de fin.';
+        }
+
+        if (!confirm(msg)) e.preventDefault();
+    });
+}
+
+// Estado inicial: aplica los topes por tipo contando lo que ya venía montado.
+Object.keys(porTipo).forEach(refrescarTipo);
+refrescarCierre();
+</script>
+
+{% endblock %}

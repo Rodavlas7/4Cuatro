@@ -45,10 +45,12 @@ class ModeloLaptopComponenteDetalleSerializer(serializers.ModelSerializer):
     componente_codigo = serializers.CharField(source='modelo_componente.codigo', read_only=True)
     componente_nombre = serializers.CharField(source='modelo_componente.nombre', read_only=True)
     componente_tipo = serializers.CharField(source='modelo_componente.tipo_componente_id', read_only=True)
+    componente_tipo_nombre = serializers.CharField(source='modelo_componente.tipo_componente.nombre', read_only=True)
 
     class Meta:
         model = ModeloLaptopComponente
-        fields = ['componente_codigo', 'componente_nombre', 'componente_tipo', 'capacidad']
+        fields = ['componente_codigo', 'componente_nombre', 'componente_tipo',
+                  'componente_tipo_nombre', 'capacidad']
  
  
 # Ordenes de material
