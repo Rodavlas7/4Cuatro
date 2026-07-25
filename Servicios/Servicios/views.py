@@ -1,11 +1,15 @@
 """
 Índice / landing de la API de Servicios.
 
-Vista pública (no DRF, sin autenticación) que se sirve en la raíz del backend
-para que quien consuma la API pueda ver, desde el mismo host, todos los
-endpoints ya establecidos con una descripción corta de cada uno.
+Flujo web:
+  - url /            -> formulario de login (copiado del cliente).
+  - al iniciar sesión guarda el token en la sesión del navegador y redirige al índice.
+  - url /index/      -> índice de endpoints (requiere haber iniciado sesión).
+Con el token en la sesión, la API se puede navegar sin pegar el Bearer a mano
+(ver usuarios/authentication.py).
 """
-from django.shortcuts import render
+import requests
+from django.shortcuts import render, redirect
 
 
 # Inventario de endpoints agrupados por módulo (base = prefijo del include en urls.py).
@@ -127,8 +131,49 @@ API_MODULES = [
 ]
 
 
+def login_view(request):
+    """Formulario de login en la raíz (/). Copiado del cliente: envía las
+    credenciales al endpoint de login de la API, guarda el token en la sesión
+    del navegador y redirige al índice."""
+    # Si ya hay sesión iniciada, directo al índice.
+    if request.session.get("token"):
+        return redirect("api-index")
+
+    if request.method == "POST":
+        usuario = request.POST.get("usuario")
+        contrasena = request.POST.get("contrasena")
+        try:
+            respuesta = requests.post(
+                request.build_absolute_uri("/api/usuarios/login/"),
+                json={"usuario": usuario, "contrasena": contrasena},
+                timeout=5,
+            )
+            datos = respuesta.json()
+        except requests.RequestException:
+            return render(request, "login.html",
+                          {"error": "No se pudo conectar con la API."})
+
+        if respuesta.status_code == 200:
+            request.session["token"] = datos.get("token")
+            request.session["usuario"] = datos.get("usuario")
+            request.session["rol"] = datos.get("rol")
+            request.session["nombre"] = datos.get("nombre")
+            return redirect("api-index")
+
+        return render(request, "login.html",
+                      {"error": datos.get("mensaje", "Credenciales inválidas.")})
+
+    return render(request, "login.html")
+
+
+def logout_view(request):
+    """Cierra la sesión web y vuelve al login."""
+    request.session.flush()
+    return redirect("/")
+
+
 def _render_index(request, *, status=200, not_found=False):
-    """Renderiza el índice de endpoints. Reutilizado por la raíz y por el 404."""
+    """Renderiza el índice de endpoints. Reutilizado por el índice y por el 404."""
     total_endpoints = sum(len(m["endpoints"]) for m in API_MODULES)
     return render(
         request,
@@ -140,16 +185,24 @@ def _render_index(request, *, status=200, not_found=False):
             "total_endpoints": total_endpoints,
             "not_found": not_found,
             "attempted_path": request.path,
+            "usuario": request.session.get("usuario"),
+            "rol": request.session.get("rol"),
+            "token": request.session.get("token"),
         },
         status=status,
     )
 
 
 def api_index(request):
-    """Índice de endpoints de la API, servido en la raíz del backend."""
+    """Índice de endpoints. Requiere haber iniciado sesión en / (login)."""
+    if not request.session.get("token"):
+        return redirect("/")
     return _render_index(request)
 
 
 def not_found(request, unknown=None):
-    """Cualquier URL inexistente muestra el índice con un aviso (estado 404)."""
+    """Cualquier URL inexistente lleva al índice con un aviso (estado 404).
+    Si no hay sesión, primero manda al login."""
+    if not request.session.get("token"):
+        return redirect("/")
     return _render_index(request, status=404, not_found=True)

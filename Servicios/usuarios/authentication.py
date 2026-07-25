@@ -11,15 +11,18 @@ class TokenAuthentication(BaseAuthentication):
 
         auth_header = request.headers.get("Authorization")
 
-        # Si no envían Authorization, no autenticar.
-        # Las vistas con AllowAny seguirán funcionando.
-        if not auth_header:
+        if auth_header:
+            # Cliente de API (Postman, curl, front): token por header Bearer.
+            if not auth_header.startswith("Bearer "):
+                raise AuthenticationFailed("Formato de token inválido")
+            token = auth_header.split(" ")[1]
+        else:
+            # Permite navegar la API sin pegar el Bearer a mano.
+            token = getattr(request, "session", {}).get("token")
+
+        # Sin token en ningún lado -> no autenticar (las vistas AllowAny siguen ok).
+        if not token:
             return None
-
-        if not auth_header.startswith("Bearer "):
-            raise AuthenticationFailed("Formato de token inválido")
-
-        token = auth_header.split(" ")[1]
 
         try:
             sesion = Sesion.objects.get(token=token)

@@ -17,15 +17,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include, re_path
 
-from Servicios.views import api_index, not_found
+from Servicios.views import api_index, not_found, login_view, logout_view
 
 urlpatterns = [
-    path('', api_index, name='api-index'),
+    path('', login_view, name='web-login'),
+    path('index/', api_index, name='api-index'),
+    path('logout/', logout_view, name='logout'),
     path('admin/', admin.site.urls),
     path("api/usuarios/", include("usuarios.urls")),
     path("api/lineas/", include("lineas.urls")),
     path("api/produccion/", include("produccion.urls")),
     path("api/componentes/", include("componentes.urls")),
     path("api/embalaje/", include("embalaje.urls")),
-    path("api/calidad/", include("calidad.urls")),  
+    path("api/calidad/", include("calidad.urls")),
+    re_path(r'^.*$', not_found, name='not-found'),
 ]

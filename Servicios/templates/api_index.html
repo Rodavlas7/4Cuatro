@@ -89,6 +89,39 @@
     filter: brightness(0) invert(1);
   }
 
+  /* Sesión (usuario + salir) a la izquierda del logo. */
+  .topbar-right{
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .session{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .session-user{
+    color: rgba(255,255,255,0.75);
+    font-weight: 600;
+  }
+  .logout{
+    color: var(--azul-glow);
+    text-decoration: none;
+    padding: 6px 12px;
+    border: 1px solid rgba(59,130,246,0.30);
+    border-radius: 8px;
+    transition: background .15s ease;
+  }
+  .logout:hover{ background: rgba(59,130,246,0.12); }
+
+  /* Chip del token (clic para copiar). */
+  .token-chip{ cursor: copy; }
+  .token-chip code{ color: var(--verde); }
+  .token-chip .copy-hint{ color: rgba(255,255,255,0.4); font-size: 11px; }
+  .token-chip.copied code{ color: var(--blanco); }
+  .token-chip.copied .copy-hint{ color: var(--verde); }
+
   /* Aviso cuando se llega desde una URL inexistente (404). */
   .notfound-banner{
     display: flex;
@@ -295,8 +328,16 @@
             <span class="name">Trace X</span>
             <span class="tag">API Reference</span>
         </div>
-        <div class="logo-right">
-            <img src="{% static 'img/tracex-logo.png' %}" alt="Trace X">
+        <div class="topbar-right">
+            {% if usuario %}
+            <div class="session">
+                <span class="session-user">{{ usuario }}{% if rol %} · {{ rol }}{% endif %}</span>
+                <a class="logout" href="{% url 'logout' %}">Salir</a>
+            </div>
+            {% endif %}
+            <div class="logo-right">
+                <img src="{% static 'img/tracex-logo.png' %}" alt="Trace X">
+            </div>
         </div>
     </div>
 </header>
@@ -329,6 +370,12 @@
                 <span class="k">Autenticación</span>
                 <code>Authorization: Bearer &lt;token&gt;</code>
             </span>
+            {% if token %}
+            <span class="chip token-chip" id="tokenChip" data-token="{{ token }}" title="Clic para copiar tu token">
+                <span class="k">Tu token</span>
+                <code>{{ token|slice:":12" }}… <span class="copy-hint">copiar</span></code>
+            </span>
+            {% endif %}
 
             <div class="stats">
                 <div class="stat">
@@ -388,6 +435,22 @@ document.querySelectorAll('.path').forEach(function (el) {
         });
     });
 });
+
+// Clic en el chip del token -- copia el token completo (para pegar en Postman).
+var tokenChip = document.getElementById('tokenChip');
+if (tokenChip) {
+    tokenChip.addEventListener('click', function () {
+        navigator.clipboard.writeText(tokenChip.getAttribute('data-token')).then(function () {
+            var hint = tokenChip.querySelector('.copy-hint');
+            tokenChip.classList.add('copied');
+            if (hint) hint.textContent = '✓ copiado';
+            setTimeout(function () {
+                tokenChip.classList.remove('copied');
+                if (hint) hint.textContent = 'copiar';
+            }, 1400);
+        });
+    });
+}
 </script>
 
 </body>
