@@ -99,9 +99,6 @@
     <div class="card bg-white mb-3">
         <div class="card-header bg-white">
             <strong>Componentes compatibles</strong>
-            <span class="text-muted small ms-2">
-                según <code>modelo_laptop_componente</code> · marca los que lleva y ajusta la cantidad
-            </span>
         </div>
 
         {% if componentes %}
@@ -149,7 +146,7 @@
 
                         <td class="text-center">
                             {% if c.montado %}
-                                <span class="badge text-bg-dark">{{ c.montado }} ✓</span>
+                                <span class="badge text-bg-dark">{{ c.montado }}</span>
                             {% elif c.tipo_lleno %}
                                 <span class="text-muted small">tipo lleno</span>
                             {% else %}
