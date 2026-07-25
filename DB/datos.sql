@@ -438,3 +438,17 @@ VALUES (
     1,
     2607029
 );
+
+
+
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell,rol,turno, activo)
+VALUES (
+    2607030, 'Salvador', 'Garcia', 'Bojorquez', 'ADMIN','MAT', TRUE);
+
+INSERT INTO usuario (usuario,contrasena,estado,empleado)
+VALUES (
+    'rodavlas',
+    'pbkdf2_sha256$1200000$5kvgHFDNQNGmm0d5UNH5ha$jMmpPlOnw9v/RI5MLXKEte38VSyHWsTBb4PSshcw8wI=',
+    1,
+    2607030
+);

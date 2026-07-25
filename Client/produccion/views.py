@@ -16,6 +16,13 @@ ESTADOS_LAPTOP_EXCLUIDOS = {"EMBALA", "APROV"}
 EDO_COMP_DISPONIBLE = "EDC001"
 EDO_COMP_EN_USO = "EDC002"
 
+# Estado con el que nace una orden de producción (edo_produccion).
+EDO_ORDEN_PENDIENTE = "PEND"
+
+# Laptop ya embalada: es la que de verdad cuenta como producida (ver el trigger
+# tg_Control_Estado_Orden_Produccion en DB/triggers.sql).
+EDO_LAPTOP_EMBALADA = "EMBALA"
+
 
 def _headers(request):
     return {"Authorization": f"Bearer {request.session.get('token')}"}
@@ -364,5 +371,217 @@ def ensamblajeRegistrarView(request):
             "componentes": componentes_bom,
             "tipos_info": tipos_info,
             "registro": registro,
+        }
+    )
+
+
+# 
+#   ORDENES DE PROCUCION
+# 
+
+def _laptops_de_orden(headers, folio):
+    """Laptops registradas a esa orden. vista_laptops ya trae orden_folio, así
+    que basta con filtrar la consulta general."""
+    laptops = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+    if not isinstance(laptops, list):
+        return []
+    propias = [l for l in laptops if str(l.get("orden_folio")) == str(folio)]
+    return sorted(propias, key=lambda l: l.get("numero") or 0)
+
+
+def _ensamblajes_por_laptop(headers):
+    """Todos los registros de ensamblaje agrupados por laptop. Se piden de una
+    sola vez para no llamar a la API una vez por renglón de la tabla."""
+    regs = requests.get(f"{API}/produccion/registros-ensamblaje/", headers=headers).json()
+    if not isinstance(regs, list):
+        return {}
+    por_laptop = {}
+    for registro in sorted(regs, key=lambda r: r.get("numero") or 0):
+        por_laptop.setdefault(str(registro.get("laptop")), []).append(registro)
+    return por_laptop
+
+
+def _avance_ensamblaje(registros):
+    """Cómo va el ensamblaje de una laptop: sin registro, uno abierto (sin
+    fecha_fin) o ya terminado. Devuelve el badge listo para la plantilla."""
+    abierto = next((r for r in registros if not r.get("fecha_fin")), None)
+
+    if abierto:
+        return {
+            "estado": "proceso",
+            "texto": f"En proceso #{abierto.get('numero')}",
+            "clase": "text-bg-warning",
+            "detalle": f"Inició {abierto.get('fecha_inicio') or '—'} "
+                       f"{abierto.get('hora_inicio') or ''}".strip(),
+        }
+
+    cerrados = [r for r in registros if r.get("fecha_fin")]
+    if cerrados:
+        ultimo = cerrados[-1]
+        return {
+            "estado": "terminado",
+            "texto": f"Terminado #{ultimo.get('numero')}",
+            "clase": "text-bg-success",
+            "detalle": f"Terminó {ultimo.get('fecha_fin')} "
+                       f"{ultimo.get('hora_fin') or ''}".strip(),
+        }
+
+    return {
+        "estado": "sin_iniciar",
+        "texto": "Sin iniciar",
+        "clase": "text-bg-light",
+        "detalle": "",
+    }
+
+
+def ordenesProduccionListView(request):
+    """Consulta general de órdenes de producción (lee de vista_ordenes_produccion)
+    y alta de una nueva."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers = _headers(request)
+
+    if request.method == "POST":
+
+        payload = {
+            "fecha": request.POST.get("fecha") or None,
+            "hora": request.POST.get("hora") or None,
+            "modelo_laptop": request.POST.get("modelo_laptop") or None,
+            "cant_planificada": request.POST.get("cant_planificada") or 0,
+            # Nace en cero: lo producido se va contando conforme avanza la orden.
+            "cant_producida": 0,
+            "estado": request.POST.get("estado") or EDO_ORDEN_PENDIENTE,
+        }
+
+        respuesta = requests.post(f"{API}/produccion/", json=payload, headers=headers)
+
+        if respuesta.status_code == 201:
+            messages.success(request, "Orden de producción registrada correctamente.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+        return redirect('ordenes-produccion-lista')
+
+    ordenes = requests.get(f"{API}/produccion/", headers=headers).json()
+    modelos = requests.get(f"{API}/produccion/modelos/", headers=headers).json()
+    estados = requests.get(f"{API}/produccion/estados/", headers=headers).json()
+
+    ahora = datetime.now()
+
+    return render(
+        request,
+        "produccion/lista_ordenes.html",
+        {
+            "ordenes": ordenes if isinstance(ordenes, list) else [],
+            "modelos": modelos if isinstance(modelos, list) else [],
+            "estados": estados if isinstance(estados, list) else [],
+            # Valores por defecto del modal de alta.
+            "hoy": ahora.date().isoformat(),
+            "hora_ahora": ahora.strftime("%H:%M"),
+            "estado_inicial": EDO_ORDEN_PENDIENTE,
+        }
+    )
+
+
+def ordenProduccionEditarView(request, folio):
+    """Se manda PATCH y no PUT porque cant_producida no se captura en el
+    formulario: con un PUT parcial la API la dejaría vacía."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+
+        payload = {
+            "fecha": request.POST.get("fecha") or None,
+            "hora": request.POST.get("hora") or None,
+            "modelo_laptop": request.POST.get("modelo_laptop") or None,
+            "cant_planificada": request.POST.get("cant_planificada") or 0,
+            "estado": request.POST.get("estado") or None,
+        }
+
+        respuesta = requests.patch(f"{API}/produccion/mod/{folio}/", json=payload, headers=headers)
+
+        if respuesta.status_code in (200, 202):
+            messages.success(request, "Orden de producción actualizada correctamente.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('ordenes-produccion-lista')
+
+
+def ordenProduccionCancelarView(request, folio):
+    """El DELETE de la API no borra la orden: la deja en estado Cancelada (CANC)."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+        respuesta = requests.delete(f"{API}/produccion/mod/{folio}/", headers=headers)
+
+        if respuesta.status_code == 204:
+            messages.success(request, f"Orden #{folio} cancelada.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('ordenes-produccion-lista')
+
+
+def ordenProduccionDetalleView(request, folio):
+    """Ficha de la orden con las laptops que se le registraron y en qué va el
+    ensamblaje de cada una."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers = _headers(request)
+
+    orden = requests.get(f"{API}/produccion/{folio}/", headers=headers).json()
+    if not isinstance(orden, dict) or not orden.get("folio"):
+        messages.error(request, "No se encontró esa orden de producción.")
+        return redirect('ordenes-produccion-lista')
+
+    registros = _ensamblajes_por_laptop(headers)
+
+    laptops = []
+    terminados = 0
+    en_proceso = 0
+    embaladas = 0
+
+    for laptop in _laptops_de_orden(headers, folio):
+        avance = _avance_ensamblaje(registros.get(str(laptop.get("numero")), []))
+
+        if avance["estado"] == "terminado":
+            terminados += 1
+        elif avance["estado"] == "proceso":
+            en_proceso += 1
+
+        if laptop.get("estado_codigo") == EDO_LAPTOP_EMBALADA:
+            embaladas += 1
+
+        laptops.append({**laptop, "avance": avance})
+
+    planificadas = orden.get("cant_planificada") or 0
+    registradas = len(laptops)
+
+    return render(
+        request,
+        "produccion/detalle_orden.html",
+        {
+            "orden": orden,
+            "laptops": laptops,
+            "planificadas": planificadas,
+            "registradas": registradas,
+            "terminados": terminados,
+            "en_proceso": en_proceso,
+            "embaladas": embaladas,
+            # Se topa en 100 para que la barra no se desborde si se registraron too many
+            "porcentaje": min(100, round(registradas * 100 / planificadas)) if planificadas else 0,
         }
     )

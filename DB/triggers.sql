@@ -14,6 +14,9 @@ DROP TRIGGER IF EXISTS tg_Bloquear_Componentes_Laptop_Finalizada;
 DROP TRIGGER IF EXISTS tg_Actualizar_Estado_Laptop_Inspeccion_Calidad;
 DROP TRIGGER IF EXISTS tg_Control_Componentes_Duplicados;
 DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente;
+DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Alta;
+DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Cambio;
+DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Baja;
 
 DELIMITER $$
 
@@ -114,32 +117,33 @@ END$$
 --     no en cualquier UPDATE al registro.
 --   - El formato incluye fecha real de aprobación, útil para
 --     auditorías de trazabilidad (RF43, RF50).
+--   - Es BEFORE UPDATE y asigna con SET NEW.num_serie. Antes era
+--     AFTER UPDATE con un UPDATE laptop adentro, y MySQL no deja que
+--     un trigger modifique su propia tabla: aprobar una laptop moría
+--     con el error 1442.
+--   - OLD.estado se compara con IS NULL / <> porque la columna admite
+--     nulos y 'NULL != APROV' no es TRUE, es NULL (la condición nunca
+--     se cumplía para una laptop que venía sin estado).
 
 
 
 CREATE TRIGGER tg_Generar_Numero_Serie_Final
-AFTER UPDATE ON laptop
+BEFORE UPDATE ON laptop
 FOR EACH ROW
 BEGIN
-    DECLARE serie_final VARCHAR(50);
-
     -- Solo actúa cuando el estado cambia específicamente a Aprobada
     -- y la laptop aún no tiene número de serie asignado
     IF NEW.estado = 'APROV'
-       AND OLD.estado != 'APROV'
+       AND (OLD.estado IS NULL OR OLD.estado <> 'APROV')
        AND (NEW.num_serie IS NULL OR NEW.num_serie = '')
     THEN
         -- Formato: TP-AAAAMMDD-000000
-        SET serie_final = CONCAT(
+        SET NEW.num_serie = CONCAT(
             'TP-',
             DATE_FORMAT(CURDATE(), '%Y%m%d'),
             '-',
             LPAD(NEW.numero, 6, '0')
         );
-
-        UPDATE laptop
-           SET num_serie = serie_final
-         WHERE numero    = NEW.numero;
     END IF;
 END$$
 
@@ -304,7 +308,7 @@ BEGIN
 
     END IF;
 
-END;
+END$$
 
 
 
@@ -442,7 +446,127 @@ BEGIN
     END IF;
 END$$
 
+
+
+
+-- TRIGGERS 8, 9 y 10: tg_Sincronizar_Cant_Producida_*
+--
+-- Evento   : AFTER INSERT / AFTER UPDATE / AFTER DELETE en laptop
+-- Objetivo : Mantener orden_produccion.cant_producida al día sin que
+--            nadie la capture a mano.
+--
+-- Qué cuenta:
+--   Laptops de la orden que ya terminaron su proceso, es decir con
+--   estado 'APROV' (Aprobada) o 'EMBALA' (Embalada). Quedan fuera las
+--   rechazadas (RECHA), las que siguen en ensamblaje (PENSAM) y las
+--   apenas registradas (REGIS), porque ninguna de esas es producción
+--   terminada.
+--
+-- Por qué recuenta en lugar de sumar 1:
+--   Un contador incremental se desincroniza en cuanto alguien corrige
+--   un estado a mano, mueve una laptop de orden o borra un registro.
+--   El COUNT(*) completo se autocorrige solo en cada cambio; sobre el
+--   volumen de una orden el costo es irrelevante.
+--
+-- Momentos en los que se dispara de forma natural:
+--   - tg_Actualizar_Estado_Laptop_Inspeccion_Calidad marca APROV  → +1
+--   - tg_Finalizar_Proceso_Embalaje marca EMBALA (ya contaba)     → igual
+--   - Una laptop aprobada que se reprueba a RECHA                 → -1
+--
+-- NOTA: leer la propia tabla laptop dentro de un trigger sobre laptop
+--   sí está permitido; lo que MySQL prohíbe es modificarla (error 1442).
+--   Aquí solo se escribe en orden_produccion.
+
+
+CREATE TRIGGER tg_Sincronizar_Cant_Producida_Alta
+AFTER INSERT ON laptop
+FOR EACH ROW
+BEGIN
+    -- Normalmente una laptop nace en 'Registrada' y no suma, pero si se
+    -- da de alta ya terminada (una carga de datos, por ejemplo) el
+    -- recuento la toma igual.
+    IF NEW.orden IS NOT NULL THEN
+        UPDATE orden_produccion
+           SET cant_producida = (
+                   SELECT COUNT(*)
+                     FROM laptop
+                    WHERE orden  = NEW.orden
+                      AND estado IN ('APROV', 'EMBALA')
+               )
+         WHERE folio = NEW.orden;
+    END IF;
+END$$
+
+
+CREATE TRIGGER tg_Sincronizar_Cant_Producida_Cambio
+AFTER UPDATE ON laptop
+FOR EACH ROW
+BEGIN
+    -- Solo interesan los cambios de estado o de orden. El <=> compara
+    -- tolerando nulos: 'NULL <=> NULL' es TRUE, a diferencia de '='.
+    IF NOT (NEW.estado <=> OLD.estado) OR NOT (NEW.orden <=> OLD.orden) THEN
+
+        -- Orden a la que pertenece ahora
+        IF NEW.orden IS NOT NULL THEN
+            UPDATE orden_produccion
+               SET cant_producida = (
+                       SELECT COUNT(*)
+                         FROM laptop
+                        WHERE orden  = NEW.orden
+                          AND estado IN ('APROV', 'EMBALA')
+                   )
+             WHERE folio = NEW.orden;
+        END IF;
+
+        -- Si la laptop se movió de orden, la anterior también se recuenta
+        IF OLD.orden IS NOT NULL AND NOT (OLD.orden <=> NEW.orden) THEN
+            UPDATE orden_produccion
+               SET cant_producida = (
+                       SELECT COUNT(*)
+                         FROM laptop
+                        WHERE orden  = OLD.orden
+                          AND estado IN ('APROV', 'EMBALA')
+                   )
+             WHERE folio = OLD.orden;
+        END IF;
+
+    END IF;
+END$$
+
+
+CREATE TRIGGER tg_Sincronizar_Cant_Producida_Baja
+AFTER DELETE ON laptop
+FOR EACH ROW
+BEGIN
+    IF OLD.orden IS NOT NULL THEN
+        UPDATE orden_produccion
+           SET cant_producida = (
+                   SELECT COUNT(*)
+                     FROM laptop
+                    WHERE orden  = OLD.orden
+                      AND estado IN ('APROV', 'EMBALA')
+               )
+         WHERE folio = OLD.orden;
+    END IF;
+END$$
+
 DELIMITER ;
+
+
+
+-- SINCRONIZACIÓN INICIAL
+--
+-- Los triggers de arriba solo actúan de aquí en adelante. Esta sentencia
+-- pone al día lo que ya está capturado en la base, para que cant_producida
+-- arranque cuadrada con las laptops reales de cada orden.
+
+UPDATE orden_produccion op
+   SET op.cant_producida = (
+           SELECT COUNT(*)
+             FROM laptop l
+            WHERE l.orden  = op.folio
+              AND l.estado IN ('APROV', 'EMBALA')
+       );
 
 
 
@@ -456,6 +580,25 @@ DELIMITER ;
 --
 -- Si cualquiera de los dos lanza SIGNAL, el INSERT se cancela
 -- y el segundo trigger no llega a ejecutarse.
+
+
+-- CADENA DE DISPARO AL APROBAR UNA LAPTOP
+--
+-- Un solo INSERT en inspeccion_calidad con resultado = 1 encadena:
+--
+--   1. tg_Actualizar_Estado_Laptop_Inspeccion_Calidad
+--        hace UPDATE laptop SET estado = 'APROV'
+--   2. tg_Generar_Numero_Serie_Final  (BEFORE UPDATE laptop)
+--        le pone el num_serie a esa misma fila
+--   3. tg_Sincronizar_Cant_Producida_Cambio  (AFTER UPDATE laptop)
+--        recuenta orden_produccion.cant_producida
+--
+-- Y un INSERT en registro_embalaje encadena:
+--
+--   1. tg_Control_Estado_Orden_Produccion   → estado de la orden
+--   2. tg_Finalizar_Proceso_Embalaje        → UPDATE laptop a 'EMBALA'
+--   3. tg_Sincronizar_Cant_Producida_Cambio → recuenta (la laptop ya
+--        contaba desde 'APROV', así que el número no se mueve)
 
 
 
