@@ -1,0 +1,239 @@
+/* ---------- Google Font ---------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ---------- Variables ---------- */
+
+:root {
+
+    /* Colores */
+    --color-primary: #0D1B2A;
+    --color-secondary: #2F3A46;
+    --color-accent: #1D4ED8;
+    --color-white: #FFFFFF;
+
+    /* Estados industriales */
+    --color-success: #422e7d; /* Operación correcta / aprobado */
+    --color-warning: #D97706; /* Advertencia / pendiente */
+    --color-danger: #B91C1C;  /* Fallo / paro crítico */
+    --color-info: #0369A1;    /* Información / trazabilidad */
+
+    /* Grises */
+    --color-bg: #F8FAFC;
+    --color-border: #E5E7EB;
+    --color-text: #1F2937;
+    --color-text-light: #6B7280;
+
+    /* Tipografía */
+    --font-family: 'Inter', sans-serif;
+
+    /* Tamaños de texto */
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-md: 16px;
+    --text-lg: 18px;
+    --text-xl: 24px;
+    --text-2xl: 32px;
+
+    /* Bordes */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 999px;
+
+    /* Sombras */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, .08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.16);
+
+    /* Espaciados */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+
+    /* Transiciones */
+    --transition: .25s ease;
+
+    /* Iconos */
+    --icon-size-sm: 16px;
+    --icon-size-md: 20px;
+    --icon-size-lg: 24px;
+
+    /* Botones */
+
+    --btn-height-sm: 32px;
+    --btn-height-md: 40px;
+    --btn-height-lg: 48px;
+
+}
+
+/* ---------- Reset ---------- */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ---------- Base ---------- */
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-family);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+
+/* ---------- Encabezados ---------- */
+
+h1 {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+}
+
+h2 {
+    font-size: var(--text-xl);
+    font-weight: 600;
+}
+
+h3 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+}
+
+
+/* ---------- Texto general ---------- */
+
+p,
+span,
+label,
+input,
+select,
+textarea,
+button {
+    font-family: inherit;
+}
+
+p {
+    font-size: var(--text-md);
+}
+
+label {
+    font-size: var(--text-sm);
+}
+
+
+/* ---------- Utilidades de texto ---------- */
+
+.text-primary {
+    color: var(--color-primary);
+}
+
+.text-secondary {
+    color: var(--color-text-light);
+}
+
+.text-success {
+    color: var(--color-success);
+}
+
+.text-danger {
+    color: var(--color-danger);
+}
+
+
+/* ---------- Enlaces ---------- */
+
+a {
+    color: var(--color-info);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+a:hover {
+    color: var(--color-primary);
+}
+
+a:focus,
+button:focus {
+    outline: 2px solid var(--color-info);
+    outline-offset: 2px;
+}
+
+/* ---------- Listas ---------- */
+
+ul,
+ol {
+    list-style: none;
+}
+
+/* ---------- Imágenes ---------- */
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+/* ---------- Icon ---------- */
+.icon {
+    font-size: var(--icon-size-md);
+}
+
+/* ---------- Botones ---------- */
+button {
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: var(--color-white);
+    padding: 0 var(--space-lg);
+    height: var(--btn-height-md);
+}
+
+.btn-primary:hover {
+    background: var(--color-secondary);
+}
+.btn-secondary {
+    background: var(--color-secondary);
+    color: var(--color-white);
+}
+.btn-success {
+    background: var(--color-success);
+    color: var(--color-white);
+}
+
+.btn-danger {
+    background: var(--color-danger);
+    color: var(--color-white);
+}
+
+
+/* ---------- Contenedores ---------- */
+
+.container {
+    width: 100%;
+    padding: 0 var(--space-lg);
+}
+
+/* ---------- Fondos ---------- */
+
+.bg-primary {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.bg-secondary {
+    background: var(--color-secondary);
+}

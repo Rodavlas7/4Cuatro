@@ -1,4 +1,5 @@
-  :root{
+
+ :root{
     --azul-marino: #0D1B2A;
     --gris-pizarra: #2F3A46;
     --blanco: #FFFFFF;
@@ -46,7 +47,7 @@
     width: 42px;
     height: 42px;
     object-fit: contain;
-    filter: brightness(0) invert(1); /* logo en blanco sobre el fondo oscuro */
+    filter: brightness(0) invert(1); 
   }
 
   h1{
@@ -212,4 +213,3 @@
   }
 
   .footer-text a:hover{ text-decoration:underline; }
-

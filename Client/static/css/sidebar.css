@@ -27,3 +27,33 @@
 .chevron{
     transition: transform .25s ease;
 }
+
+/* logo */
+.sidebar-logo-full {
+    width: 170px;
+    max-width: 100%;
+    height: auto;
+}
+
+
+/*.sidebar-header{
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}*/
+
+
+.sidebar-header{
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 8px;   /* espacio entre logo y línea */
+}
+
+.sidebar-divider{
+    margin-top: 11px;      /* sube/baja la línea hacia el logo */
+    margin-bottom: 16px;   /* espacio entre línea y módulos */
+    border-color: #495057; /* o el color que ya usabas (text-secondary) */
+}
