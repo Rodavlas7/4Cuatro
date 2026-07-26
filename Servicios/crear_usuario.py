@@ -19,8 +19,8 @@ from django.contrib.auth.hashers import make_password
 from usuarios.models import Empleado, Usuario, Rol, Turno
 
 # ----------------- EDITA ESTO -----------------
-USUARIO  = "rodavlas"   # con esto inicias sesión
-NOMBRE   = "Rodavlas"   # nombre de pila del empleado
+USUARIO  = "jperez1"   # con esto inicias sesión
+NOMBRE   = "Carlos"   # nombre de pila del empleado
 APELLIDO = "Garcia"     # primer apellido
 ROL      = "ADMIN"      # ADMIN / SUPER / OPCALI pueden iniciar sesión
 TURNO    = "MAT"        # MAT / VES

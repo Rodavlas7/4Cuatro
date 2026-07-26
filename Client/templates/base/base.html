@@ -75,7 +75,7 @@
 
                 <!-- Calidad -->
                 <li class="nav-item mb-2">
-                    <a href="#" class="nav-link text-white">
+                     <a href="#" class="nav-link text-white">
                         <i class="bi bi-check2-circle me-2"></i>
                         Calidad
                     </a>
@@ -144,17 +144,17 @@
                 <!-- Personal -->
                 <li class="nav-item mb-2 has-submenu">
                     <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" 
-                    href="#personal"role="button" aria-expanded="false">
+                    href="#personal" role="button" aria-expanded="false">
                         <span>
                             <i class="bi bi-gear-wide-connected me-2"></i>
-                            Producción
+                            Personal
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
 
                     <div class="collapse submenu" id="personal">
-                        <a href="#" class="nav-link text-white small">Usuarios</a>
-                        <a href="#" class="nav-link text-white small">Empleados</a>
+                        <a href="{% url 'lista_usuarios' %}" class="nav-link text-white small">Usuarios</a>
+                        <a href="{% url 'lista_empleados' %}" class="nav-link text-white small">Empleados</a>
                     </div>
                 </li>
 

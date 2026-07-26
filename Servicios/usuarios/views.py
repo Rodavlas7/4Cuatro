@@ -17,6 +17,8 @@ from usuarios import models, serializers
 from .models import Sesion, Usuario, Empleado, VistaEmpleado, VistaUsuario, EmpleadoEstacion, EmpleadoLinea
 from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleadoSerializer, UpdateEmpleadoSerializer, BajaEmpleadoSerializer
 from usuarios.permissions import TienePermisoModulo
+from .models import Rol, Turno
+from .serializers import RolSerializer, TurnoSerializer
 
 from django.db.models import Q
 #################################
@@ -25,14 +27,35 @@ from django.db.models import Q
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
-│   - Empleado          (FALTA PONER ESTE)
+│   - Empleado         
 │   - Usuario           
-│   - Rol               (NO PONDREMOS)
-│   - Turno             (NO PONDREMOS)
-│   - EmpleadoLinea   (FALTA PONER ESTE)
-│   - EmpleadoEstacion (FALTA PONER ESTE)
+│   - Rol           
+│   - Turno        
+│   - EmpleadoLinea  
+│   - EmpleadoEstacion 
 '''
 # Create your models here.
+
+
+#rol
+class ListaRolesAPIView(APIView):
+    permission_classes = [AllowAny]
+    modulo = "usuarios"
+
+    def get(self, request):
+        roles = Rol.objects.all()
+        serializer = RolSerializer(roles, many=True)
+        return Response(serializer.data)
+
+#turno
+class ListaTurnosAPIView(APIView):
+    permission_classes = [AllowAny]
+    modulo = "usuarios"
+
+    def get(self, request):
+        turnos = Turno.objects.all()
+        serializer = TurnoSerializer(turnos, many=True)
+        return Response(serializer.data)
 
 
 #----------------------------------------------------------------------------------------------
@@ -177,8 +200,9 @@ class LoginAPIView(APIView):
 class RegistroUsuarioAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "usuarios"
      
@@ -230,8 +254,9 @@ class RegistroUsuarioAPIView(APIView):
 class ListaUsuariosAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -251,8 +276,9 @@ class ListaUsuariosAPIView(APIView):
 class DetailUsuarioAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -279,8 +305,9 @@ class DetailUsuarioAPIView(APIView):
 class UpdateUsuarioAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
+        AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
         ]
     modulo = "usuarios" 
 
@@ -325,8 +352,9 @@ class UpdateUsuarioAPIView(APIView):
 class BajaUsuarioAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
+            AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
         ]
     modulo = "usuarios" 
 
@@ -367,8 +395,9 @@ class BajaUsuarioAPIView(APIView):
 class ReactivarUsuarioAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
+            AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
         ]
     modulo = "usuarios" 
 
@@ -415,8 +444,9 @@ class ReactivarUsuarioAPIView(APIView):
 class RegistroEmpleadoAPIView(APIView):
     
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
+            AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
         ]
     modulo = "empleados" 
 
@@ -554,8 +584,9 @@ class RegistroEmpleadoAPIView(APIView):
 #. . . . . .  . LISTA
 class ListaEmpleadosAPIView(APIView):
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "empleados"
 
@@ -569,11 +600,14 @@ class ListaEmpleadosAPIView(APIView):
         )
 
         return Response(serializer.data)
+    
+    
 #. . . . . .  . DETAIL
 class DetailEmpleadoAPIView(APIView):
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "empleados"
 
@@ -596,11 +630,30 @@ class DetailEmpleadoAPIView(APIView):
 class UpdateEmpleadoAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "empleados"
+    
+    def get(self, request, numero):
+        try:
+            empleado = Empleado.objects.get(numero=numero)
+        except Empleado.DoesNotExist:
+            return Response(
+                {"mensaje": "Empleado no encontrado"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({
+            "numero": empleado.numero,
+            "nombrepila": empleado.nombrepila,
+            "primerapell": empleado.primerapell,
+            "segundoapell": empleado.segundoapell,
+            "rol": empleado.rol_id,
+            "turno": empleado.turno_id,
+        })
 
 
     def put(self, request, numero):
@@ -709,9 +762,10 @@ class UpdateEmpleadoAPIView(APIView):
 # chavalines, no os preocupeis, es la desactivación de empleado, es decir, cambia el estado activo a False para conservar trazabilidad histórica
 class BajaEmpleadoView(generics.UpdateAPIView):
     permission_classes = [
-                IsAuthenticated,
-                TienePermisoModulo
-            ]
+            AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
+        ]
     modulo = "empleados" 
     queryset = Empleado.objects.all()
     serializer_class = BajaEmpleadoSerializer
@@ -725,8 +779,9 @@ class BajaEmpleadoView(generics.UpdateAPIView):
 class BuscarEmpleadoView(generics.ListAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "empleados"
@@ -762,8 +817,9 @@ class BuscarEmpleadoView(generics.ListAPIView):
 class BuscarUsuarioView(generics.ListAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -799,8 +855,9 @@ class BuscarUsuarioView(generics.ListAPIView):
 class BuscarEmpleadoLineaView(generics.ListAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
