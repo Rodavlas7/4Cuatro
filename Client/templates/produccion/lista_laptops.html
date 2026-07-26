@@ -1,0 +1,279 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Laptops{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Laptops</h2>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+        <i class="bi bi-plus-lg me-1"></i> Nueva laptop
+    </button>
+</div>
+
+<!-- ...................................................................
+     F I L T R O S
+...................................................................... -->
+<form method="GET" class="card p-3 mb-3 bg-white">
+    <div class="row g-3">
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Buscar</label>
+            <input type="text" name="q" class="form-control"
+                   value="{{ filtros.q }}"
+                   placeholder="Número o num. de serie">
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Estado</label>
+            <select name="estado" class="form-select">
+                <option value="">— Todos —</option>
+                {% for e in estados %}
+                <option value="{{ e.codigo }}" {% if filtros.estado == e.codigo %}selected{% endif %}>
+                    {{ e.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Modelo</label>
+            <select name="modelo" class="form-select">
+                <option value="">— Todos —</option>
+                {% for m in modelos %}
+                <option value="{{ m.codigo }}" {% if filtros.modelo == m.codigo %}selected{% endif %}>
+                    {{ m.codigo }} — {{ m.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Línea</label>
+            <select name="linea" class="form-select">
+                <option value="">— Todas —</option>
+                {% for l in lineas %}
+                <option value="{{ l.codigo }}" {% if filtros.linea == l.codigo %}selected{% endif %}>
+                    {{ l.codigo }} — {{ l.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Lote</label>
+            <select name="lote" class="form-select">
+                <option value="">— Todos —</option>
+                {% for lo in lotes %}
+                <option value="{{ lo.codigo }}" {% if filtros.lote == lo.codigo %}selected{% endif %}>
+                    {{ lo.codigo }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Orden de producción</label>
+            <select name="orden" class="form-select">
+                <option value="">— Todas —</option>
+                {% for o in ordenes %}
+                <option value="{{ o.folio }}" {% if filtros.orden == o.folio|stringformat:"s" %}selected{% endif %}>
+                    #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }} ({{ o.estado_nombre }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-muted small">
+            {% if hay_filtros %}
+                Mostrando <strong>{{ mostradas }}</strong> de {{ total }} laptops.
+            {% else %}
+                {{ total }} laptop{{ total|pluralize:"s" }} registrada{{ total|pluralize:"s" }}.
+            {% endif %}
+        </span>
+        <div class="d-flex gap-2">
+            {% if hay_filtros %}
+            <a href="{% url 'laptops-lista' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i> Limpiar
+            </a>
+            {% endif %}
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-funnel me-1"></i> Filtrar
+            </button>
+        </div>
+    </div>
+</form>
+
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle bg-white">
+        <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>Num. Serie</th>
+                <th>Descripción</th>
+                <th>Modelo</th>
+                <th>Orden</th>
+                <th>Línea</th>
+                <th>Lote</th>
+                <th>Estado</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in laptops %}
+            <tr>
+                <td><a href="{% url 'laptop-detalle' l.numero %}">{{ l.numero }}</a></td>
+                <td>
+                    <span class="font-monospace small">{{ l.num_serie|default:"—" }}</span>
+                </td>
+                <td>{{ l.descripcion|default:"—" }}</td>
+                <td>{{ l.modelo_nombre|default:"—" }}</td>
+                <td>
+                    {% if l.orden_folio %}
+                    <a href="{% url 'orden-produccion-detalle' l.orden_folio %}">#{{ l.orden_folio }}</a>
+                    {% else %}—{% endif %}
+                </td>
+                <td>{{ l.linea_nombre|default:"—" }}</td>
+                <td>{{ l.lote_codigo|default:"—" }}</td>
+                <td>
+                    <span class="badge
+                        {% if l.estado_codigo == 'EMBALA' %}text-bg-success
+                        {% elif l.estado_codigo == 'APROV' %}text-bg-primary
+                        {% elif l.estado_codigo == 'RECHA' %}text-bg-danger
+                        {% elif l.estado_codigo == 'PENSAM' %}text-bg-warning
+                        {% else %}text-bg-light{% endif %}">
+                        {{ l.estado_nombre|default:"—" }}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <a href="{% url 'laptop-detalle' l.numero %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil-square"></i> Abrir
+                    </a>
+
+                    {% if l.estado_codigo == 'RECHA' %}
+                        <button type="button" class="btn btn-sm btn-outline-danger" disabled
+                                title="Ya está rechazada">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    {% else %}
+                        <form method="POST" action="{% url 'laptop-rechazar' l.numero %}" class="d-inline"
+                              onsubmit="return confirm('¿Marcar la laptop #{{ l.numero }} como Rechazada? No se borra el registro.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Rechazar laptop">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center text-muted py-4">
+                {% if hay_filtros %}
+                    Ninguna laptop coincide con los filtros.
+                {% else %}
+                    No hay laptops registradas.
+                {% endif %}
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!-- MODAL: CREAR -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" action="{% url 'laptops-lista' %}">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva laptop</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Núm. de serie</label>
+                            <input type="text" name="num_serie" class="form-control"
+                                   value="{{ serie_sugerida }}" maxlength="50">
+                            <div class="form-text">
+                                Provisional. Calidad la reemplaza por la definitiva
+                                (TP-AAAAMMDD-…) al aprobar la laptop.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Descripción</label>
+                            <input type="text" name="descripcion" class="form-control" maxlength="256">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Modelo</label>
+                            <select name="modelo" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for m in modelos %}
+                                <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Orden de producción</label>
+                            <select name="orden" class="form-select">
+                                <option value="">— Sin orden —</option>
+                                {% for o in ordenes %}
+                                <option value="{{ o.folio }}">
+                                    #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }} ({{ o.estado_nombre }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Línea</label>
+                            <select name="linea" class="form-select">
+                                <option value="">— Sin línea —</option>
+                                {% for l in lineas %}
+                                <option value="{{ l.codigo }}">{{ l.codigo }} — {{ l.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Lote</label>
+                            <select name="lote" class="form-select">
+                                <option value="">— Sin lote —</option>
+                                {% for lo in lotes %}
+                                <option value="{{ lo.codigo }}">{{ lo.codigo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Estado</label>
+                            <select name="estado" class="form-select">
+                                {% for e in estados %}
+                                <option value="{{ e.codigo }}" {% if e.codigo == estado_inicial %}selected{% endif %}>
+                                    {{ e.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
