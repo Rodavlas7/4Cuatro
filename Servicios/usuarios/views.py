@@ -788,27 +788,20 @@ class BuscarEmpleadoView(generics.ListAPIView):
 
     serializer_class = serializers.ListEmpleadoSerializer
 
-
     def get_queryset(self):
 
-        queryset = Empleado.objects.all()
+        queryset = VistaEmpleado.objects.all()
 
         buscar = self.request.GET.get("buscar")
-
 
         if buscar:
 
             queryset = queryset.filter(
-
                 Q(numero__icontains=buscar) |
-                Q(nombrepila__icontains=buscar) |
-                Q(primerapell__icontains=buscar) |
-                Q(segundoapell__icontains=buscar) |
-                Q(rol__nombre__icontains=buscar) |
-                Q(turno__nombre__icontains=buscar)
-
+                Q(nombre_completo__icontains=buscar) |
+                Q(rol_nombre__icontains=buscar) |
+                Q(turno_nombre__icontains=buscar)
             )
-
 
         return queryset
     
@@ -824,28 +817,21 @@ class BuscarUsuarioView(generics.ListAPIView):
 
     modulo = "usuarios"
 
-
     serializer_class = serializers.ListUsuarioSerializer
-
 
     def get_queryset(self):
 
-        queryset = Usuario.objects.all()
+        queryset = VistaUsuario.objects.all()
 
         buscar = self.request.GET.get("buscar")
-
 
         if buscar:
 
             queryset = queryset.filter(
-
                 Q(numero__icontains=buscar) |
                 Q(usuario__icontains=buscar) |
-                Q(empleado__nombrepila__icontains=buscar) |
-                Q(empleado__primerapell__icontains=buscar)
-
+                Q(empleado_nombre__icontains=buscar)
             )
-
 
         return queryset
     

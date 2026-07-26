@@ -32,13 +32,20 @@ API_EMPLEADO = "http://127.0.0.1:8000/api/usuarios/Empleado/"
 class ListaEmpleados(generic.View):
     template_name = "usuarios/empleados.html"
     url_api_listar = API_EMPLEADO + "Listar/"
+    url_api_buscar = API_EMPLEADO + "Buscar/"
     url_api_actualizar = API_EMPLEADO + "Actualizar/"
 
     def get(self, request):
         token = request.session.get("token")
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = requests.get(self.url_api_listar, headers=headers)
+        buscar = request.GET.get("buscar", "").strip()
+
+        if buscar:
+            response = requests.get(self.url_api_buscar, headers=headers, params={"buscar": buscar})
+        else:
+            response = requests.get(self.url_api_listar, headers=headers)
+
         empleados_lista = response.json() if response.status_code == 200 else []
 
         empleados = []
@@ -53,9 +60,9 @@ class ListaEmpleados(generic.View):
             "estaciones": get_choices_estaciones(token),
             "roles": get_choices_roles(token),
             "turnos": get_choices_turnos(token),
+            "buscar": buscar,
         }
         return render(request, self.template_name, context)
-
 
 # ===============================
 # CREAR (CREATE)
@@ -219,109 +226,38 @@ API_USUARIO = "http://127.0.0.1:8000/api/usuarios/Usuario/"
 # LISTA USUARIOS
 # ===============================
 class ListaUsuarios(generic.View):
-
     template_name = "usuarios/usuarios.html"
-
     url_api_listar = API_USUARIO + "Listar/"
+    url_api_buscar = API_USUARIO + "Buscar/"
     url_api_empleados = API_EMPLEADO + "Listar/"
 
-
     def get(self, request):
-
         token = request.session.get("token")
+        headers = {"Authorization": f"Bearer {token}"}
 
-        headers = {
-            "Authorization": f"Bearer {token}"
-        }
+        buscar = request.GET.get("buscar", "").strip()
 
+        if buscar:
+            response = requests.get(
+                self.url_api_buscar,
+                headers=headers,
+                params={"buscar": buscar}
+            )
+        else:
+            response = requests.get(self.url_api_listar, headers=headers)
 
-        # =================================
-        # LISTAR TODOS LOS USUARIOS
-        # =================================
+        usuarios = response.json() if response.status_code == 200 else []
 
-        response = requests.get(
-            self.url_api_listar,
-            headers=headers
-        )
-
-
-        usuarios = []
-
-        if response.status_code == 200:
-            usuarios = response.json()
-
-
-
-        # =================================
-        # EMPLEADOS DISPONIBLES
-        # PARA CREAR USUARIO
-        # =================================
-
-        response_empleados = requests.get(
-            self.url_api_empleados,
-            headers=headers
-        )
-
-
-        empleados = []
-
-
-        if response_empleados.status_code == 200:
-
-            empleados_api = response_empleados.json()
-
-
-            roles_permitidos = [
-                "Administrador",
-                "Supervisor",
-                "Inspector Calidad"
-            ]
-
-
-            for empleado in empleados_api:
-
-
-                # Si no tiene usuario asignado
-                sin_usuario = (
-                    not empleado.get("usuario")
-                    and (
-                        empleado.get("estado_usuario") == "Sin usuario"
-                        or empleado.get("estado_usuario") is None
-                    )
-                )
-
-
-                # Rol permitido
-                rol_valido = (
-                    empleado.get("rol_nombre")
-                    in roles_permitidos
-                )
-
-
-                if sin_usuario and rol_valido:
-
-                    empleados.append(empleado)
-
-
+        empleados_resp = requests.get(self.url_api_empleados, headers=headers)
+        empleados = empleados_resp.json() if empleados_resp.status_code == 200 else []
 
         context = {
-
-            # Tabla general
             "usuarios": usuarios,
-
-
-            # Select del modal crear
-            "empleados": empleados
-
+            "empleados": empleados,
+            "buscar": buscar,
         }
-
-
-        return render(
-            request,
-            self.template_name,
-            context
-        )
-
+        return render(request, self.template_name, context)
+    
 # ==================================================
 # CREAR (CREATE)
 # ==================================================
