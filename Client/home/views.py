@@ -16,7 +16,20 @@ TOKEN_COOKIE_MAX_AGE = 10 * 60 * 60
 
 
 '''-----------------------------------------------------------------------------
-    D A S H B O A R D   V I E W (luego dividir en carpetas correspondientes) 
+    I N D E X   V I E W
+-----------------------------------------------------------------------------'''
+def indexView(request):
+    """Puerta de entrada del sitio: quien ya tiene sesión pasa derecho al
+    dashboard y quien no, al login. Así la raíz deja de dar 404."""
+
+    if 'token' in request.session:
+        return redirect('dashboard')
+
+    return redirect('login')
+
+
+'''-----------------------------------------------------------------------------
+    D A S H B O A R D   V I E W (luego dividir en carpetas correspondientes)
 -----------------------------------------------------------------------------'''
 def dashboardView(request):
 
