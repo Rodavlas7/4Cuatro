@@ -1,0 +1,281 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Laptop #{{ laptop.numero }}{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'laptops-lista' %}" class="text-decoration-none">
+    <i class="bi bi-arrow-left"></i> Volver a laptops
+</a>
+
+<div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+    <div>
+        <h2 class="mb-0">Laptop #{{ laptop.numero }}</h2>
+        <p class="text-muted mb-0">
+            <span class="font-monospace">{{ laptop.num_serie|default:"sin serie" }}</span>
+            · {{ laptop.modelo_nombre|default:"sin modelo" }}
+            {% if laptop.orden_folio %}
+            · Orden <a href="{% url 'orden-produccion-detalle' laptop.orden_folio %}">#{{ laptop.orden_folio }}</a>
+            {% endif %}
+        </p>
+    </div>
+    <span class="badge fs-6
+        {% if laptop.estado_codigo == 'EMBALA' %}text-bg-success
+        {% elif laptop.estado_codigo == 'APROV' %}text-bg-primary
+        {% elif laptop.estado_codigo == 'RECHA' %}text-bg-danger
+        {% elif laptop.estado_codigo == 'PENSAM' %}text-bg-warning
+        {% else %}text-bg-light{% endif %}">
+        {{ laptop.estado_nombre|default:"—" }}
+    </span>
+</div>
+
+
+<!-- ...................................................................
+     D A T O S   D E   L A   L A P T O P
+...................................................................... -->
+<form method="POST" action="{% url 'laptop-editar' laptop.numero %}">
+    {% csrf_token %}
+    <div class="card bg-white mb-3">
+        <div class="card-header bg-white">
+            <strong>Datos de la laptop</strong>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <label class="form-label">Núm. de serie</label>
+                    <input type="text" name="num_serie" class="form-control"
+                           value="{{ laptop.num_serie|default:'' }}" maxlength="50">
+                    <div class="form-text">
+                        Si se deja vacío se conserva la actual.
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Descripción</label>
+                    <input type="text" name="descripcion" class="form-control"
+                           value="{{ laptop.descripcion|default:'' }}" maxlength="256">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Modelo</label>
+                    <select name="modelo" class="form-select">
+                        <option value="">— Sin modelo —</option>
+                        {% for m in modelos %}
+                        <option value="{{ m.codigo }}" {% if laptop.modelo_codigo == m.codigo %}selected{% endif %}>
+                            {{ m.codigo }} — {{ m.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Orden de producción</label>
+                    <select name="orden" class="form-select">
+                        <option value="">— Sin orden —</option>
+                        {% for o in ordenes %}
+                        <option value="{{ o.folio }}" {% if laptop.orden_folio == o.folio %}selected{% endif %}>
+                            #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }} ({{ o.estado_nombre }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Línea</label>
+                    <select name="linea" class="form-select">
+                        <option value="">— Sin línea —</option>
+                        {% for l in lineas %}
+                        <option value="{{ l.codigo }}" {% if laptop.linea_codigo == l.codigo %}selected{% endif %}>
+                            {{ l.codigo }} — {{ l.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Lote</label>
+                    <select name="lote" class="form-select">
+                        <option value="">— Sin lote —</option>
+                        {% for lo in lotes %}
+                        <option value="{{ lo.codigo }}" {% if laptop.lote_codigo == lo.codigo %}selected{% endif %}>
+                            {{ lo.codigo }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select">
+                        {% for e in estados %}
+                        <option value="{{ e.codigo }}" {% if laptop.estado_codigo == e.codigo %}selected{% endif %}>
+                            {{ e.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+        </div>
+        <div class="card-footer bg-white d-flex justify-content-end gap-2">
+            <a href="{% url 'laptops-lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check2-circle me-1"></i> Guardar cambios
+            </button>
+        </div>
+    </div>
+</form>
+
+
+<!-- ...................................................................
+     C O M P O N E N T E S   M O N T A D O S
+...................................................................... -->
+{% if finalizada %}
+<div class="alert alert-secondary">
+    <i class="bi bi-lock me-1"></i>
+    La laptop está <strong>{{ laptop.estado_nombre }}</strong>: sus componentes se
+    muestran solo de consulta. Desarmar una laptop que ya cerró su proceso
+    rompería la trazabilidad.
+</div>
+{% endif %}
+
+<div class="card bg-white mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>Componentes montados</strong>
+        <span class="text-muted small">{{ componentes|length }} pieza{{ componentes|length|pluralize:"s" }}</span>
+    </div>
+
+    {% if componentes %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Componente</th>
+                    <th>Num. Serie</th>
+                    <th>Línea</th>
+                    <th>Lote</th>
+                    <th>Estado</th>
+                    <th>Ensamblaje</th>
+                    {% if not finalizada %}<th class="text-end" style="width:260px;">Liberar</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in componentes %}
+                <tr>
+                    <td>{{ c.numero }}</td>
+                    <td>
+                        <strong>{{ c.modelo_nombre|default:c.modelo_codigo }}</strong>
+                        <span class="text-muted small d-block">
+                            {{ c.modelo_codigo }}{% if c.modelo_fabricante %} · {{ c.modelo_fabricante }}{% endif %}
+                        </span>
+                    </td>
+                    <td><span class="font-monospace small">{{ c.num_serie|default:"—" }}</span></td>
+                    <td>{{ c.linea_nombre|default:"—" }}</td>
+                    <td>{{ c.lote_codigo|default:"—" }}</td>
+                    <td>
+                        <span class="badge
+                            {% if c.estado_codigo == 'EDC001' %}text-bg-success
+                            {% elif c.estado_codigo == 'EDC002' %}text-bg-primary
+                            {% elif c.estado_codigo == 'EDC003' %}text-bg-warning
+                            {% else %}text-bg-secondary{% endif %}">
+                            {{ c.estado_nombre|default:"—" }}
+                        </span>
+                    </td>
+                    <td><span class="text-muted small">#{{ c.registro_ensamblaje }}</span></td>
+
+                    {% if not finalizada %}
+                    <td class="text-end">
+                        <form method="POST"
+                              action="{% url 'laptop-componente-liberar' laptop.numero c.numero %}"
+                              class="d-flex gap-1 justify-content-end"
+                              onsubmit="return confirm('¿Quitar {{ c.modelo_nombre|default:c.modelo_codigo|escapejs }} (#{{ c.numero }}) de esta laptop?');">
+                            {% csrf_token %}
+                            <select name="estado" class="form-select form-select-sm" style="width:auto;">
+                                {% for e in estados_componente %}
+                                <option value="{{ e.codigo }}" {% if e.codigo == estado_disponible %}selected{% endif %}>
+                                    {{ e.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-danger text-nowrap">
+                                <i class="bi bi-box-arrow-up"></i> Liberar
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if not finalizada %}
+    <div class="card-footer bg-white">
+        <span class="text-muted small">
+            Al liberar, la pieza se desliga del ensamblaje y queda en el estado que elijas:
+            <strong>Disponible</strong> si vuelve al inventario de su línea, o
+            <strong>Dañado</strong> / <strong>Mermado</strong> si salió defectuosa.
+        </span>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="card-body">
+        <div class="alert alert-info mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            Esta laptop no tiene componentes montados.
+            {% if not registros %}
+            Todavía no se le ha registrado ningún ensamblaje —
+            <a href="{% url 'ensamblaje-registrar' %}">registrar ensamblaje</a>.
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+
+<!-- ...................................................................
+     R E G I S T R O S   D E   E N S A M B L A J E
+...................................................................... -->
+<div class="card bg-white mb-3">
+    <div class="card-header bg-white">
+        <strong>Registros de ensamblaje</strong>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Línea</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Situación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in registros %}
+                <tr>
+                    <td>{{ r.numero }}</td>
+                    <td>{{ r.linea|default:"—" }}</td>
+                    <td>{{ r.fecha_inicio|default:"—" }} {{ r.hora_inicio|default:"" }}</td>
+                    <td>{{ r.fecha_fin|default:"—" }} {{ r.hora_fin|default:"" }}</td>
+                    <td>
+                        {% if r.fecha_fin %}
+                        <span class="badge text-bg-success">Terminado</span>
+                        {% else %}
+                        <span class="badge text-bg-warning">Abierto</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">
+                    Esta laptop no tiene registros de ensamblaje.
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

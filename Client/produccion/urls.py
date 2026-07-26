@@ -8,6 +8,13 @@ urlpatterns = [
     path('ordenes/cancelar/<int:folio>/', views.ordenProduccionCancelarView, name='orden-produccion-cancelar'),
     path('ordenes/<int:folio>/', views.ordenProduccionDetalleView, name='orden-produccion-detalle'),
 
+    # Laptops
+    path('laptops/', views.laptopsListView, name='laptops-lista'),
+    path('laptops/editar/<int:numero>/', views.laptopEditarView, name='laptop-editar'),
+    path('laptops/rechazar/<int:numero>/', views.laptopRechazarView, name='laptop-rechazar'),
+    path('laptops/<int:numero>/', views.laptopDetalleView, name='laptop-detalle'),
+    path('laptops/<int:numero>/liberar/<int:componente>/', views.laptopComponenteLiberarView, name='laptop-componente-liberar'),
+
     # Ensamblaje
     path('ensamblaje/registrar/', views.ensamblajeRegistrarView, name='ensamblaje-registrar'),
 ]

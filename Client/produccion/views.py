@@ -585,3 +585,282 @@ def ordenProduccionDetalleView(request, folio):
             "porcentaje": min(100, round(registradas * 100 / planificadas)) if planificadas else 0,
         }
     )
+
+
+# 
+#   LAPTOPS
+# 
+
+# Estados en los que la laptop ya cerró su ciclo productivo y no se le deben
+# quitar piezas. Es el mismo criterio del trigger
+# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql).
+ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
+
+# Estado con el que nace una laptop.
+EDO_LAPTOP_REGISTRADA = "REGIS"
+
+
+def _serie_temporal_sugerida(laptops):
+    """Serie provisional para una laptop nueva, siguiendo la convención que ya
+    trae la base (TMP-0001, TMP-0002...). La columna num_serie es NOT NULL y
+    UNIQUE, así que no puede quedar vacía; el trigger
+    tg_Generar_Numero_Serie_Final la reemplaza por la definitiva
+    (TP-AAAAMMDD-NNNNNN) cuando calidad aprueba la laptop."""
+    numeros = [l.get("numero") or 0 for l in laptops]
+    return "TMP-{:04d}".format((max(numeros) + 1) if numeros else 1)
+
+
+def _filtrar_laptops(laptops, filtros):
+    """Aplica los filtros de la barra de búsqueda. Se filtra aquí y no en la API
+    porque el endpoint de laptops no acepta query params."""
+    resultado = laptops
+
+    for campo, clave in (("estado", "estado_codigo"),
+                         ("modelo", "modelo_codigo"),
+                         ("linea", "linea_codigo"),
+                         ("lote", "lote_codigo"),
+                         ("orden", "orden_folio")):
+        valor = filtros.get(campo)
+        if valor:
+            resultado = [l for l in resultado
+                         if str(l.get(clave) or "") == str(valor)]
+
+    texto = (filtros.get("q") or "").strip().lower()
+    if texto:
+        resultado = [l for l in resultado
+                     if texto in str(l.get("num_serie") or "").lower()
+                     or texto in str(l.get("numero") or "")]
+
+    return resultado
+
+
+def _componentes_montados(headers, registros):
+    """Componentes físicos ligados a los ensamblajes de una laptop.
+
+    Se leen de vista_componentes (/api/componentes/) y no del detalle de la
+    laptop porque esa vista ya trae los nombres de modelo, fabricante y estado;
+    el detalle solo devuelve los códigos."""
+    numeros = {str(r.get("numero")) for r in registros}
+    if not numeros:
+        return []
+    montados = [c for c in _todos_los_componentes(headers)
+                if str(c.get("registro_ensamblaje")) in numeros]
+    return sorted(montados,
+                  key=lambda c: ((c.get("modelo_nombre") or "").lower(), c.get("numero") or 0))
+
+
+def _catalogos_laptop(headers):
+    """Los cinco catálogos que alimentan los selects de alta, edición y filtros."""
+    def lista(url):
+        datos = requests.get(url, headers=headers).json()
+        return datos if isinstance(datos, list) else []
+
+    return {
+        "modelos": lista(f"{API}/produccion/modelos/"),
+        "estados": lista(f"{API}/produccion/estados-laptop/"),
+        "lineas": lista(f"{API}/lineas/"),
+        "lotes": lista(f"{API}/produccion/lotes/"),
+        "ordenes": lista(f"{API}/produccion/"),
+    }
+
+
+def laptopsListView(request):
+    """Consulta general de laptops (lee de vista_laptops) con filtros, y alta
+    de una nueva."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers = _headers(request)
+
+    if request.method == "POST":
+
+        laptops_actuales = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+        if not isinstance(laptops_actuales, list):
+            laptops_actuales = []
+
+        payload = {
+            "num_serie": (request.POST.get("num_serie") or "").strip()
+                         or _serie_temporal_sugerida(laptops_actuales),
+            "descripcion": request.POST.get("descripcion") or None,
+            "orden": request.POST.get("orden") or None,
+            "modelo": request.POST.get("modelo") or None,
+            "estado": request.POST.get("estado") or EDO_LAPTOP_REGISTRADA,
+            "linea": request.POST.get("linea") or None,
+            "lote": request.POST.get("lote") or None,
+        }
+
+        respuesta = requests.post(f"{API}/produccion/laptops/", json=payload, headers=headers)
+
+        if respuesta.status_code == 201:
+            messages.success(request, "Laptop registrada correctamente.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+        return redirect('laptops-lista')
+
+    laptops = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+    laptops = laptops if isinstance(laptops, list) else []
+
+    filtros = {
+        "estado": request.GET.get("estado") or "",
+        "modelo": request.GET.get("modelo") or "",
+        "linea": request.GET.get("linea") or "",
+        "lote": request.GET.get("lote") or "",
+        "orden": request.GET.get("orden") or "",
+        "q": request.GET.get("q") or "",
+    }
+
+    filtradas = _filtrar_laptops(laptops, filtros)
+
+    contexto = _catalogos_laptop(headers)
+    contexto.update({
+        "laptops": filtradas,
+        "total": len(laptops),
+        "mostradas": len(filtradas),
+        "filtros": filtros,
+        "hay_filtros": any(filtros.values()),
+        "serie_sugerida": _serie_temporal_sugerida(laptops),
+        "estado_inicial": EDO_LAPTOP_REGISTRADA,
+    })
+
+    return render(request, "produccion/lista_laptops.html", contexto)
+
+
+def laptopDetalleView(request, numero):
+    """Ficha de la laptop: sus datos editables, sus registros de ensamblaje y
+    los componentes que trae montados, con la opción de liberarlos."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers = _headers(request)
+
+    laptop = requests.get(f"{API}/produccion/laptops/{numero}/", headers=headers).json()
+    if not isinstance(laptop, dict) or not laptop.get("numero"):
+        messages.error(request, "No se encontró esa laptop.")
+        return redirect('laptops-lista')
+
+    registros = laptop.get("registros_ensamblaje") or []
+    componentes = _componentes_montados(headers, registros)
+
+    # Estados a los que puede pasar un componente al desmontarlo. Se excluye
+    # "En Uso": si sigue En Uso es que no se liberó.
+    estados_comp = requests.get(f"{API}/componentes/estados/", headers=headers).json()
+    estados_comp = ([e for e in estados_comp if e.get("codigo") != EDO_COMP_EN_USO]
+                    if isinstance(estados_comp, list) else [])
+
+    contexto = _catalogos_laptop(headers)
+    contexto.update({
+        "laptop": laptop,
+        "registros": registros,
+        "componentes": componentes,
+        "estados_componente": estados_comp,
+        # Aprobada, Rechazada o Embalada: se muestran las piezas pero ya no se
+        # pueden quitar, para no romper la trazabilidad.
+        "finalizada": laptop.get("estado_codigo") in ESTADOS_LAPTOP_FINALIZADOS,
+        "estado_disponible": EDO_COMP_DISPONIBLE,
+    })
+
+    return render(request, "produccion/detalle_laptop.html", contexto)
+
+
+def laptopEditarView(request, numero):
+    """Guarda los datos de la laptop. Se manda PATCH para tocar solo lo que
+    viene en el formulario."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+
+        payload = {
+            "descripcion": request.POST.get("descripcion") or None,
+            "orden": request.POST.get("orden") or None,
+            "modelo": request.POST.get("modelo") or None,
+            "estado": request.POST.get("estado") or None,
+            "linea": request.POST.get("linea") or None,
+            "lote": request.POST.get("lote") or None,
+        }
+
+        # num_serie es NOT NULL y UNIQUE: si viene vacía no se manda, para no
+        # tumbar la que ya tenía (la pone el trigger al aprobar).
+        serie = (request.POST.get("num_serie") or "").strip()
+        if serie:
+            payload["num_serie"] = serie
+
+        respuesta = requests.patch(
+            f"{API}/produccion/laptops/mod/{numero}/", json=payload, headers=headers)
+
+        if respuesta.status_code in (200, 202):
+            messages.success(request, "Laptop actualizada correctamente.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('laptop-detalle', numero=numero)
+
+
+def laptopRechazarView(request, numero):
+    """El DELETE de la API no borra la laptop: la deja Rechazada (RECHA)."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+        respuesta = requests.delete(f"{API}/produccion/laptops/mod/{numero}/", headers=headers)
+
+        if respuesta.status_code == 204:
+            messages.success(request, f"Laptop #{numero} marcada como Rechazada.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('laptops-lista')
+
+
+def laptopComponenteLiberarView(request, numero, componente):
+    """Desmonta un componente de la laptop: lo desliga de su registro de
+    ensamblaje y lo deja en el estado elegido — Disponible si vuelve al stock,
+    o Dañado/Mermado si salió defectuoso."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+
+        # Se vuelve a consultar el estado de la laptop: el bloqueo no puede
+        # depender de que el botón no se haya pintado, el POST se puede forzar.
+        laptop = requests.get(f"{API}/produccion/laptops/{numero}/", headers=headers).json()
+        laptop = laptop if isinstance(laptop, dict) else {}
+
+        if laptop.get("estado_codigo") in ESTADOS_LAPTOP_FINALIZADOS:
+            messages.error(
+                request,
+                "No se pueden quitar componentes: la laptop está "
+                f"{laptop.get('estado_nombre') or 'finalizada'}."
+            )
+            return redirect('laptop-detalle', numero=numero)
+
+        nuevo_estado = request.POST.get("estado") or EDO_COMP_DISPONIBLE
+        if nuevo_estado == EDO_COMP_EN_USO:
+            messages.error(request, "Un componente liberado no puede quedar En Uso.")
+            return redirect('laptop-detalle', numero=numero)
+
+        respuesta = requests.patch(
+            f"{API}/componentes/mod/{componente}/",
+            json={"registro_ensamblaje": None, "estado": nuevo_estado},
+            headers=headers,
+        )
+
+        if respuesta.status_code in (200, 202):
+            messages.success(
+                request, f"Componente #{componente} liberado de la laptop #{numero}.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('laptop-detalle', numero=numero)
