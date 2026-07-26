@@ -2,7 +2,7 @@ from rest_framework import generics
 
 from .models import *
 from .serializers import *
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from usuarios.permissions import TienePermisoModulo
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -130,8 +130,9 @@ class EstacionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 class ListaEstacionesAPIView(APIView):
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
+            AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
         ]
     modulo = "empleados"
     def get(self, request):
@@ -144,8 +145,9 @@ class ListaEstacionesAPIView(APIView):
     
 class LineasActivasAPIView(APIView):
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "empleados"
 

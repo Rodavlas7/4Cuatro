@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import generics
 from django.utils import timezone
 
@@ -32,8 +32,9 @@ from django.db.models import Q
 # . . . . . .  . REGISTRO
 class RegistroInspeccionCalidadAPIView(APIView):
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "calidad"
 
@@ -50,6 +51,21 @@ class RegistroInspeccionCalidadAPIView(APIView):
         linea = serializer.validated_data["linea"]
         laptop = serializer.validated_data["laptop"]
         
+        # Validar que la laptop no tenga ya una inspección en la misma línea
+        if InspeccionCalidad.objects.filter(
+            laptop=laptop,
+            linea=linea
+        ).exists():
+            return Response(
+                {
+                    "mensaje": (
+                        "No es posible registrar la inspección. "
+                        "La laptop ya fue inspeccionada en la línea seleccionada."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         #validar rol del empleado
         if not empleado.rol or empleado.rol.codigo != "OPCALI":
             return Response(
@@ -217,8 +233,9 @@ class DetailInspeccionCalidadAPIView(APIView):
 class ListaInspeccionCalidadAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "calidad"
@@ -243,8 +260,9 @@ class ListaInspeccionCalidadAPIView(APIView):
 class DetailInspeccionCalidadAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "calidad"
@@ -286,8 +304,9 @@ class DetailInspeccionCalidadAPIView(APIView):
 class UpdateInspeccionCalidadAPIView(generics.UpdateAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "calidad"
@@ -306,8 +325,9 @@ class UpdateInspeccionCalidadAPIView(generics.UpdateAPIView):
 class DeleteInspeccionCalidadAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "calidad"
@@ -344,39 +364,31 @@ class DeleteInspeccionCalidadAPIView(APIView):
 class BuscarInspeccionCalidadView(generics.ListAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "calidad"
 
-    serializer_class = serializers.ListInspeccionCalidadSerializer
-
+    serializer_class = serializers.ListVistaInspeccionSerializer
 
     def get_queryset(self):
 
-        queryset = InspeccionCalidad.objects.all()
+        queryset = VistaInspeccionCalidad.objects.all()
 
         buscar = self.request.GET.get("buscar")
-
 
         if buscar:
 
             queryset = queryset.filter(
 
                 Q(numero__icontains=buscar) |
-
-                Q(laptop__numero__icontains=buscar) |
-
-                Q(empleado__nombrepila__icontains=buscar) |
-
-                Q(empleado__primerapell__icontains=buscar) |
-
-                Q(linea__nombre__icontains=buscar) |
-
+                Q(laptop_numero__icontains=buscar) |
+                Q(empleado_nombre__icontains=buscar) |
+                Q(linea_nombre__icontains=buscar) |
                 Q(observaciones__icontains=buscar)
 
             )
-
 
         return queryset.order_by("-fecha", "-hora")

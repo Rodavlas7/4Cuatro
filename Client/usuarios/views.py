@@ -510,3 +510,4 @@ class ReactivarUsuario(generic.View):
 
         return redirect("lista_usuarios")
     
+

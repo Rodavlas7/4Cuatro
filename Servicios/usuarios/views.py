@@ -308,7 +308,7 @@ class UpdateUsuarioAPIView(APIView):
         AllowAny
             #IsAuthenticated,
             #TienePermisoModulo
-        ]
+    ]
     modulo = "usuarios" 
 
     def put(self, request, numero):
@@ -352,10 +352,10 @@ class UpdateUsuarioAPIView(APIView):
 class BajaUsuarioAPIView(APIView):
 
     permission_classes = [
-            AllowAny
+        AllowAny
             #IsAuthenticated,
             #TienePermisoModulo
-        ]
+    ]
     modulo = "usuarios" 
 
     def patch(self, request, numero):
@@ -395,10 +395,10 @@ class BajaUsuarioAPIView(APIView):
 class ReactivarUsuarioAPIView(APIView):
 
     permission_classes = [
-            AllowAny
+        AllowAny
             #IsAuthenticated,
             #TienePermisoModulo
-        ]
+    ]
     modulo = "usuarios" 
 
     def patch(self, request, numero):
@@ -444,10 +444,10 @@ class ReactivarUsuarioAPIView(APIView):
 class RegistroEmpleadoAPIView(APIView):
     
     permission_classes = [
-            AllowAny
+        AllowAny
             #IsAuthenticated,
             #TienePermisoModulo
-        ]
+    ]
     modulo = "empleados" 
 
     @transaction.atomic
@@ -878,8 +878,9 @@ class BuscarEmpleadoLineaView(generics.ListAPIView):
 class BuscarEmpleadoEstacionView(generics.ListAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -910,3 +911,28 @@ class BuscarEmpleadoEstacionView(generics.ListAPIView):
 
 
         return queryset
+    
+
+
+class EmpleadosCalidadPorLineaAPIView(APIView):
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+    modulo = "empleados"
+
+    def get(self, request, linea_id):
+        asignaciones = EmpleadoLinea.objects.filter(
+            linea_id=linea_id,
+            fecha_fin__isnull=True,
+            empleado__rol__codigo="OPCALI"
+        ).select_related("empleado")
+
+        data = [
+            {
+                "numero": a.empleado.numero,
+                "nombre": f"{a.empleado.nombrepila} {a.empleado.primerapell}",
+            }
+            for a in asignaciones
+        ]
+        return Response(data)
