@@ -17,4 +17,10 @@ urlpatterns = [
 
     # Ensamblaje
     path('ensamblaje/registrar/', views.ensamblajeRegistrarView, name='ensamblaje-registrar'),
+    
+    #Paros
+    path('paros/', views.ListaParos.as_view(), name='lista_paros'),
+    path('paros/crear/', views.CrearParo.as_view(), name='paro-crear'),
+    path('paros/editar/<int:numero>/', views.EditarParo.as_view(), name='paro-editar'),
+    path('paros/cerrar/<int:numero>/', views.CerrarParo.as_view(), name='paro-cerrar'),
 ]

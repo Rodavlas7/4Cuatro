@@ -20,4 +20,5 @@ urlpatterns = [
     path("registros-ensamblaje/<int:numero>/", RegistroEnsamblajeDetailAPIView.as_view(), name="registro-ensamblaje-detail"),
     path("mod/<int:folio>/", OrdenProduccionModifyAPIView.as_view(), name="orden-modify"),
     path("<int:folio>/", OrdenProduccionDetailAPIView.as_view(), name="orden-detail"),
+    path("paros/buscar/", BuscarParoAPIView.as_view(), name="buscar_paro"),
 ]

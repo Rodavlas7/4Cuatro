@@ -4,6 +4,11 @@ from datetime import datetime
 
 from django.contrib import messages
 from django.shortcuts import render, redirect
+import requests
+from django.views import generic
+
+
+from .forms import get_choices_lineas_paro
 
 # URL base de la API (Servicios). Igual que en home/views.py y componentes/views.py.
 API = "http://127.0.0.1:8000/api"
@@ -864,3 +869,113 @@ def laptopComponenteLiberarView(request, numero, componente):
             messages.error(request, _mensaje_api(respuesta))
 
     return redirect('laptop-detalle', numero=numero)
+
+
+#--------------------------------------------------------------------------------
+#                         P A R O S
+#---------------------------------------------------------------------------------
+
+
+
+API_PARO = "http://127.0.0.1:8000/api/produccion/paros/"
+
+
+class ListaParos(generic.View):
+    template_name = "produccion/paros.html"
+
+    def get(self, request):
+        token = request.session.get("token")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        buscar = request.GET.get("buscar", "").strip()
+
+        if buscar:
+            response = requests.get(API_PARO + "buscar/", headers=headers, params={"buscar": buscar})
+        else:
+            response = requests.get(API_PARO, headers=headers)
+
+        paros = response.json() if response.status_code == 200 else []
+
+        context = {
+            "paros": paros,
+            "lineas": get_choices_lineas_paro(token),
+            "buscar": buscar,
+        }
+        return render(request, self.template_name, context)
+
+
+class CrearParo(generic.View):
+    def post(self, request):
+        token = request.session.get("token")
+        ahora = datetime.now()
+
+        data = {
+            "razon": request.POST.get("razon"),
+            "fecha_inicio": ahora.strftime("%Y-%m-%d"),
+            "hora_inicio": ahora.strftime("%H:%M:%S"),
+            "linea": request.POST.get("linea"),
+        }
+
+        response = requests.post(
+            API_PARO,
+            headers={"Authorization": f"Bearer {token}"},
+            data=data
+        )
+
+        if response.status_code == 201:
+            messages.success(request, "Paro registrado correctamente.")
+        else:
+            error_data = response.json()
+            mensaje = error_data.get("mensaje") or str(error_data)
+            messages.error(request, mensaje)
+
+        return redirect("lista_paros")
+
+
+class EditarParo(generic.View):
+    def post(self, request, numero):
+        token = request.session.get("token")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        det_resp = requests.get(API_PARO + f"{numero}/", headers=headers)
+        detalle = det_resp.json() if det_resp.status_code == 200 else {}
+
+        data = {
+            "razon": request.POST.get("razon"),
+            "fecha_inicio": detalle.get("fecha_inicio"),
+            "hora_inicio": detalle.get("hora_inicio"),
+            "linea": detalle.get("linea_codigo"),
+        }
+
+        response = requests.put(
+            API_PARO + f"mod/{numero}/",
+            headers=headers,
+            data=data
+        )
+
+        if response.status_code == 200:
+            messages.success(request, "Paro actualizado correctamente.")
+        else:
+            error_data = response.json()
+            mensaje = error_data.get("mensaje") or str(error_data)
+            messages.error(request, mensaje)
+
+        return redirect("lista_paros")
+
+
+class CerrarParo(generic.View):
+    def post(self, request, numero):
+        token = request.session.get("token")
+
+        response = requests.delete(
+            API_PARO + f"mod/{numero}/",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        if response.status_code in (200, 204):
+            messages.success(request, "Paro cerrado correctamente.")
+        else:
+            error_data = response.json()
+            messages.error(request, error_data.get("mensaje", "No se pudo cerrar el paro."))
+
+        return redirect("lista_paros")
