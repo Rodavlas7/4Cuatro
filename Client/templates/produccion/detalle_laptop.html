@@ -44,11 +44,9 @@
 
                 <div class="col-md-6">
                     <label class="form-label">Núm. de serie</label>
-                    <input type="text" name="num_serie" class="form-control"
-                           value="{{ laptop.num_serie|default:'' }}" maxlength="50">
-                    <div class="form-text">
-                        Si se deja vacío se conserva la actual.
-                    </div>
+                    <!-- Sin name y deshabilitado -->
+                    <input type="text" class="form-control font-monospace"
+                           value="{{ laptop.num_serie|default:'' }}" disabled>
                 </div>
 
                 <div class="col-md-6">

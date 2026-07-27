@@ -790,12 +790,6 @@ def laptopEditarView(request, numero):
             "lote": request.POST.get("lote") or None,
         }
 
-        # num_serie es NOT NULL y UNIQUE: si viene vacía no se manda, para no
-        # tumbar la que ya tenía (la pone el trigger al aprobar).
-        serie = (request.POST.get("num_serie") or "").strip()
-        if serie:
-            payload["num_serie"] = serie
-
         respuesta = requests.patch(
             f"{API}/produccion/laptops/mod/{numero}/", json=payload, headers=headers)
 

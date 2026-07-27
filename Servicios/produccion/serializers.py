@@ -76,6 +76,17 @@ class LaptopSerializer(serializers.ModelSerializer):
         model = Laptop
         fields = '__all__'
 
+    def validate_num_serie(self, value):
+        """El número de serie se fija al registrar la laptop y solo lo sustituye
+        el trigger tg_Generar_Numero_Serie_Final cuando calidad la aprueba. Es el
+        identificador con el que la laptop queda trazada, así que un update no lo
+        puede reescribir. Mandar el mismo valor no estorba: solo se rechaza el cambio."""
+        if self.instance is not None and value != self.instance.num_serie:
+            raise serializers.ValidationError(
+                "El número de serie no se puede modificar."
+            )
+        return value
+
 
 class VistaLaptopSerializer(serializers.ModelSerializer):
     class Meta:
