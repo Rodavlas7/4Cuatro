@@ -29,6 +29,12 @@
     height: auto;
 }
 
+.sidebar-logo-icon{
+    width: 40px;
+    height: auto;
+    display: none; /* solo se muestra cuando el sidebar está colapsado */
+}
+
 /* El <hr> ya no dibuja línea (la da el border-bottom de arriba);
    solo se usa como espaciador. Si prefieres quitar el <hr> del HTML,
    esta regla se puede borrar entera. */
@@ -84,4 +90,87 @@
 /* Rota el chevron cuando el link está expandido (Bootstrap collapse) */
 .nav-link[aria-expanded="true"] .chevron{
     transform: rotate(180deg);
+}
+
+/* ====================================================================
+   RESPONSIVIDAD
+==================================================================== */
+
+:root{
+    --sidebar-width-collapsed: 72px;
+}
+
+.sidebar-panel{
+    transition: flex-basis var(--transition), width var(--transition);
+}
+
+/* ---------- Desktop (≥992px): colapsar a solo iconos ---------- */
+
+/* Oculta el texto de los links y el logo completo cuando está colapsado */
+body.sidebar-collapsed .sidebar-panel .nav-label,
+body.sidebar-collapsed .sidebar-panel .sidebar-logo-full{
+    display: none;
+}
+
+/* Muestra el isotipo en su lugar */
+body.sidebar-collapsed .sidebar-panel .sidebar-logo-icon{
+    display: block;
+}
+
+/* Sin el padding lateral, el isotipo tiene los 72px completos para centrarse */
+body.sidebar-collapsed .sidebar-panel .sidebar-header{
+    padding: 0;
+}
+
+/* Centra los iconos cuando no hay texto al lado */
+body.sidebar-collapsed .sidebar-panel .nav-link{
+    justify-content: center;
+}
+body.sidebar-collapsed .sidebar-panel .nav-link i{
+    margin-right: 0 !important;
+}
+
+/* En modo colapsado no hay espacio para submenús desplegados ni chevrons */
+body.sidebar-collapsed .sidebar-panel .chevron,
+body.sidebar-collapsed .sidebar-panel .submenu{
+    display: none;
+}
+
+body.sidebar-collapsed .sidebar-panel{
+    flex-basis: var(--sidebar-width-collapsed);
+    width: var(--sidebar-width-collapsed);
+}
+
+/* ---------- Tablet / Móvil (<992px): sidebar como panel flotante ---------- */
+
+@media (max-width: 991.98px){
+
+    .sidebar-panel{
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1045;
+        transform: translateX(-100%);
+        transition: transform var(--transition);
+    }
+
+    /* clase que agrega el JS al abrir el menú en móvil */
+    body.sidebar-mobile-open .sidebar-panel{
+        transform: translateX(0);
+        width: var(--sidebar-width); /* siempre completo en móvil, no colapsado */
+        flex-basis: var(--sidebar-width);
+    }
+
+    /* fondo oscuro detrás del sidebar cuando está abierto */
+    .sidebar-backdrop{
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.5);
+        z-index: 1044;
+    }
+    body.sidebar-mobile-open .sidebar-backdrop{
+        display: block;
+    }
 }

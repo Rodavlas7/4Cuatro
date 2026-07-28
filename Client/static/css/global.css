@@ -162,3 +162,14 @@ html {
 .icon {
     font-size: var(--icon-size-md);
 }
+
+/* ---------- Área de contenido ---------- */
+.content-area{
+    padding: var(--space-lg);
+}
+ 
+@media (max-width: 575.98px){
+    .content-area{
+        padding: var(--space-md);
+    }
+}

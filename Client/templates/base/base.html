@@ -23,6 +23,7 @@
 
 </head>
 
+
 <body>
  
     <div class="d-flex">
@@ -31,11 +32,12 @@
             S I D E B A R
         ...................................................................................................... -->
  
-        <aside class="sidebar-panel">
+        <aside class="sidebar-panel ">
  
             <!-- Logo -->
             <div class="sidebar-header">
                 <img src="{% static 'img/logo2.svg' %}" alt="TraceX" class="sidebar-logo-full">
+                <img src="{% static 'img/isotipo-blanco.svg' %}" alt="TraceX" class="sidebar-logo-icon">
             </div>
  
             <hr class="sidebar-divider">
@@ -46,7 +48,7 @@
                 <!-- Dashboard -->
                 <li class="nav-item mb-2">
                     <a class="nav-link active" href="#">
-                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        <i class="bi bi-speedometer2 me-2"></i><span class="nav-label">Dashboard</span>
                     </a>
                 </li>
  
@@ -55,43 +57,43 @@
                     <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                        href="#produccion" role="button" aria-expanded="false">
                         <span>
-                            <i class="bi bi-gear-wide-connected me-2"></i>Producción
+                            <i class="bi bi-gear-wide-connected me-2"></i><span class="nav-label">Producción</span>
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
  
                     <div class="collapse submenu" id="produccion">
-                        <a href="#" class="nav-link">Órdenes de Producción</a>
-                        <a href="#" class="nav-link">Laptops</a>
-                        <a href="#" class="nav-link">Seguimiento de Ensamblaje</a>
+                        <a href="#" class="nav-link"><span class="nav-label">Órdenes de Producción</span></a>
+                        <a href="#" class="nav-link"><span class="nav-label">Laptops</span></a>
+                        <a href="#" class="nav-link"><span class="nav-label">Seguimiento de Ensamblaje</span></a>
                     </div>
                 </li>
  
                 <!-- Calidad -->
                 <li class="nav-item mb-2">
                     <a href="#" class="nav-link">
-                        <i class="bi bi-check2-circle me-2"></i>Calidad
+                        <i class="bi bi-check2-circle me-2"></i><span class="nav-label">Calidad</span>
                     </a>
                 </li>
  
                 <!-- Incidencias -->
                 <li class="nav-item mb-2">
                     <a href="#" class="nav-link">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
+                        <i class="bi bi-exclamation-triangle me-2"></i><span class="nav-label">Incidencias</span>
                     </a>
                 </li>
  
                 <!-- Embalaje -->
                 <li class="nav-item mb-2">
                     <a href="#" class="nav-link">
-                        <i class="bi bi-box-seam me-2"></i>Embalaje
+                        <i class="bi bi-box-seam me-2"></i><span class="nav-label">Embalaje</span>
                     </a>
                 </li>
  
                 <!-- Trazabilidad -->
                 <li class="nav-item mb-2">
                     <a href="#" class="nav-link">
-                        <i class="bi bi-search me-2"></i>Trazabilidad
+                        <i class="bi bi-search me-2"></i><span class="nav-label">Trazabilidad</span>
                     </a>
                 </li>
  
@@ -100,29 +102,29 @@
                     <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                        href="#planta" role="button" aria-expanded="false">
                         <span>
-                            <i class="bi bi-building me-2"></i>Planta
+                            <i class="bi bi-building me-2"></i><span class="nav-label">Planta</span>
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
  
                     <div class="collapse submenu" id="planta">
-                        <a href="#" class="nav-link small">Líneas de Ensamblaje</a>
-                        <a href="#" class="nav-link small">Estaciones de Trabajo</a>
+                        <a href="#" class="nav-link small"><span class="nav-label">Líneas de Ensamblaje</span></a>
+                        <a href="#" class="nav-link small"><span class="nav-label">Estaciones de Trabajo</span></a>
                     </div>
                 </li>
  
                 <!-- Materiales -->
-                <li class="nav-item mb-2">
+                 <li class="nav-item mb-2">
                     <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                        href="#materiales" role="button" aria-expanded="false">
                         <span>
-                            <i class="bi bi-box-arrow-up me-2"></i>Materiales
+                            <i class="bi bi-box-arrow-up me-2"></i><span class="nav-label">Materiales</span>
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
                     <div class="collapse submenu" id="materiales">
-                        <a href="#" class="nav-link small">Componentes</a>
-                        <a href="#" class="nav-link small">Órdenes de Material</a>
+                        <a href="#" class="nav-link small"><span class="nav-label">Componentes</span></a>
+                        <a href="#" class="nav-link small"><span class="nav-label">Órdenes de Material</span></a>
                     </div>
                 </li>
  
@@ -131,20 +133,20 @@
                     <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                        href="#personal" role="button" aria-expanded="false">
                         <span>
-                            <i class="bi bi-people me-2"></i>Personal
+                            <i class="bi bi-people me-2"></i><span class="nav-label">Personal</span>
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
                     <div class="collapse submenu" id="personal">
-                        <a href="#" class="nav-link small">Usuarios</a>
-                        <a href="#" class="nav-link small">Empleados</a>
+                        <a href="#" class="nav-link small"><span class="nav-label">Usuarios</span></a>
+                        <a href="#" class="nav-link small"><span class="nav-label">Empleados</span></a>
                     </div>
                 </li>
  
                 <!-- Reportes -->
                 <li class="nav-item">
                     <a href="#" class="nav-link">
-                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i><span class="nav-label">Reportes</span>
                     </a>
                 </li>
  
@@ -152,6 +154,9 @@
  
         </aside>
  
+        <!-- Fondo oscuro detrás del sidebar cuando está abierto en móvil -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
         <!-- ......................................................................................................
              C O N T E N E D O R   P R I N C I P A L
         ...................................................................................................... -->
@@ -164,13 +169,19 @@
  
                 <div class="topbar-left">
  
-                    <h2 class="module-title">
-                        {% block page_title %}Dashboard{% endblock %}
-                    </h2>
+                    <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Mostrar/ocultar menú">
+                        <i class="bi bi-list"></i>
+                    </button>
  
-                    <span class="module-subtitle">
-                        TraceX
-                    </span>
+                    <div>
+                        <h2 class="module-title">
+                            {% block page_title %}Dashboard{% endblock %}
+                        </h2>
+ 
+                        <span class="module-subtitle">
+                            TraceX
+                        </span>
+                    </div>
  
                 </div>
  
@@ -218,7 +229,6 @@
  
             </header>
  
-
             <!-- ......................................................................................................
                 C O N T E N I D O  P A G I NA
             ...................................................................................................... -->
