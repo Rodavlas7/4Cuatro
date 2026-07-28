@@ -14,6 +14,7 @@ DROP TRIGGER IF EXISTS tg_Bloquear_Componentes_Laptop_Finalizada;
 DROP TRIGGER IF EXISTS tg_Actualizar_Estado_Laptop_Inspeccion_Calidad;
 DROP TRIGGER IF EXISTS tg_Control_Componentes_Duplicados;
 DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente;
+DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Registrar_Laptop;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Alta;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Cambio;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Baja;
@@ -476,6 +477,37 @@ END$$
 -- NOTA: leer la propia tabla laptop dentro de un trigger sobre laptop
 --   sí está permitido; lo que MySQL prohíbe es modificarla (error 1442).
 --   Aquí solo se escribe en orden_produccion.
+
+
+-- TRIGGER 11: tg_Iniciar_Orden_Al_Registrar_Laptop
+--
+-- Evento   : AFTER INSERT en laptop
+-- Objetivo : Arrancar la orden en cuanto se le registra su PRIMERA laptop:
+--            el estado pasa de 'Pendiente' (PEND) a 'En Proceso' (PROC).
+--
+-- Por qué hace falta si ya existe el TRIGGER 1:
+--   El TRIGGER 1 mueve la orden a 'En Proceso' cuando se EMBALA la primera
+--   laptop, que es mucho después. Con este, la orden refleja que ya se está
+--   trabajando desde que se le da de alta la primera unidad. Los dos conviven:
+--   para cuando llega el embalaje la orden ya está en PROC, así que esa rama
+--   del TRIGGER 1 simplemente no encuentra nada que hacer, y su rama de
+--   'Completada' sigue funcionando igual.
+--
+-- Solo actúa sobre órdenes en 'Pendiente': una Cancelada o Completada no se
+-- reabre por registrarle una laptop.
+
+
+CREATE TRIGGER tg_Iniciar_Orden_Al_Registrar_Laptop
+AFTER INSERT ON laptop
+FOR EACH ROW
+BEGIN
+    IF NEW.orden IS NOT NULL THEN
+        UPDATE orden_produccion
+           SET estado = 'PROC'
+         WHERE folio  = NEW.orden
+           AND estado = 'PEND';
+    END IF;
+END$$
 
 
 CREATE TRIGGER tg_Sincronizar_Cant_Producida_Alta

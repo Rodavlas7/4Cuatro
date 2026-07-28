@@ -259,7 +259,8 @@ INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
 -- 13. LOTE DE LAPTOPS
 
 INSERT INTO lote_laptop (codigo, fecha) VALUES
-('LOT2026A', '2026-07-15');
+('LOT2026A', '2026-07-15'),
+('LOT2026B', '2026-07-20');
 
 
 -- 14. LOTE DE COMPONENTES (ejemplo)

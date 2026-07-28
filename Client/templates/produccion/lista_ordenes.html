@@ -19,6 +19,7 @@
                 <th>Fecha</th>
                 <th>Hora</th>
                 <th>Modelo</th>
+                <th>Lote</th>
                 <th class="text-center">Planificadas</th>
                 <th class="text-center">Producidas</th>
                 <th>Estado</th>
@@ -37,6 +38,7 @@
                     {{ o.modelo_nombre|default:"—" }}
                     <span class="text-muted small d-block">{{ o.modelo_codigo|default:"" }}</span>
                 </td>
+                <td>{{ o.lote_codigo|default:"—" }}</td>
                 <td class="text-center">{{ o.cant_planificada|default_if_none:"—" }}</td>
                 <td class="text-center">{{ o.cant_producida|default_if_none:"—" }}</td>
                 <td>
@@ -62,6 +64,7 @@
                         data-fecha="{{ o.fecha|default:'' }}"
                         data-hora="{{ o.hora|default:'' }}"
                         data-modelo="{{ o.modelo_codigo|default:'' }}"
+                        data-lote="{{ o.lote_codigo|default:'' }}"
                         data-planificada="{{ o.cant_planificada|default_if_none:'' }}"
                         data-producida="{{ o.cant_producida|default_if_none:'0' }}"
                         data-estado="{{ o.estado_codigo|default:'' }}">
@@ -84,7 +87,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="8" class="text-center text-muted py-4">No hay órdenes de producción registradas.</td></tr>
+            <tr><td colspan="9" class="text-center text-muted py-4">No hay órdenes de producción registradas.</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -113,36 +116,37 @@
                         </div>
                     </div>
 
-                    <div class="mt-3">
-                        <label class="form-label">Modelo de laptop</label>
-                        <select name="modelo_laptop" class="form-select" required>
-                            <option value="">— Selecciona —</option>
-                            {% for m in modelos %}
-                            <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
                     <div class="row g-3 mt-0">
                         <div class="col-6">
-                            <label class="form-label">Cantidad planificada</label>
-                            <input type="number" name="cant_planificada" class="form-control" min="0" value="1" required>
+                            <label class="form-label">Modelo de laptop</label>
+                            <select name="modelo_laptop" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for m in modelos %}
+                                <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Estado</label>
-                            <select name="estado" class="form-select">
-                                {% for e in estados %}
-                                <option value="{{ e.codigo }}" {% if e.codigo == estado_inicial %}selected{% endif %}>
-                                    {{ e.nombre }}
-                                </option>
+                            <label class="form-label">Lote</label>
+                            <select name="lote" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for lo in lotes %}
+                                <option value="{{ lo.codigo }}">{{ lo.codigo }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
 
-                    <div class="form-text mt-2">
-                        La cantidad producida arranca en 0: se va llenando conforme
-                        se registran y embalan las laptops de la orden.
+                    <div class="mt-3">
+                        <label class="form-label">Cantidad planificada</label>
+                        <input type="number" name="cant_planificada" class="form-control" min="0" value="1" required>
+                    </div>
+
+                    <div class="alert alert-secondary mt-3 mb-0 py-2 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        La orden nace <strong>Pendiente</strong> y pasa sola a
+                        <strong>En Proceso</strong> al registrarle su primera laptop.
+                        Las laptops de esta orden heredarán su modelo y su lote.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -177,14 +181,28 @@
                         </div>
                     </div>
 
-                    <div class="mt-3">
-                        <label class="form-label">Modelo de laptop</label>
-                        <select name="modelo_laptop" id="edit_modelo" class="form-select">
-                            <option value="">— Selecciona —</option>
-                            {% for m in modelos %}
-                            <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="row g-3 mt-0">
+                        <div class="col-6">
+                            <label class="form-label">Modelo de laptop</label>
+                            <select name="modelo_laptop" id="edit_modelo" class="form-select">
+                                <option value="">— Selecciona —</option>
+                                {% for m in modelos %}
+                                <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Lote</label>
+                            <select name="lote" id="edit_lote" class="form-select">
+                                <option value="">— Selecciona —</option>
+                                {% for lo in lotes %}
+                                <option value="{{ lo.codigo }}">{{ lo.codigo }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Las laptops que se registren después lo heredarán.
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row g-3 mt-0">
@@ -229,6 +247,7 @@ document.getElementById('modalEditar').addEventListener('show.bs.modal', functio
     // La API manda la hora como HH:MM:SS y el input type="time" espera HH:MM.
     document.getElementById('edit_hora').value = btn.dataset.hora.slice(0, 5);
     document.getElementById('edit_modelo').value = btn.dataset.modelo;
+    document.getElementById('edit_lote').value = btn.dataset.lote;
     document.getElementById('edit_planificada').value = btn.dataset.planificada;
     document.getElementById('edit_estado').value = btn.dataset.estado;
     document.getElementById('edit_producida').value = btn.dataset.producida;

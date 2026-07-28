@@ -16,6 +16,7 @@ urlpatterns = [
     path('laptops/<int:numero>/liberar/<int:componente>/', views.laptopComponenteLiberarView, name='laptop-componente-liberar'),
 
     # Ensamblaje
+    path('ensamblaje/', views.ensamblajeSeguimientoView, name='ensamblaje-seguimiento'),
     path('ensamblaje/registrar/', views.ensamblajeRegistrarView, name='ensamblaje-registrar'),
     
     #Paros

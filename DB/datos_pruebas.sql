@@ -40,14 +40,24 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 
 -- ============================================================
---  1. ÓRDENES DE PRODUCCIÓN  (estados PEND / PROC / CANC; la COMP la
---     dejará el trigger de embalaje automáticamente en la orden 3)
+--  1. ÓRDENES DE PRODUCCIÓN
+--
+--  Cada orden lleva su LOTE: las laptops que se registren contra ella heredan
+--  de aquí su modelo y su lote. LOT2026A surte dos órdenes y LOT2026B otras
+--  tres, para que se vea la relación 1 lote -> N órdenes.
+--
+--  Sobre los estados: los folios 1 a 4 se insertan en su estado inicial, pero
+--  el trigger tg_Iniciar_Orden_Al_Registrar_Laptop mueve a 'PROC' cualquier
+--  orden 'PEND' en cuanto se le registra una laptop. Por eso el folio 1 termina
+--  en 'PROC' y el 5, que se queda sin laptops, es el único que sigue 'PEND'.
+--  El folio 3 pasa a 'COMP' por el trigger de embalaje.
 -- ============================================================
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado) VALUES
-('2026-07-21', '08:00:00', 'ML001', 5, 0, 'PEND'),   -- folio 1
-('2026-07-21', '09:00:00', 'ML001', 3, 2, 'PROC'),   -- folio 2
-('2026-07-20', '08:00:00', 'ML001', 1, 1, 'PROC'),   -- folio 3 (pasará a COMP por trigger)
-('2026-07-19', '08:00:00', 'ML001', 2, 0, 'CANC');   -- folio 4
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
+('2026-07-21', '08:00:00', 'ML001', 5, 0, 'PEND', 'LOT2026A'),   -- folio 1 (el trigger la deja en PROC)
+('2026-07-21', '09:00:00', 'ML001', 3, 2, 'PROC', 'LOT2026A'),   -- folio 2
+('2026-07-20', '08:00:00', 'ML001', 1, 1, 'PROC', 'LOT2026B'),   -- folio 3 (pasará a COMP por trigger)
+('2026-07-19', '08:00:00', 'ML001', 2, 0, 'CANC', 'LOT2026B'),   -- folio 4
+('2026-07-22', '07:30:00', 'ML001', 4, 0, 'PEND', 'LOT2026B');   -- folio 5, sin laptops: se queda PEND
 
 
 -- ============================================================
@@ -62,8 +72,10 @@ INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, linea, lote) 
 ('TP-20260721-000004', 'Unidad 4 - será aprobada',    2, 'ML001', 'PENSAM', 'LIN001', 'LOT2026A'),  -- numero 4
 ('TMP-0005', 'Unidad 5 - será rechazada',             2, 'ML001', 'PENSAM', 'LIN001', 'LOT2026A'),  -- numero 5
 ('TMP-0006', 'Unidad 6 - en ensamblaje',              2, 'ML001', 'PENSAM', 'LIN003', 'LOT2026A'),  -- numero 6
-('TP-20260721-000007', 'Unidad 7 - será embalada',    3, 'ML001', 'PENSAM', 'LIN001', 'LOT2026A'),  -- numero 7
-('TMP-0008', 'Unidad 8 - de orden cancelada',         4, 'ML001', 'REGIS',  'LIN001', 'LOT2026A');  -- numero 8
+-- Las de las órdenes 3 y 4 llevan LOT2026B, que es el lote de esas órdenes:
+-- el lote de una laptop siempre tiene que coincidir con el de su orden.
+('TP-20260721-000007', 'Unidad 7 - será embalada',    3, 'ML001', 'PENSAM', 'LIN001', 'LOT2026B'),  -- numero 7
+('TMP-0008', 'Unidad 8 - de orden cancelada',         4, 'ML001', 'REGIS',  'LIN001', 'LOT2026B');  -- numero 8
 
 
 -- ============================================================
@@ -411,5 +423,10 @@ UNION ALL SELECT 'paro',                COUNT(*) FROM paro;
 -- Estados finales de laptops (deberían verse REGIS, PENSAM, APROV, RECHA, EMBALA)
 SELECT numero, num_serie, estado FROM laptop ORDER BY numero;
 
--- Estados finales de órdenes (la 3 debe estar COMP por el trigger de embalaje)
-SELECT folio, estado, cant_planificada FROM orden_produccion ORDER BY folio;
+-- Estados finales de órdenes. Esperado:
+--   1 PROC (el trigger la arrancó al registrarle laptops)
+--   2 PROC
+--   3 COMP (trigger de embalaje)
+--   4 CANC
+--   5 PEND (sin laptops, es la única que sigue Pendiente)
+SELECT folio, estado, lote, cant_planificada FROM orden_produccion ORDER BY folio;

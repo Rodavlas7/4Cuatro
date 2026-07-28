@@ -1,9 +1,13 @@
+from django.contrib import messages
 from django.shortcuts import render
 from django.shortcuts import render, redirect
 import requests
 
 
 # Create your views here.
+
+# URL base de la API (Servicios).
+API = "http://127.0.0.1:8000/api"
 
 # Cookie de host donde se deja el token para que la API (:8000) también lo vea.
 # Las cookies no distinguen puerto, así que con iniciar sesión aquí basta para
@@ -14,18 +18,79 @@ TOKEN_COOKIE = "token_4cuatro"
 # El token dura 10 horas (ver LoginAPIView de la API); la cookie vence a la par.
 TOKEN_COOKIE_MAX_AGE = 10 * 60 * 60
 
+# Mensajes con los que la API avisa que el token ya no sirve.
+#
+# Se comparan por texto y no por código HTTP porque la API NUNCA responde 401:
+# su TokenAuthentication no implementa authenticate_header(), así que DRF
+# degrada el 401 a 403. Y con 403 llega también la falta de permisos de módulo
+# ("No cuenta con las credenciales para acceder."), que NO es sesión vencida:
+# si nos guiáramos solo por el código, sacaríamos del sistema a un usuario que
+# sí está dentro pero no tiene acceso a ese módulo.
+MENSAJES_SESION_MUERTA = (
+    "la sesión ha expirado",
+    "token inválido",
+    "formato de token inválido",
+    "authentication credentials were not provided",
+)
+
+
+def _token_vigente(token):
+    """Le pregunta a la API si el token todavía sirve.
+
+    Se usa un catálogo barato (turnos, 2 renglones). Ese endpoint es AllowAny,
+    así que un 200 solo puede significar que la autenticación pasó; cualquier
+    fallo de token se cae antes, en TokenAuthentication."""
+    if not token:
+        return False
+
+    try:
+        respuesta = requests.get(
+            f"{API}/usuarios/Turno/Listar/",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=5,
+        )
+    except requests.RequestException:
+        # Si la API no contesta no se puede afirmar que el token esté vencido.
+        # Sacar a alguien por un tropiezo de red sería peor que dejarlo pasar.
+        return True
+
+    if respuesta.status_code == 200:
+        return True
+
+    try:
+        detalle = str(respuesta.json().get("detail", "")).lower()
+    except ValueError:
+        detalle = ""
+
+    return not any(m in detalle for m in MENSAJES_SESION_MUERTA)
+
 
 '''-----------------------------------------------------------------------------
     I N D E X   V I E W
 -----------------------------------------------------------------------------'''
 def indexView(request):
-    """Puerta de entrada del sitio: quien ya tiene sesión pasa derecho al
-    dashboard y quien no, al login. Así la raíz deja de dar 404."""
+    """Puerta de entrada del sitio.
 
-    if 'token' in request.session:
-        return redirect('dashboard')
+    No basta con que haya token en la sesión: puede estar vencido, y entonces el
+    dashboard se pinta pero todo lo de adentro falla. Por eso primero se le
+    pregunta a la API si sigue sirviendo; si no, se limpia la sesión y se manda
+    al login."""
 
-    return redirect('login')
+    token = request.session.get('token')
+
+    if not token:
+        return redirect('login')
+
+    if not _token_vigente(token):
+        # Se limpia aquí para no volver a preguntar en cada entrada y para que
+        # la cookie compartida no siga dando acceso a la API por su cuenta.
+        request.session.flush()
+        respuesta = redirect('login')
+        respuesta.delete_cookie(TOKEN_COOKIE)
+        messages.info(request, "Tu sesión expiró. Vuelve a iniciar sesión.")
+        return respuesta
+
+    return redirect('dashboard')
 
 
 '''-----------------------------------------------------------------------------

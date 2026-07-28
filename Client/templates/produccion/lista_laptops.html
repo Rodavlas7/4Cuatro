@@ -195,7 +195,50 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+
+                    {% if not ordenes_abiertas %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        No hay órdenes de producción <strong>Pendientes</strong> ni
+                        <strong>En Proceso</strong>. Registra una orden antes de dar
+                        de alta laptops.
+                    </div>
+                    {% endif %}
+
                     <div class="row g-3">
+
+                        <div class="col-12">
+                            <label class="form-label">
+                                Orden de producción <span class="text-danger">*</span>
+                            </label>
+                            <select name="orden" id="crear_orden" class="form-select" required
+                                    {% if not ordenes_abiertas %}disabled{% endif %}>
+                                <option value="">— Selecciona la orden —</option>
+                                {% for o in ordenes_abiertas %}
+                                <option value="{{ o.folio }}"
+                                        data-modelo="{{ o.modelo_nombre|default:'sin modelo' }}"
+                                        data-lote="{{ o.lote_codigo|default:'sin lote' }}">
+                                    #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }} ({{ o.estado_nombre }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Solo órdenes Pendientes o En Proceso. De aquí salen el
+                                modelo y el lote de la laptop.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" id="crear_modelo" class="form-control"
+                                   value="—" disabled>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Lote</label>
+                            <input type="text" id="crear_lote" class="form-control"
+                                   value="—" disabled>
+                        </div>
 
                         <div class="col-md-6">
                             <label class="form-label">Núm. de serie</label>
@@ -208,33 +251,6 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Descripción</label>
-                            <input type="text" name="descripcion" class="form-control" maxlength="256">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Modelo</label>
-                            <select name="modelo" class="form-select" required>
-                                <option value="">— Selecciona —</option>
-                                {% for m in modelos %}
-                                <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Orden de producción</label>
-                            <select name="orden" class="form-select">
-                                <option value="">— Sin orden —</option>
-                                {% for o in ordenes %}
-                                <option value="{{ o.folio }}">
-                                    #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }} ({{ o.estado_nombre }})
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-md-4">
                             <label class="form-label">Línea</label>
                             <select name="linea" class="form-select">
                                 <option value="">— Sin línea —</option>
@@ -244,27 +260,18 @@
                             </select>
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label">Lote</label>
-                            <select name="lote" class="form-select">
-                                <option value="">— Sin lote —</option>
-                                {% for lo in lotes %}
-                                <option value="{{ lo.codigo }}">{{ lo.codigo }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="col-12">
+                            <label class="form-label">Descripción</label>
+                            <input type="text" name="descripcion" class="form-control" maxlength="256">
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label">Estado</label>
-                            <select name="estado" class="form-select">
-                                {% for e in estados %}
-                                <option value="{{ e.codigo }}" {% if e.codigo == estado_inicial %}selected{% endif %}>
-                                    {{ e.nombre }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    </div>
 
+                    <div class="alert alert-secondary mt-3 mb-0 py-2 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        La laptop se registra en estado <strong>Registrada</strong>. Si es
+                        la primera de su orden, la orden pasará sola a
+                        <strong>En Proceso</strong>.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -275,5 +282,21 @@
         </form>
     </div>
 </div>
+
+<script>
+// El modelo y el lote no se capturan: los hereda de la orden. Aquí solo se
+// reflejan para que se vea qué se va a guardar; quien los asigna de verdad es
+// la API (LaptopSerializer.validate).
+var selOrden = document.getElementById('crear_orden');
+
+if (selOrden) {
+    selOrden.addEventListener('change', function () {
+        var op = selOrden.options[selOrden.selectedIndex];
+        var hayOrden = !!selOrden.value;
+        document.getElementById('crear_modelo').value = hayOrden ? op.dataset.modelo : '—';
+        document.getElementById('crear_lote').value = hayOrden ? op.dataset.lote : '—';
+    });
+}
+</script>
 
 {% endblock %}

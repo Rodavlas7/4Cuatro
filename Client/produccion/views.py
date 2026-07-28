@@ -1,6 +1,6 @@
 import requests
 
-from datetime import datetime
+from datetime import datetime, time
 
 from django.contrib import messages
 from django.shortcuts import render, redirect
@@ -454,10 +454,13 @@ def ordenesProduccionListView(request):
             "fecha": request.POST.get("fecha") or None,
             "hora": request.POST.get("hora") or None,
             "modelo_laptop": request.POST.get("modelo_laptop") or None,
+            "lote": request.POST.get("lote") or None,
             "cant_planificada": request.POST.get("cant_planificada") or 0,
             # Nace en cero: lo producido se va contando conforme avanza la orden.
             "cant_producida": 0,
-            "estado": request.POST.get("estado") or EDO_ORDEN_PENDIENTE,
+            # El estado no se captura: toda orden nueva nace Pendiente y de ahí
+            # la mueven los triggers o el botón de cancelar.
+            "estado": EDO_ORDEN_PENDIENTE,
         }
 
         respuesta = requests.post(f"{API}/produccion/", json=payload, headers=headers)
@@ -472,6 +475,7 @@ def ordenesProduccionListView(request):
     ordenes = requests.get(f"{API}/produccion/", headers=headers).json()
     modelos = requests.get(f"{API}/produccion/modelos/", headers=headers).json()
     estados = requests.get(f"{API}/produccion/estados/", headers=headers).json()
+    lotes = requests.get(f"{API}/produccion/lotes/", headers=headers).json()
 
     ahora = datetime.now()
 
@@ -482,10 +486,10 @@ def ordenesProduccionListView(request):
             "ordenes": ordenes if isinstance(ordenes, list) else [],
             "modelos": modelos if isinstance(modelos, list) else [],
             "estados": estados if isinstance(estados, list) else [],
+            "lotes": lotes if isinstance(lotes, list) else [],
             # Valores por defecto del modal de alta.
             "hoy": ahora.date().isoformat(),
             "hora_ahora": ahora.strftime("%H:%M"),
-            "estado_inicial": EDO_ORDEN_PENDIENTE,
         }
     )
 
@@ -505,6 +509,7 @@ def ordenProduccionEditarView(request, folio):
             "fecha": request.POST.get("fecha") or None,
             "hora": request.POST.get("hora") or None,
             "modelo_laptop": request.POST.get("modelo_laptop") or None,
+            "lote": request.POST.get("lote") or None,
             "cant_planificada": request.POST.get("cant_planificada") or 0,
             "estado": request.POST.get("estado") or None,
         }
@@ -604,6 +609,10 @@ ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
 # Estado con el que nace una laptop.
 EDO_LAPTOP_REGISTRADA = "REGIS"
 
+# Órdenes que todavía admiten producción nueva. Contra una Completada o
+# Cancelada ya no se registran laptops.
+EDOS_ORDEN_ABIERTA = ("PEND", "PROC")
+
 
 def _serie_temporal_sugerida(laptops):
     """Serie provisional para una laptop nueva, siguiendo la convención que ya
@@ -654,18 +663,373 @@ def _componentes_montados(headers, registros):
                   key=lambda c: ((c.get("modelo_nombre") or "").lower(), c.get("numero") or 0))
 
 
+# ---------------------------------------------------------------------------
+#   Seguimiento de la laptop: calidad, embalaje, tiempos, avance y bitácora
+# ---------------------------------------------------------------------------
+
+def _momento(fecha, hora):
+    """Junta la fecha y la hora que manda la API en un datetime, para poder
+    ordenar y restar. Devuelve None si no hay fecha."""
+    if not fecha:
+        return None
+    try:
+        dia = datetime.strptime(str(fecha)[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    try:
+        reloj = datetime.strptime(str(hora or "00:00:00")[:8], "%H:%M:%S").time()
+    except ValueError:
+        reloj = time(0, 0)
+    return datetime.combine(dia, reloj)
+
+
+def _duracion_min(minutos):
+    """Minutos a texto legible: '45 min', '3 h 30 min', '2 d 5 h'."""
+    if not minutos:
+        return None
+    if minutos < 60:
+        return f"{minutos} min"
+    horas, resto = divmod(minutos, 60)
+    if horas < 24:
+        return f"{horas} h {resto} min" if resto else f"{horas} h"
+    dias, horas = divmod(horas, 24)
+    return f"{dias} d {horas} h" if horas else f"{dias} d"
+
+
+def _duracion(desde, hasta):
+    """Duración legible entre dos datetime. None si falta alguno o van al revés."""
+    if not desde or not hasta or hasta < desde:
+        return None
+    return _duracion_min(int((hasta - desde).total_seconds() // 60))
+
+
+def _inspecciones_de_laptop(headers, numero):
+    """Inspecciones de calidad de la laptop.
+
+    El endpoint de lista de calidad no devuelve `observaciones` ni `hora`, así
+    que se usa solo para saber CUÁLES son de esta laptop y luego se pide el
+    detalle de cada una, que sí trae todo. Son pocas por laptop, así que el
+    costo es aceptable y no hay que tocar el módulo de calidad."""
+    lista = requests.get(f"{API}/calidad/Inspeccion/Listar/", headers=headers).json()
+    if not isinstance(lista, list):
+        return []
+
+    completas = []
+    for fila in lista:
+        if str(fila.get("laptop_numero")) != str(numero):
+            continue
+        detalle = requests.get(
+            f"{API}/calidad/Inspeccion/Detalle/{fila.get('numero')}/",
+            headers=headers,
+        ).json()
+        # Si el detalle falla nos quedamos con lo que traía la lista.
+        completas.append(detalle if isinstance(detalle, dict) and detalle.get("numero") else fila)
+
+    return sorted(completas, key=lambda i: (str(i.get("fecha") or ""), str(i.get("hora") or "")))
+
+
+def _embalajes_de_laptop(headers, num_serie):
+    """Embalajes de la laptop. El endpoint de lista no devuelve el número de
+    laptop, pero sí su num_serie, y como esa columna es única (IUK_serie_laptop)
+    alcanza para cruzar sin pedir el detalle de cada registro."""
+    if not num_serie:
+        return []
+    lista = requests.get(f"{API}/embalaje/Embalaje/Listar/", headers=headers).json()
+    if not isinstance(lista, list):
+        return []
+    propios = [e for e in lista
+               if str(e.get("laptop_num_serie") or "") == str(num_serie)]
+    return sorted(propios, key=lambda e: (str(e.get("fecha") or ""), str(e.get("hora") or "")))
+
+
+def _avance_bom(headers, modelo_laptop, componentes):
+    """Qué tan armada va la laptop contra la lista de materiales de su modelo.
+
+    Se cuenta POR TIPO, que es el tope real: una laptop con un socket lleva un
+    procesador aunque haya varios modelos compatibles. Devuelve None si el
+    modelo no tiene BOM registrado."""
+    filas = _bom(headers, modelo_laptop) if modelo_laptop else []
+    if not filas:
+        return None
+
+    cap_tipo = _capacidad_por_tipo(filas)
+    nombre_tipo = {f.get("componente_tipo"): (f.get("componente_tipo_nombre")
+                                              or f.get("componente_tipo"))
+                   for f in filas}
+    tipo_de_modelo = {f.get("componente_codigo"): f.get("componente_tipo") for f in filas}
+
+    montado_tipo = {}
+    for c in componentes:
+        tipo = tipo_de_modelo.get(c.get("modelo_codigo"))
+        if tipo:
+            montado_tipo[tipo] = montado_tipo.get(tipo, 0) + 1
+
+    detalle = []
+    for tipo, capacidad in cap_tipo.items():
+        puestos = montado_tipo.get(tipo, 0)
+        detalle.append({
+            "tipo": nombre_tipo.get(tipo, tipo),
+            "montado": puestos,
+            "capacidad": capacidad,
+            "faltan": max(0, capacidad - puestos),
+            "completo": puestos >= capacidad,
+        })
+
+    # Primero lo que falta, para que salte a la vista; luego por nombre.
+    detalle.sort(key=lambda d: (d["completo"], d["tipo"].lower()))
+    completos = sum(1 for d in detalle if d["completo"])
+
+    return {
+        "detalle": detalle,
+        "faltantes": [d for d in detalle if not d["completo"]],
+        "tipos_totales": len(detalle),
+        "tipos_completos": completos,
+        "porcentaje": round(completos * 100 / len(detalle)) if detalle else 0,
+        "completa": completos == len(detalle),
+    }
+
+
+def _tiempos(registros, embalajes):
+    """Anota la duración de cada ensamblaje en su propio diccionario y calcula
+    los tiempos agregados de la laptop.
+
+    OJO: la tabla laptop no guarda cuándo se dio de alta, así que el ciclo se
+    mide desde que ARRANCÓ SU PRIMER ENSAMBLAJE, no desde que se registró."""
+    minutos_armado = 0
+
+    for r in registros:
+        inicio = _momento(r.get("fecha_inicio"), r.get("hora_inicio"))
+        fin = _momento(r.get("fecha_fin"), r.get("hora_fin"))
+        r["duracion"] = _duracion(inicio, fin)
+        if inicio and fin and fin >= inicio:
+            minutos_armado += int((fin - inicio).total_seconds() // 60)
+
+    inicios = [m for m in (_momento(r.get("fecha_inicio"), r.get("hora_inicio"))
+                           for r in registros) if m]
+    cierres = [m for m in (_momento(e.get("fecha"), e.get("hora"))
+                           for e in embalajes) if m]
+
+    primer_inicio = min(inicios) if inicios else None
+    embalado_en = max(cierres) if cierres else None
+
+    return {
+        # Suma de los ensamblajes ya cerrados: tiempo de trabajo real, sin
+        # contar las esperas entre uno y otro.
+        "armado_efectivo": _duracion_min(minutos_armado),
+        "primer_inicio": primer_inicio,
+        "embalado_en": embalado_en,
+        "ciclo": _duracion(primer_inicio, embalado_en),
+        "abiertos": sum(1 for r in registros if not r.get("fecha_fin")),
+    }
+
+
+def _bitacora(registros, inspecciones, embalajes):
+    """Todos los eventos de la laptop en una sola lista cronológica: arranques y
+    cierres de ensamblaje, inspecciones de calidad y embalaje."""
+    eventos = []
+
+    for r in registros:
+        numero = r.get("numero")
+        eventos.append({
+            "momento": _momento(r.get("fecha_inicio"), r.get("hora_inicio")),
+            "fecha": r.get("fecha_inicio"),
+            "hora": r.get("hora_inicio"),
+            "titulo": f"Ensamblaje #{numero} iniciado",
+            "detalle": f"Línea {r.get('linea_nombre') or r.get('linea') or '—'}",
+            "icono": "bi-play-circle",
+            "clase": "primary",
+        })
+        if r.get("fecha_fin"):
+            dur = r.get("duracion")
+            eventos.append({
+                "momento": _momento(r.get("fecha_fin"), r.get("hora_fin")),
+                "fecha": r.get("fecha_fin"),
+                "hora": r.get("hora_fin"),
+                "titulo": f"Ensamblaje #{numero} terminado",
+                "detalle": f"Duró {dur}" if dur else "",
+                "icono": "bi-check-circle",
+                "clase": "success",
+            })
+
+    for i in inspecciones:
+        # resultado: 1 aprobada, 0 rechazada, 2 continuar (ver calidad/models.py)
+        resultado = i.get("resultado")
+        nombre = i.get("resultado_nombre") or "Inspección"
+        if resultado == 1:
+            icono, clase = "bi-patch-check", "success"
+        elif resultado == 0:
+            icono, clase = "bi-x-octagon", "danger"
+        else:
+            icono, clase = "bi-arrow-repeat", "warning"
+
+        partes = []
+        if i.get("empleado_nombre"):
+            partes.append(i["empleado_nombre"])
+        if i.get("linea_nombre"):
+            partes.append(i["linea_nombre"])
+
+        eventos.append({
+            "momento": _momento(i.get("fecha"), i.get("hora")),
+            "fecha": i.get("fecha"),
+            "hora": i.get("hora"),
+            "titulo": f"Inspección #{i.get('numero')} · {nombre}",
+            "detalle": " · ".join(partes),
+            "observaciones": i.get("observaciones"),
+            "icono": icono,
+            "clase": clase,
+        })
+
+    for e in embalajes:
+        eventos.append({
+            "momento": _momento(e.get("fecha"), e.get("hora")),
+            "fecha": e.get("fecha"),
+            "hora": e.get("hora"),
+            "titulo": f"Embalada · embalaje #{e.get('numero')}",
+            "detalle": e.get("tipo_nombre") or "",
+            "icono": "bi-box-seam",
+            "clase": "dark",
+        })
+
+    # Los eventos sin fecha se van al final en vez de romper el orden.
+    eventos.sort(key=lambda ev: (ev["momento"] is None, ev["momento"] or datetime.min))
+    return eventos
+
+
+def _registros_enriquecidos(headers, nombres_linea):
+    """Todos los registros de ensamblaje de la planta con el contexto que el
+    endpoint no trae: de qué laptop son, el nombre de la línea, cuánto duraron
+    y cuántas piezas llevan montadas."""
+    regs = requests.get(f"{API}/produccion/registros-ensamblaje/", headers=headers).json()
+    if not isinstance(regs, list):
+        return []
+
+    laptops = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+    laptops = {str(l.get("numero")): l for l in laptops} if isinstance(laptops, list) else {}
+
+    # Piezas por registro, contadas de una sola pasada sobre el inventario.
+    piezas = {}
+    for c in _todos_los_componentes(headers):
+        clave = c.get("registro_ensamblaje")
+        if clave:
+            piezas[str(clave)] = piezas.get(str(clave), 0) + 1
+
+    enriquecidos = []
+    for r in regs:
+        laptop = laptops.get(str(r.get("laptop"))) or {}
+        inicio = _momento(r.get("fecha_inicio"), r.get("hora_inicio"))
+        fin = _momento(r.get("fecha_fin"), r.get("hora_fin"))
+        minutos = (int((fin - inicio).total_seconds() // 60)
+                   if inicio and fin and fin >= inicio else None)
+
+        enriquecidos.append({
+            **r,
+            "linea_nombre": nombres_linea.get(r.get("linea")) or r.get("linea"),
+            "laptop_serie": laptop.get("num_serie"),
+            "laptop_modelo": laptop.get("modelo_nombre"),
+            "laptop_estado": laptop.get("estado_nombre"),
+            "laptop_estado_codigo": laptop.get("estado_codigo"),
+            "duracion": _duracion_min(minutos),
+            "minutos": minutos,
+            "piezas": piezas.get(str(r.get("numero")), 0),
+            "abierto": not r.get("fecha_fin"),
+        })
+
+    # Los abiertos primero, que son los que urgen; dentro de cada grupo, lo más
+    # reciente arriba.
+    enriquecidos.sort(key=lambda e: (not e["abierto"], -(e.get("numero") or 0)))
+    return enriquecidos
+
+
+def _filtrar_ensamblajes(registros, filtros):
+    """Filtros de la pantalla de seguimiento. Se aplican aquí porque el endpoint
+    de registros de ensamblaje no acepta query params."""
+    resultado = registros
+
+    situacion = filtros.get("situacion")
+    if situacion == "abierto":
+        resultado = [r for r in resultado if r["abierto"]]
+    elif situacion == "terminado":
+        resultado = [r for r in resultado if not r["abierto"]]
+
+    if filtros.get("linea"):
+        resultado = [r for r in resultado
+                     if str(r.get("linea") or "") == str(filtros["linea"])]
+
+    texto = (filtros.get("q") or "").strip().lower()
+    if texto:
+        resultado = [r for r in resultado
+                     if texto in str(r.get("numero") or "")
+                     or texto in str(r.get("laptop") or "")
+                     or texto in str(r.get("laptop_serie") or "").lower()]
+
+    return resultado
+
+
+def ensamblajeSeguimientoView(request):
+    """Seguimiento de ensamblaje: todos los registros de la planta, con filtros
+    y acceso al expediente de cada laptop. Responde de un vistazo qué se está
+    armando ahora mismo y qué ya cerró."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers = _headers(request)
+
+    lineas = requests.get(f"{API}/lineas/", headers=headers).json()
+    lineas = lineas if isinstance(lineas, list) else []
+    nombres_linea = {l.get("codigo"): l.get("nombre") for l in lineas}
+
+    registros = _registros_enriquecidos(headers, nombres_linea)
+
+    filtros = {
+        "situacion": request.GET.get("situacion") or "",
+        "linea": request.GET.get("linea") or "",
+        "q": request.GET.get("q") or "",
+    }
+    filtrados = _filtrar_ensamblajes(registros, filtros)
+
+    # Promedio solo de los que ya cerraron: los abiertos no tienen duración.
+    cerrados = [r["minutos"] for r in registros if r["minutos"] is not None]
+    promedio = _duracion_min(round(sum(cerrados) / len(cerrados))) if cerrados else None
+
+    return render(
+        request,
+        "produccion/seguimiento_ensamblaje.html",
+        {
+            "registros": filtrados,
+            "total": len(registros),
+            "mostrados": len(filtrados),
+            "abiertos": sum(1 for r in registros if r["abierto"]),
+            "terminados": sum(1 for r in registros if not r["abierto"]),
+            "promedio": promedio,
+            "filtros": filtros,
+            "hay_filtros": any(filtros.values()),
+            "lineas": lineas,
+        }
+    )
+
+
 def _catalogos_laptop(headers):
-    """Los cinco catálogos que alimentan los selects de alta, edición y filtros."""
+    """Los catálogos que alimentan los selects de alta, edición y filtros.
+
+    `ordenes` trae todas (los filtros de la lista necesitan poder buscar por
+    cualquiera) y `ordenes_abiertas` solo las que admiten producción nueva."""
     def lista(url):
         datos = requests.get(url, headers=headers).json()
         return datos if isinstance(datos, list) else []
+
+    ordenes = lista(f"{API}/produccion/")
 
     return {
         "modelos": lista(f"{API}/produccion/modelos/"),
         "estados": lista(f"{API}/produccion/estados-laptop/"),
         "lineas": lista(f"{API}/lineas/"),
         "lotes": lista(f"{API}/produccion/lotes/"),
-        "ordenes": lista(f"{API}/produccion/"),
+        "ordenes": ordenes,
+        # Solo contra estas se puede registrar: una Completada o Cancelada ya
+        # no admite laptops nuevas.
+        "ordenes_abiertas": [o for o in ordenes
+                             if o.get("estado_codigo") in EDOS_ORDEN_ABIERTA],
     }
 
 
@@ -684,15 +1048,21 @@ def laptopsListView(request):
         if not isinstance(laptops_actuales, list):
             laptops_actuales = []
 
+        orden = request.POST.get("orden") or None
+        if not orden:
+            messages.error(request, "Selecciona la orden de producción: de ahí "
+                                    "salen el modelo y el lote de la laptop.")
+            return redirect('laptops-lista')
+
+        # Ni modelo ni lote ni estado se capturan: los dos primeros los hereda de
+        # su orden (la API los resuelve) y el estado siempre es Registrada.
         payload = {
             "num_serie": (request.POST.get("num_serie") or "").strip()
                          or _serie_temporal_sugerida(laptops_actuales),
             "descripcion": request.POST.get("descripcion") or None,
-            "orden": request.POST.get("orden") or None,
-            "modelo": request.POST.get("modelo") or None,
-            "estado": request.POST.get("estado") or EDO_LAPTOP_REGISTRADA,
+            "orden": orden,
+            "estado": EDO_LAPTOP_REGISTRADA,
             "linea": request.POST.get("linea") or None,
-            "lote": request.POST.get("lote") or None,
         }
 
         respuesta = requests.post(f"{API}/produccion/laptops/", json=payload, headers=headers)
@@ -733,8 +1103,10 @@ def laptopsListView(request):
 
 
 def laptopDetalleView(request, numero):
-    """Ficha de la laptop: sus datos editables, sus registros de ensamblaje y
-    los componentes que trae montados, con la opción de liberarlos."""
+    """Expediente completo de la laptop: sus datos editables, el seguimiento de
+    todo su paso por la planta (ensamblajes, calidad y embalaje), los tiempos,
+    qué le falta contra su lista de materiales y los componentes que trae
+    montados, con la opción de liberarlos."""
 
     if 'token' not in request.session:
         return redirect('login')
@@ -749,17 +1121,42 @@ def laptopDetalleView(request, numero):
     registros = laptop.get("registros_ensamblaje") or []
     componentes = _componentes_montados(headers, registros)
 
+    # Las otras dos etapas del ciclo. Cada módulo pide su propio permiso
+    # (calidad / embalaje): si el rol no lo tiene, los helpers devuelven lista
+    # vacía y la sección se muestra sin datos en vez de tronar.
+    inspecciones = _inspecciones_de_laptop(headers, numero)
+    embalajes = _embalajes_de_laptop(headers, laptop.get("num_serie"))
+
+    contexto = _catalogos_laptop(headers)
+
+    # El registro de ensamblaje solo guarda el código de la línea; se le pega el
+    # nombre para no mostrar "LIN001" pelón en la bitácora y en la tabla.
+    nombres_linea = {l.get("codigo"): l.get("nombre") for l in contexto.get("lineas", [])}
+    for r in registros:
+        r["linea_nombre"] = nombres_linea.get(r.get("linea")) or r.get("linea")
+
+    # _tiempos anota la duración dentro de cada registro, así que va antes.
+    tiempos = _tiempos(registros, embalajes)
+    avance = _avance_bom(headers, laptop.get("modelo_codigo"), componentes)
+    bitacora = _bitacora(registros, inspecciones, embalajes)
+
     # Estados a los que puede pasar un componente al desmontarlo. Se excluye
     # "En Uso": si sigue En Uso es que no se liberó.
     estados_comp = requests.get(f"{API}/componentes/estados/", headers=headers).json()
     estados_comp = ([e for e in estados_comp if e.get("codigo") != EDO_COMP_EN_USO]
                     if isinstance(estados_comp, list) else [])
 
-    contexto = _catalogos_laptop(headers)
     contexto.update({
         "laptop": laptop,
         "registros": registros,
         "componentes": componentes,
+        "inspecciones": inspecciones,
+        "embalajes": embalajes,
+        "tiempos": tiempos,
+        "avance": avance,
+        "bitacora": bitacora,
+        # La última inspección manda: es la que explica el estado actual.
+        "ultima_inspeccion": inspecciones[-1] if inspecciones else None,
         "estados_componente": estados_comp,
         # Aprobada, Rechazada o Embalada: se muestran las piezas pero ya no se
         # pueden quitar, para no romper la trazabilidad.
@@ -781,13 +1178,16 @@ def laptopEditarView(request, numero):
 
         headers = _headers(request)
 
+        # Tres campos quedan fuera del payload a propósito:
+        #   num_serie     — se fija al registrar y solo la reescribe el trigger
+        #                   tg_Generar_Numero_Serie_Final al aprobar en calidad.
+        #   modelo y lote — se heredan de la orden; la API los recalcula sola en
+        #                   cada guardado, así que mandarlos no serviría de nada.
         payload = {
             "descripcion": request.POST.get("descripcion") or None,
             "orden": request.POST.get("orden") or None,
-            "modelo": request.POST.get("modelo") or None,
             "estado": request.POST.get("estado") or None,
             "linea": request.POST.get("linea") or None,
-            "lote": request.POST.get("lote") or None,
         }
 
         respuesta = requests.patch(
