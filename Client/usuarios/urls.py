@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ListaEmpleados, CrearEmpleado, EditarEmpleado, DesactivarEmpleado, DetalleEmpleado, EstacionesPorLinea, ListaUsuarios, CrearUsuario, EditarUsuario, DesactivarUsuario, DetalleUsuario, ReactivarUsuario
+from .views import ListaEmpleados, CrearEmpleado, EditarEmpleado, DesactivarEmpleado, DetalleEmpleado, EstacionesPorLinea, ListaUsuarios, CrearUsuario, EditarUsuario, DesactivarUsuario, DetalleUsuario, ReactivarUsuario, ReactivarEmpleado
 urlpatterns = [
     path('empleados/', ListaEmpleados.as_view(), name='lista_empleados'),
     path('empleados/crear/', CrearEmpleado.as_view(), name='empleado-crear'),
@@ -13,4 +13,5 @@ urlpatterns = [
     path("usuarios/Actualizar/<int:numero>/",EditarUsuario.as_view(), name="usuario-editar"),
     path("usuarios/desactivar/<int:numero>/", DesactivarUsuario.as_view(), name="usuario-desactivar"),
     path("usuarios/reactivar/<int:numero>/", ReactivarUsuario.as_view(),name="usuario-reactivar"),
+    path("empleados/reactivar/<int:numero>/", ReactivarEmpleado.as_view(), name="empleado-reactivar"),
 ]

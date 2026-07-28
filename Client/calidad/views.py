@@ -35,11 +35,26 @@ class ListaInspecciones(generic.View):
         headers = {"Authorization": f"Bearer {token}"}
 
         buscar = request.GET.get("buscar", "").strip()
+        fecha_inicio = request.GET.get("fecha_inicio", "")
+        fecha_fin = request.GET.get("fecha_fin", "")
+
+        params = {}
 
         if buscar:
-            response = requests.get(API_INSPECCION + "Buscar/", headers=headers, params={"buscar": buscar})
-        else:
-            response = requests.get(API_INSPECCION + "Listar/", headers=headers)
+            params["buscar"] = buscar
+
+        if fecha_inicio:
+            params["fecha_inicio"] = fecha_inicio
+
+        if fecha_fin:
+            params["fecha_fin"] = fecha_fin
+
+
+        response = requests.get(
+            API_INSPECCION + "Buscar/",
+            headers=headers,
+            params=params
+        )
 
         items = response.json() if response.status_code == 200 else []
         inspecciones_base = [normalizar_listar(i) for i in items]
@@ -60,6 +75,8 @@ class ListaInspecciones(generic.View):
             "lineas": get_choices_lineas_produccion(token),
             "resultados": RESULTADO_CHOICES,
             "buscar": buscar,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
         }
         return render(request, self.template_name, context)
 

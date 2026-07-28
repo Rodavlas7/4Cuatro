@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import LoginAPIView, ListaEmpleadosAPIView, DetailEmpleadoAPIView, UpdateEmpleadoAPIView, BajaEmpleadoView,RegistroEmpleadoAPIView, RegistroUsuarioAPIView, UpdateUsuarioAPIView, BajaUsuarioAPIView, ListaUsuariosAPIView, DetailUsuarioAPIView,ReactivarUsuarioAPIView, ListaRolesAPIView, ListaTurnosAPIView, EmpleadosCalidadPorLineaAPIView
+from .views import LoginAPIView, ListaEmpleadosAPIView, DetailEmpleadoAPIView,ReactivarEmpleadoAPIView, UpdateEmpleadoAPIView, BajaEmpleadoView,RegistroEmpleadoAPIView, RegistroUsuarioAPIView, UpdateUsuarioAPIView, BajaUsuarioAPIView, ListaUsuariosAPIView, DetailUsuarioAPIView,ReactivarUsuarioAPIView, ListaRolesAPIView, ListaTurnosAPIView, EmpleadosCalidadPorLineaAPIView
 from usuarios import views #este y lo podemos borrar, ya que lo andamos dividiendo por aplicaiones
 
 #################################
@@ -27,4 +27,5 @@ urlpatterns = [
     path("Empleado/Linea/Buscar/", views.BuscarEmpleadoLineaView.as_view(), name="buscar_empleado-linea"),
     path("Empleado/Estacion/Buscar/", views.BuscarEmpleadoEstacionView.as_view(), name="buscar_empleado-estacion"),
     path('empleados-calidad-por-linea/<str:linea_id>/', EmpleadosCalidadPorLineaAPIView.as_view(), name='empleados-calidad-por-linea'),
+    path('Empleado/Reactivar/<int:numero>/', ReactivarEmpleadoAPIView.as_view(), name="reactivar_usuario"),
 ]

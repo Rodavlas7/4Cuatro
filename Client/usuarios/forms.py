@@ -17,11 +17,25 @@ def get_choices_lineas(token):
 
 def get_choices_estaciones(token, linea_id=None):
     url = "http://127.0.0.1:8000/api/lineas/lineas/estaciones/"
+
     if linea_id:
         url += f"?linea={linea_id}"
-    resp = requests.get(url, headers={"Authorization": f"Bearer {token}"})
+
+    resp = requests.get(
+        url,
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
     if resp.status_code == 200:
-        return [(e["codigo"], e["nombre"]) for e in resp.json()]
+
+        estaciones = resp.json()
+
+        return [
+            (e["codigo"], e["nombre"])
+            for e in estaciones
+            if e.get("activo") is True
+        ]
+
     return []
 
 
