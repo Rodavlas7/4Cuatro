@@ -1,59 +1,87 @@
-  /* ====================================================================================================================
-   SIDEBAR SUBMENUS HOVER
-============================================================================================================================ */
+/* ====================================================================
+   SIDEBAR — TraceX
+==================================================================== */
 
-
-/* Submenú */
-
-.submenu{
-    margin-left: 20px;
-    border-left: 2px solid #495057;
-    padding-left: 10px;
+/* Contenedor del sidebar — SIN padding propio, para que .sidebar-header
+   quede pegado arriba (0px), igual que .topbar */
+.sidebar-panel{
+    flex: 0 0 var(--sidebar-width);
+    width: var(--sidebar-width);
+    min-height: 100vh;
+    background: var(--color-primary);
+    overflow-y: auto;
 }
 
-.submenu .nav-link{
-    font-size: .90rem;
-    color: #ced4da !important;
+/* ---------- Logo ---------- */
+
+.sidebar-header{
+    height: var(--topbar-height); /* mismo alto exacto que .topbar, arrancando en 0 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--space-md);
+    border-bottom: 1px solid rgba(255,255,255,.25); /* misma técnica que .topbar: border adentro de la caja */
 }
 
-.submenu .nav-link:hover{
-    background: #495057;
-    border-radius: 6px;
-    color: white !important;
-}
-
-/* Chevron */
-
-.chevron{
-    transition: transform .25s ease;
-}
-
-/* logo */
 .sidebar-logo-full {
     width: 170px;
     max-width: 100%;
     height: auto;
 }
 
-
-/*.sidebar-header{
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}*/
-
-
-.sidebar-header{
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-bottom: 8px;   /* espacio entre logo y línea */
+/* El <hr> ya no dibuja línea (la da el border-bottom de arriba);
+   solo se usa como espaciador. Si prefieres quitar el <hr> del HTML,
+   esta regla se puede borrar entera. */
+.sidebar-divider{
+    display: none;
 }
 
-.sidebar-divider{
-    margin-top: 11px;      /* sube/baja la línea hacia el logo */
-    margin-bottom: 16px;   /* espacio entre línea y módulos */
-    border-color: #495057; /* o el color que ya usabas (text-secondary) */
+/* ---------- Menú (el padding lateral que antes daba el p-3 del aside) ---------- */
+
+.sidebar-menu{
+    padding: var(--space-md) var(--space-md) var(--space-md);
+}
+
+/* ---------- Links del menú ---------- */
+
+.sidebar-panel .nav-link{
+    color: #ced4da;
+    border-radius: var(--bs-border-radius-sm);
+    transition: var(--transition);
+}
+
+.sidebar-panel .nav-link:hover,
+.sidebar-panel .nav-link.active{
+    background: var(--bs-secondary);
+    color: var(--bs-light);
+}
+
+/* ---------- Submenú ---------- */
+
+.submenu{
+    margin-left: 20px;
+    border-left: 2px solid var(--bs-secondary);
+    padding-left: 10px;
+}
+
+.submenu .nav-link{
+    font-size: .90rem;
+    color: #ced4da;
+}
+
+.submenu .nav-link:hover{
+    background: var(--bs-secondary);
+    border-radius: var(--bs-border-radius-sm);
+    color: var(--bs-light);
+}
+
+/* ---------- Chevron (indicador de submenú) ---------- */
+
+.chevron{
+    transition: transform .25s ease;
+}
+
+/* Rota el chevron cuando el link está expandido (Bootstrap collapse) */
+.nav-link[aria-expanded="true"] .chevron{
+    transform: rotate(180deg);
 }

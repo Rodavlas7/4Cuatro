@@ -6,19 +6,95 @@
 
 :root {
 
-    /* Colores */
+    /* ============================
+       BOOTSTRAP (theming)
+       ============================ */
+    --bs-primary: #0D1B2A;
+    --bs-primary-rgb: 13, 27, 42;
+
+    --bs-secondary: #2F3A46;
+    --bs-secondary-rgb: 47, 58, 70;
+
+    --bs-success: #422e7d;
+    --bs-success-rgb: 66, 46, 125;
+
+    --bs-warning: #D97706;
+    --bs-warning-rgb: 217, 119, 6;
+
+    --bs-danger: #B91C1C;
+    --bs-danger-rgb: 185, 28, 28;
+
+    --bs-info: #0369A1;
+    --bs-info-rgb: 3, 105, 161;
+
+    --bs-light: #F8FAFC;
+    --bs-light-rgb: 248, 250, 252;
+
+    --bs-dark: #1F2937;
+    --bs-dark-rgb: 31, 41, 55;
+
+    --bs-body-bg: #F8FAFC;
+    --bs-body-color: #1F2937;
+    --bs-border-color: #E5E7EB;
+
+    --bs-font-sans-serif: 'Inter', sans-serif;
+    --bs-body-font-size: 14px;
+    --bs-body-line-height: 1.5;
+
+    --bs-link-color: #0369A1;
+    --bs-link-color-rgb: 3, 105, 161;
+    --bs-link-hover-color: #0D1B2A;
+    --bs-link-hover-color-rgb: 13, 27, 42;
+
+    --bs-border-radius: 8px;
+    --bs-border-radius-sm: 6px;
+    --bs-border-radius-lg: 12px;
+    --bs-border-radius-pill: 999px;
+
+
+    /* ============================
+       COREUI (theming, mismo mapeo)
+       ============================ */
+    --cui-primary: #0D1B2A;
+    --cui-primary-rgb: 13, 27, 42;
+
+    --cui-secondary: #2F3A46;
+    --cui-secondary-rgb: 47, 58, 70;
+
+    --cui-success: #422e7d;
+    --cui-success-rgb: 66, 46, 125;
+
+    --cui-warning: #D97706;
+    --cui-warning-rgb: 217, 119, 6;
+
+    --cui-danger: #B91C1C;
+    --cui-danger-rgb: 185, 28, 28;
+
+    --cui-info: #0369A1;
+    --cui-info-rgb: 3, 105, 161;
+
+    --cui-light: #F8FAFC;
+    --cui-light-rgb: 248, 250, 252;
+
+    --cui-dark: #1F2937;
+    --cui-dark-rgb: 31, 41, 55;
+
+
+    /* ============================
+       PROPIAS DE TRACEX
+       ============================ */
+
+    /* Colores (referencia directa, por si se usan fuera de componentes bs/cui) */
     --color-primary: #0D1B2A;
     --color-secondary: #2F3A46;
     --color-accent: #1D4ED8;
     --color-white: #FFFFFF;
 
-    /* Estados industriales */
-    --color-success: #422e7d; /* Operación correcta / aprobado */
-    --color-warning: #D97706; /* Advertencia / pendiente */
-    --color-danger: #B91C1C;  /* Fallo / paro crítico */
-    --color-info: #0369A1;    /* Información / trazabilidad */
+    --color-success: #422e7d;
+    --color-warning: #D97706;
+    --color-danger: #B91C1C;
+    --color-info: #0369A1;
 
-    /* Grises */
     --color-bg: #F8FAFC;
     --color-border: #E5E7EB;
     --color-text: #1F2937;
@@ -27,7 +103,6 @@
     /* Tipografía */
     --font-family: 'Inter', sans-serif;
 
-    /* Tamaños de texto */
     --text-xs: 12px;
     --text-sm: 14px;
     --text-md: 16px;
@@ -61,179 +136,29 @@
     --icon-size-md: 20px;
     --icon-size-lg: 24px;
 
-    /* Botones */
-
+    /* Botones (alturas propias, las clases de color ahora las da Bootstrap) */
     --btn-height-sm: 32px;
     --btn-height-md: 40px;
     --btn-height-lg: 48px;
 
+    /* Layout */
+    --sidebar-width: 260px;
+    --topbar-height: 70px;
+    --avatar-size: 42px;
+
 }
 
-/* ---------- Reset ---------- */
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* ---------- Base ---------- */
+/* ---------- Base ----------
+   NOTA: el reset (*, margin, padding, box-sizing) y los estilos base de
+   a/button/ul ya los da el Reboot de Bootstrap. No se reescriben aquí
+   para evitar reglas duplicadas o en conflicto.
+------------------------------ */
 
 html {
     scroll-behavior: smooth;
 }
 
-body {
-    font-family: var(--font-family);
-    background: var(--color-bg);
-    color: var(--color-text);
-    font-size: var(--text-sm);
-    line-height: 1.5;
-}
-
-/* ---------- Encabezados ---------- */
-
-h1 {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-}
-
-h2 {
-    font-size: var(--text-xl);
-    font-weight: 600;
-}
-
-h3 {
-    font-size: var(--text-lg);
-    font-weight: 600;
-}
-
-
-/* ---------- Texto general ---------- */
-
-p,
-span,
-label,
-input,
-select,
-textarea,
-button {
-    font-family: inherit;
-}
-
-p {
-    font-size: var(--text-md);
-}
-
-label {
-    font-size: var(--text-sm);
-}
-
-
-/* ---------- Utilidades de texto ---------- */
-
-.text-primary {
-    color: var(--color-primary);
-}
-
-.text-secondary {
-    color: var(--color-text-light);
-}
-
-.text-success {
-    color: var(--color-success);
-}
-
-.text-danger {
-    color: var(--color-danger);
-}
-
-
-/* ---------- Enlaces ---------- */
-
-a {
-    color: var(--color-info);
-    text-decoration: none;
-    transition: var(--transition);
-}
-
-a:hover {
-    color: var(--color-primary);
-}
-
-a:focus,
-button:focus {
-    outline: 2px solid var(--color-info);
-    outline-offset: 2px;
-}
-
-/* ---------- Listas ---------- */
-
-ul,
-ol {
-    list-style: none;
-}
-
-/* ---------- Imágenes ---------- */
-
-img {
-    max-width: 100%;
-    display: block;
-}
-
 /* ---------- Icon ---------- */
 .icon {
     font-size: var(--icon-size-md);
-}
-
-/* ---------- Botones ---------- */
-button {
-    font-family: inherit;
-    border: none;
-    cursor: pointer;
-    border-radius: var(--radius-md);
-    transition: var(--transition);
-}
-
-.btn-primary {
-    background: var(--color-primary);
-    color: var(--color-white);
-    padding: 0 var(--space-lg);
-    height: var(--btn-height-md);
-}
-
-.btn-primary:hover {
-    background: var(--color-secondary);
-}
-.btn-secondary {
-    background: var(--color-secondary);
-    color: var(--color-white);
-}
-.btn-success {
-    background: var(--color-success);
-    color: var(--color-white);
-}
-
-.btn-danger {
-    background: var(--color-danger);
-    color: var(--color-white);
-}
-
-
-/* ---------- Contenedores ---------- */
-
-.container {
-    width: 100%;
-    padding: 0 var(--space-lg);
-}
-
-/* ---------- Fondos ---------- */
-
-.bg-primary {
-    background: var(--color-primary);
-    color: var(--color-white);
-}
-
-.bg-secondary {
-    background: var(--color-secondary);
 }

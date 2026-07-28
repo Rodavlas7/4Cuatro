@@ -17,214 +17,207 @@
     <link href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.2.0/dist/css/coreui.min.css" rel="stylesheet">
 
     <!-- Archivos CSS -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">   <!-- tu tema, al final -->
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
     <link rel="stylesheet" href="{% static 'css/topbar.css' %}">
 
 </head>
 
-
 <body>
-
+ 
     <div class="d-flex">
-
+ 
         <!-- ......................................................................................................
             S I D E B A R
         ...................................................................................................... -->
-
-        <aside
-            class="bg-dark text-white p-3"
-            style="width:260px; min-height:100vh;">
-
+ 
+        <aside class="sidebar-panel">
+ 
             <!-- Logo -->
-            <div class="text-center mb-2">
+            <div class="sidebar-header">
                 <img src="{% static 'img/logo2.svg' %}" alt="TraceX" class="sidebar-logo-full">
             </div>
-
+ 
             <hr class="sidebar-divider">
-  
-
-
+ 
             <!-- Menú -->
             <ul class="nav flex-column sidebar-menu">
-
-
-                    <!-- Dashboard -->
-                    <li class="nav-item mb-2">
-                        <a class="nav-link text-white active" href="#">
-                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                        </a>
-                    </li>
-
-                    <!-- Producción -->
-                    <li class="nav-item mb-2">
-                        <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" 
-                        href="#produccion"role="button" aria-expanded="false">
-                            <span>
-                                <i class="bi bi-gear-wide-connected me-2"></i>Producción
-                            </span>
-                            <i class="bi bi-chevron-down chevron"></i>
-                        </a>
-
-                        <div class="collapse submenu" id="produccion">
-                            <a href="#" class="nav-link text-white">Órdenes de Producción</a>
-                            <a href="#" class="nav-link text-white">Laptops</a>
-                            <a href="#" class="nav-link text-white">Seguimiento de Ensamblaje</a>
-                        </div>
-                    </li>
-
+ 
+                <!-- Dashboard -->
+                <li class="nav-item mb-2">
+                    <a class="nav-link active" href="#">
+                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                    </a>
+                </li>
+ 
+                <!-- Producción -->
+                <li class="nav-item mb-2">
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                       href="#produccion" role="button" aria-expanded="false">
+                        <span>
+                            <i class="bi bi-gear-wide-connected me-2"></i>Producción
+                        </span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </a>
+ 
+                    <div class="collapse submenu" id="produccion">
+                        <a href="#" class="nav-link">Órdenes de Producción</a>
+                        <a href="#" class="nav-link">Laptops</a>
+                        <a href="#" class="nav-link">Seguimiento de Ensamblaje</a>
+                    </div>
+                </li>
+ 
                 <!-- Calidad -->
                 <li class="nav-item mb-2">
-                    <a href="#" class="nav-link text-white">
+                    <a href="#" class="nav-link">
                         <i class="bi bi-check2-circle me-2"></i>Calidad
                     </a>
                 </li>
-
+ 
                 <!-- Incidencias -->
                 <li class="nav-item mb-2">
-                    <a href="#" class="nav-link text-white">
+                    <a href="#" class="nav-link">
                         <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
                     </a>
                 </li>
-
+ 
                 <!-- Embalaje -->
                 <li class="nav-item mb-2">
-                    <a href="#" class="nav-link text-white">
+                    <a href="#" class="nav-link">
                         <i class="bi bi-box-seam me-2"></i>Embalaje
                     </a>
                 </li>
-
+ 
                 <!-- Trazabilidad -->
                 <li class="nav-item mb-2">
-                    <a href="#" class="nav-link text-white">
+                    <a href="#" class="nav-link">
                         <i class="bi bi-search me-2"></i>Trazabilidad
                     </a>
                 </li>
-
-
+ 
                 <!-- Planta -->
                 <li class="nav-item mb-2">
-                    <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" 
-                    href="#planta"role="button" aria-expanded="false">
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                       href="#planta" role="button" aria-expanded="false">
                         <span>
                             <i class="bi bi-building me-2"></i>Planta
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
-
+ 
                     <div class="collapse submenu" id="planta">
-                        <a href="#" class="nav-link text-white small">Líneas de Ensamblaje</a>
-                        <a href="#" class="nav-link text-white small">Estaciones de Trabajo</a>
+                        <a href="#" class="nav-link small">Líneas de Ensamblaje</a>
+                        <a href="#" class="nav-link small">Estaciones de Trabajo</a>
                     </div>
                 </li>
-
+ 
                 <!-- Materiales -->
                 <li class="nav-item mb-2">
-                    <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" 
-                    href="#materiales"role="button" aria-expanded="false">
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                       href="#materiales" role="button" aria-expanded="false">
                         <span>
                             <i class="bi bi-box-arrow-up me-2"></i>Materiales
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
-                    <div class="submenu" id="materiales">
-                        <a href="#" class="nav-link text-white small">Componentes</a>
-                        <a href="#" class="nav-link text-white small">Órdenes de Material</a>
+                    <div class="collapse submenu" id="materiales">
+                        <a href="#" class="nav-link small">Componentes</a>
+                        <a href="#" class="nav-link small">Órdenes de Material</a>
                     </div>
                 </li>
-
+ 
                 <!-- Personal -->
-                <li class="nav-item mb-2 has-submenu">
-                    <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" 
-                    href="#personal"role="button" aria-expanded="false">
+                <li class="nav-item mb-2">
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                       href="#personal" role="button" aria-expanded="false">
                         <span>
                             <i class="bi bi-people me-2"></i>Personal
                         </span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </a>
                     <div class="collapse submenu" id="personal">
-                        <a href="#" class="nav-link text-white small">Usuarios</a>
-                        <a href="#" class="nav-link text-white small">Empleados</a>
+                        <a href="#" class="nav-link small">Usuarios</a>
+                        <a href="#" class="nav-link small">Empleados</a>
                     </div>
                 </li>
-
+ 
                 <!-- Reportes -->
                 <li class="nav-item">
-                    <a href="#" class="nav-link text-white">
+                    <a href="#" class="nav-link">
                         <i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes
                     </a>
                 </li>
-
+ 
             </ul>
-
-
+ 
         </aside>
+ 
         <!-- ......................................................................................................
              C O N T E N E D O R   P R I N C I P A L
         ...................................................................................................... -->
         <div class="flex-grow-1">
-
+ 
             <!-- ......................................................................................................
                 T O P   B A R
             ...................................................................................................... -->
-           <header class="topbar">
-
+            <header class="topbar">
+ 
                 <div class="topbar-left">
-
+ 
                     <h2 class="module-title">
                         {% block page_title %}Dashboard{% endblock %}
                     </h2>
-
+ 
                     <span class="module-subtitle">
                         TraceX
                     </span>
-                    
-
+ 
                 </div>
-
+ 
                 <div class="topbar-right">
-
+ 
                     <div class="dropdown">
-
+ 
                         <button class="user-menu-btn" data-bs-toggle="dropdown">
-
+ 
                             <div class="user-avatar">
                                 <i class="bi bi-person-fill"></i>
                             </div>
-
+ 
                             <div class="user-data">
                                 <span class="employee-name">Nombre empleado</span>
                                 <span class="username">Usuario</span>
                             </div>
-
+ 
                             <i class="bi bi-chevron-down"></i>
-
+ 
                         </button>
-
+ 
                         <ul class="dropdown-menu dropdown-menu-end">
-
+ 
                             <li>
                                 <a class="dropdown-item" href="#">
                                     <i class="bi bi-person me-2"></i>
                                     Mi perfil
                                 </a>
                             </li>
-
+ 
                             <li><hr class="dropdown-divider"></li>
-
+ 
                             <li>
                                 <a class="dropdown-item text-danger" href="#">
                                     <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
                                 </a>
                             </li>
-
+ 
                         </ul>
-
+ 
                     </div>
-
+ 
                 </div>
-
+ 
             </header>
+ 
 
             <!-- ......................................................................................................
                 C O N T E N I D O  P A G I NA
