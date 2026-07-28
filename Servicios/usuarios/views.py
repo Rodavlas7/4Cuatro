@@ -771,71 +771,32 @@ class BajaEmpleadoView(generics.UpdateAPIView):
     serializer_class = BajaEmpleadoSerializer
     lookup_field = "numero"
     
-#
-
-
-
-#Buscar empleado
-class BuscarEmpleadoView(generics.ListAPIView):
-
-    permission_classes = [
-        AllowAny
-        #IsAuthenticated,
-        #TienePermisoModulo
-    ]
-
-    modulo = "empleados"
-
-    serializer_class = serializers.ListEmpleadoSerializer
-
-    def get_queryset(self):
-
-        queryset = VistaEmpleado.objects.all()
-
-        buscar = self.request.GET.get("buscar")
-
-        if buscar:
-
-            queryset = queryset.filter(
-                Q(numero__icontains=buscar) |
-                Q(nombre_completo__icontains=buscar) |
-                Q(rol_nombre__icontains=buscar) |
-                Q(turno_nombre__icontains=buscar)
-            )
-
-        return queryset
     
     
-#buscar usuario
-class BuscarUsuarioView(generics.ListAPIView):
 
-    permission_classes = [
-        AllowAny
-        #IsAuthenticated,
-        #TienePermisoModulo
-    ]
+class ReactivarEmpleadoAPIView(APIView):
 
-    modulo = "usuarios"
+    def patch(self, request, numero):
 
-    serializer_class = serializers.ListUsuarioSerializer
+        try:
+            empleado = Empleado.objects.get(numero=numero)
 
-    def get_queryset(self):
+            empleado.activo = True
+            empleado.save()
 
-        queryset = VistaUsuario.objects.all()
+            return Response({
+                "mensaje": "Empleado reactivado correctamente"
+            }, status=status.HTTP_200_OK)
 
-        buscar = self.request.GET.get("buscar")
+        except Empleado.DoesNotExist:
+            return Response({
+                "mensaje": "Empleado no encontrado"
+            }, status=status.HTTP_404_NOT_FOUND)
 
-        if buscar:
 
-            queryset = queryset.filter(
-                Q(numero__icontains=buscar) |
-                Q(usuario__icontains=buscar) |
-                Q(empleado_nombre__icontains=buscar)
-            )
 
-        return queryset
     
-    
+
     
 #Buscar empleados lineas
 class BuscarEmpleadoLineaView(generics.ListAPIView):
@@ -869,6 +830,7 @@ class BuscarEmpleadoLineaView(generics.ListAPIView):
                 Q(linea__nombre__icontains=buscar)
 
             )
+        
 
 
         return queryset
@@ -936,3 +898,95 @@ class EmpleadosCalidadPorLineaAPIView(APIView):
             for a in asignaciones
         ]
         return Response(data)
+    
+    
+    
+# Buscar usuario
+class BuscarUsuarioView(generics.ListAPIView):
+
+    permission_classes = [
+        AllowAny
+        # IsAuthenticated,
+        # TienePermisoModulo
+    ]
+
+    modulo = "usuarios"
+
+    serializer_class = serializers.ListUsuarioSerializer
+
+    def get_queryset(self):
+
+        queryset = VistaUsuario.objects.all()
+
+        buscar = self.request.GET.get("buscar")
+        rol = self.request.GET.get("rol")
+        estado = self.request.GET.get("estado")
+
+        if buscar:
+            queryset = queryset.filter(
+                Q(numero__icontains=buscar) |
+                Q(usuario__icontains=buscar) |
+                Q(empleado_nombre__icontains=buscar)
+            )
+
+        if rol:
+            queryset = queryset.filter(
+                rol_nombre__iexact=rol
+            )
+
+        if estado:
+            queryset = queryset.filter(
+                estado_usuario__iexact=estado
+            )
+
+        return queryset
+    
+
+
+# Buscar empleado
+class BuscarEmpleadoView(generics.ListAPIView):
+
+    permission_classes = [
+        AllowAny
+        # IsAuthenticated,
+        # TienePermisoModulo
+    ]
+
+    modulo = "empleados"
+
+    serializer_class = serializers.ListEmpleadoSerializer
+
+    def get_queryset(self):
+
+        queryset = VistaEmpleado.objects.all()
+
+        buscar = self.request.GET.get("buscar")
+        rol = self.request.GET.get("rol")
+        estado = self.request.GET.get("estado")
+        linea = self.request.GET.get("linea")  # NUEVO
+
+        if buscar:
+            queryset = queryset.filter(
+                Q(numero__icontains=buscar) |
+                Q(nombre_completo__icontains=buscar) |
+                Q(rol_nombre__icontains=buscar) |
+                Q(turno_nombre__icontains=buscar) |
+                Q(linea_nombre__icontains=buscar)  # NUEVO
+            )
+
+        if rol:
+            queryset = queryset.filter(
+                rol_codigo=rol
+            )
+
+        if estado:
+            queryset = queryset.filter(
+                estado_empleado__iexact=estado
+            )
+
+        if linea:
+            queryset = queryset.filter(
+                linea_codigo=linea
+            )
+
+        return queryset

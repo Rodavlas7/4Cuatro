@@ -870,7 +870,6 @@ def laptopComponenteLiberarView(request, numero, componente):
 #---------------------------------------------------------------------------------
 
 
-
 API_PARO = "http://127.0.0.1:8000/api/produccion/paros/"
 
 
@@ -882,11 +881,20 @@ class ListaParos(generic.View):
         headers = {"Authorization": f"Bearer {token}"}
 
         buscar = request.GET.get("buscar", "").strip()
+        fecha_desde = request.GET.get("fecha_desde", "")
+        fecha_hasta = request.GET.get("fecha_hasta", "")
+
+        params = {}
+        if fecha_desde:
+            params["fecha_desde"] = fecha_desde
+        if fecha_hasta:
+            params["fecha_hasta"] = fecha_hasta
 
         if buscar:
-            response = requests.get(API_PARO + "buscar/", headers=headers, params={"buscar": buscar})
+            params["buscar"] = buscar
+            response = requests.get(API_PARO + "buscar/", headers=headers, params=params)
         else:
-            response = requests.get(API_PARO, headers=headers)
+            response = requests.get(API_PARO, headers=headers, params=params)
 
         paros = response.json() if response.status_code == 200 else []
 
@@ -894,6 +902,8 @@ class ListaParos(generic.View):
             "paros": paros,
             "lineas": get_choices_lineas_paro(token),
             "buscar": buscar,
+            "fecha_desde": fecha_desde,
+            "fecha_hasta": fecha_hasta,
         }
         return render(request, self.template_name, context)
 

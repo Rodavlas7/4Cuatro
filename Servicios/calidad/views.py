@@ -360,13 +360,12 @@ class DeleteInspeccionCalidadAPIView(APIView):
         )
         
        
-#busqueda 
 class BuscarInspeccionCalidadView(generics.ListAPIView):
 
     permission_classes = [
         AllowAny
-        #IsAuthenticated,
-        #TienePermisoModulo
+        # IsAuthenticated,
+        # TienePermisoModulo
     ]
 
     modulo = "calidad"
@@ -378,6 +377,8 @@ class BuscarInspeccionCalidadView(generics.ListAPIView):
         queryset = VistaInspeccionCalidad.objects.all()
 
         buscar = self.request.GET.get("buscar")
+        fecha_inicio = self.request.GET.get("fecha_inicio")
+        fecha_fin = self.request.GET.get("fecha_fin")
 
         if buscar:
 
@@ -390,5 +391,20 @@ class BuscarInspeccionCalidadView(generics.ListAPIView):
                 Q(observaciones__icontains=buscar)
 
             )
+
+
+        # Filtro desde fecha
+        if fecha_inicio:
+            queryset = queryset.filter(
+                fecha__gte=fecha_inicio
+            )
+
+
+        # Filtro hasta fecha
+        if fecha_fin:
+            queryset = queryset.filter(
+                fecha__lte=fecha_fin
+            )
+
 
         return queryset.order_by("-fecha", "-hora")

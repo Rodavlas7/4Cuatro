@@ -315,7 +315,6 @@ class RegistroEnsamblajeModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
         instance.hora_fin = ahora.time()
         instance.save(update_fields=['fecha_fin', 'hora_fin'])
 
-
 class BuscarParoAPIView(generics.ListAPIView):
     permission_classes = [
         IsAuthenticated,
@@ -323,14 +322,24 @@ class BuscarParoAPIView(generics.ListAPIView):
     ]
     modulo = "paro"
     serializer_class = VistaParoSerializer
-    
+
     def get_queryset(self):
         queryset = VistaParo.objects.all()
         buscar = self.request.GET.get("buscar")
+        fecha_desde = self.request.GET.get("fecha_desde")
+        fecha_hasta = self.request.GET.get("fecha_hasta")
+
         if buscar:
             queryset = queryset.filter(
                 Q(numero__icontains=buscar) |
                 Q(razon__icontains=buscar) |
                 Q(linea_nombre__icontains=buscar)
             )
+
+        if fecha_desde:
+            queryset = queryset.filter(fecha_inicio__gte=fecha_desde)
+
+        if fecha_hasta:
+            queryset = queryset.filter(fecha_inicio__lte=fecha_hasta)
+
         return queryset.order_by("-fecha_inicio", "-hora_inicio")

@@ -11,90 +11,333 @@
     </button>
 </div>
 <form method="GET" class="mb-3">
-    <div class="input-group" style="max-width: 400px;">
-        <input type="text" name="buscar" class="form-control" placeholder="Buscar por número, nombre, rol o turno..." value="{{ buscar|default:'' }}">
-        <button type="submit" class="btn btn-outline-secondary">
-            <i class="bi bi-search"></i>
-        </button>
-        {% if buscar %}
-        <a href="{% url 'lista_empleados' %}" class="btn btn-outline-danger">
-            <i class="bi bi-x-lg"></i>
-        </a>
+
+    <div class="row g-2 align-items-end">
+
+        <!-- Buscar -->
+        <div class="col-lg-4 col-md-6">
+            <label class="form-label">Buscar</label>
+            <div class="input-group">
+
+                <input 
+                    type="text" 
+                    name="buscar" 
+                    class="form-control"
+                    placeholder="Buscar por número, nombre, rol, turno o línea..."
+                    value="{{ buscar|default:'' }}"
+                >
+
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+
+            </div>
+        </div>
+
+
+        <!-- Rol -->
+        <div class="col-lg-2 col-md-3">
+
+            <label class="form-label">Rol</label>
+
+            <select name="rol" class="form-select">
+
+                <option value="">
+                    Todos los roles
+                </option>
+
+                {% for codigo, nombre in roles %}
+
+                <option value="{{ codigo }}"
+                    {% if rol == codigo %}selected{% endif %}>
+                    {{ nombre }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+
+        <!-- Estado -->
+        <div class="col-lg-2 col-md-3">
+
+            <label class="form-label">Estado</label>
+
+            <select name="estado" class="form-select">
+
+                <option value="">
+                    Todos los estados
+                </option>
+
+                <option value="Activo"
+                    {% if estado == "Activo" %}selected{% endif %}>
+                    Activo
+                </option>
+
+                <option value="Inactivo"
+                    {% if estado == "Inactivo" %}selected{% endif %}>
+                    Inactivo
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- Línea -->
+        <div class="col-lg-2 col-md-3">
+
+            <label class="form-label">Línea</label>
+
+            <select name="linea" class="form-select">
+
+                <option value="">
+                    Todas las líneas
+                </option>
+
+                {% for codigo, nombre in lineas %}
+
+                <option value="{{ codigo }}"
+                    {% if linea == codigo %}selected{% endif %}>
+                    {{ nombre }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+
+        <!-- Botón filtrar -->
+        <div class="col-lg-1 col-md-2">
+            <label class="form-label d-block">&nbsp;</label>
+            <button class="btn btn-primary w-100">
+                <i class="bi bi-funnel"></i>
+                Filtrar
+            </button>
+        </div>
+
+
+        <!-- Limpiar -->
+        {% if buscar or rol or estado or linea %}
+
+        <div class="col-lg-1 col-md-2">
+            <label class="form-label d-block">&nbsp;</label>
+            <a href="{% url 'lista_empleados' %}"
+               class="btn btn-outline-danger w-100">
+
+                <i class="bi bi-x-lg"></i>
+
+            </a>
+
+        </div>
+
         {% endif %}
+
+
     </div>
+
 </form>
 
+
+
 <div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>Número</th>
-                <th>Nombre completo</th>
-                <th>Rol</th>
-                <th>Turno</th>
-                <th>Estado</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for e in empleados %}
-            <tr>
-                <td>{{ e.numero }}</td>
-                <td>{{ e.nombre_completo|default:"—" }}</td>
-                <td>{{ e.rol_nombre|default:"—" }}</td>
-                <td>{{ e.turno_nombre|default:"—" }}</td>
-                <td>
-                    {% if e.estado_empleado == "Activo" %}
-                        <span class="badge bg-success">Activo</span>
-                    {% else %}
-                        <span class="badge bg-danger">Inactivo</span>
-                    {% endif %}
-                </td>
-                <td class="text-end">
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-info"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalDetalle"
-                        data-numero="{{ e.numero }}"
-                        data-nombre="{{ e.nombre_completo|default:'' }}"
-                        data-rol="{{ e.rol_nombre|default:'' }}"
-                        data-turno="{{ e.turno_nombre|default:'' }}"
-                        data-estado="{{ e.estado_empleado|default:'' }}">
-                        <i class="bi bi-eye"></i>
-                    </button>
+<table class="table table-hover align-middle bg-white">
 
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEditar"
-                        data-numero="{{ e.numero }}"
-                        data-nombrepila="{{ e.nombrepila|default:'' }}"
-                        data-primerapell="{{ e.primerapell|default:'' }}"
-                        data-segundoapell="{{ e.segundoapell|default:'' }}"
-                        data-rol="{{ e.rol|default:'' }}"
-                        data-turno="{{ e.turno|default:'' }}"
-                        data-activo="{{ e.estado_empleado|default:'' }}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+<thead class="table-light">
 
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-danger"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEliminar"
-                        data-numero="{{ e.numero }}"
-                        data-nombre="{{ e.nombre_completo|default:'' }}">
-                        <i class="bi bi-person-x"></i>
-                    </button>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6" class="text-center text-muted py-4">No hay empleados registrados.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<tr>
+    <th>Número</th>
+    <th>Nombre completo</th>
+    <th>Rol</th>
+    <th>Turno</th>
+    <th>Línea</th>
+    <th>Estación</th>
+    <th>Estado</th>
+    <th class="text-end">Acciones</th>
+</tr>
+
+</thead>
+
+
+<tbody>
+
+{% for e in empleados %}
+
+<tr>
+
+<td>
+    {{ e.numero }}
+</td>
+
+
+<td>
+    {{ e.nombre_completo|default:"—" }}
+</td>
+
+
+<td>
+    {{ e.rol_nombre|default:"—" }}
+</td>
+
+
+<td>
+    {{ e.turno_nombre|default:"—" }}
+</td>
+
+
+<td>
+    {{ e.linea_nombre|default:"—" }}
+</td>
+
+
+<td>
+    {{ e.estacion_nombre|default:"—" }}
+</td>
+
+
+<td>
+
+{% if e.estado_empleado == "Activo" %}
+
+<span class="badge bg-success">
+    Activo
+</span>
+
+{% else %}
+
+<span class="badge bg-danger">
+    Inactivo
+</span>
+
+{% endif %}
+
+</td>
+
+
+<td class="text-end">
+
+
+<!-- DETALLE -->
+
+<button
+type="button"
+class="btn btn-sm btn-outline-info"
+
+data-bs-toggle="modal"
+data-bs-target="#modalDetalle"
+
+data-numero="{{ e.numero }}"
+data-nombre="{{ e.nombre_completo|default:'' }}"
+data-rol="{{ e.rol_nombre|default:'' }}"
+data-turno="{{ e.turno_nombre|default:'' }}"
+data-linea="{{ e.linea_nombre|default:'' }}"
+data-estacion="{{ e.estacion_nombre|default:'' }}"
+data-estado="{{ e.estado_empleado|default:'' }}"
+
+
+>
+
+<i class="bi bi-eye"></i>
+
+</button>
+
+
+
+
+<!-- EDITAR -->
+
+<button
+type="button"
+class="btn btn-sm btn-outline-secondary"
+
+data-bs-toggle="modal"
+data-bs-target="#modalEditar"
+
+data-numero="{{ e.numero }}"
+
+data-nombrepila="{{ e.nombrepila|default:'' }}"
+data-primerapell="{{ e.primerapell|default:'' }}"
+data-segundoapell="{{ e.segundoapell|default:'' }}"
+
+data-rol="{{ e.rol_codigo|default:'' }}"
+data-turno="{{ e.turno_codigo|default:'' }}"
+
+data-linea="{{ e.linea_codigo|default:'' }}"
+data-lineanombre="{{ e.linea_nombre|default:'' }}"
+
+data-estacion="{{ e.estacion_codigo|default:'' }}"
+data-estacionnombre="{{ e.estacion_nombre|default:'' }}"
+
+data-activo="{{ e.estado_empleado|default:'' }}"
+
+>
+
+<i class="bi bi-pencil"></i>
+
+</button>
+
+
+
+
+<!-- ELIMINAR -->
+
+{% if e.estado_empleado == "Activo" %}
+
+<button
+type="button"
+class="btn btn-sm btn-outline-danger"
+data-bs-toggle="modal"
+data-bs-target="#modalEliminar"
+data-numero="{{ e.numero }}"
+data-nombre="{{ e.nombre_completo }}">
+<i class="bi bi-person-x"></i>
+</button>
+
+{% else %}
+
+<button
+type="button"
+class="btn btn-sm btn-outline-success"
+data-bs-toggle="modal"
+data-bs-target="#modalReactivar"
+data-numero="{{ e.numero }}"
+data-nombre="{{ e.nombre_completo }}">
+<i class="bi bi-person-check"></i>
+</button>
+
+{% endif %}
+
+
+</td>
+
+
+</tr>
+
+
+{% empty %}
+
+<tr>
+
+<td colspan="8" class="text-center text-muted py-4">
+
+No hay empleados registrados.
+
+</td>
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+</table>
+
 </div>
 
 
@@ -196,6 +439,14 @@
                     <span class="fw-semibold text-secondary">Turno</span>
                     <span id="det_turno" class="text-muted"></span>
                 </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span class="fw-semibold text-secondary">Línea</span>
+                    <span id="det_linea" class="text-muted"></span>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span class="fw-semibold text-secondary">Estación</span>
+                    <span id="det_estacion" class="text-muted"></span>
+                </div>
                 <div class="d-flex justify-content-between py-2">
                     <span class="fw-semibold text-secondary">Estado</span>
                     <span id="det_estado" class="text-muted"></span>
@@ -266,18 +517,22 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Línea (dejar en blanco si no cambia)</label>
+                        <label class="form-label">Línea (dejar la actual si no cambia)</label>
                         <select name="linea" id="edit_linea" class="form-select">
-                            <option value="">— No cambiar —</option>
+                            <option value="">Selecciona una línea</option>
                             {% for codigo, nombre in lineas %}
-                            <option value="{{ codigo }}">{{ nombre }}</option>
+                            <option value="{{ codigo }}">
+                                {{ nombre }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Estación (dejar en blanco si no cambia)</label>
                         <select name="estacion" id="edit_estacion" class="form-select">
-                            <option value="">— No cambiar —</option>
+                            <option value="">
+                                Selecciona una estación
+                            </option>
                         </select>
                     </div>
                 </div>
@@ -311,6 +566,66 @@
             </div>
         </form>
     </div>
+</div>
+
+<!-- MODAL: REACTIVAR -->
+<div class="modal fade" id="modalReactivar" tabindex="-1">
+
+    <div class="modal-dialog">
+
+        <form method="POST" id="formReactivar" action="">
+
+            {% csrf_token %}
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title text-success">
+                        Reactivar empleado
+                    </h5>
+
+                    <button 
+                    type="button" 
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+
+                <div class="modal-body">
+
+                    <p>
+                        ¿Deseas reactivar a 
+                        <strong id="rea_nombre"></strong>?
+                    </p>
+
+                </div>
+
+
+                <div class="modal-footer">
+
+                    <button 
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+                    Cancelar
+                    </button>
+
+
+                    <button 
+                    type="submit"
+                    class="btn btn-success">
+                    Reactivar
+                    </button>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
 </div>
 
 <script>
@@ -363,13 +678,18 @@ document.getElementById('modalDetalle').addEventListener('show.bs.modal', functi
     document.getElementById('det_nombre').textContent = btn.dataset.nombre;
     document.getElementById('det_rol').textContent = btn.dataset.rol;
     document.getElementById('det_turno').textContent = btn.dataset.turno;
+    document.getElementById('det_linea').textContent = 
+    btn.dataset.linea || "—";
+    document.getElementById('det_estacion').textContent = 
+    btn.dataset.estacion || "—";
     document.getElementById('det_estado').textContent = btn.dataset.estado;
+    
 });
 
 // MODAL: Editar
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
-    document.getElementById('formEditar').action = "/usuarios/empleados/" + btn.dataset.numero + "/editar/";
+    document.getElementById('formEditar').action = "/usuarios/empleados/Actualizar/" + btn.dataset.numero + "/";
     document.getElementById('edit_numero').value = btn.dataset.numero;
     document.getElementById('edit_nombrepila').value = btn.dataset.nombrepila;
     document.getElementById('edit_primerapell').value = btn.dataset.primerapell;
@@ -377,16 +697,29 @@ document.getElementById('modalEditar').addEventListener('show.bs.modal', functio
     document.getElementById('edit_rol').value = btn.dataset.rol;
     document.getElementById('edit_turno').value = btn.dataset.turno;
     document.getElementById('edit_activo').value = btn.dataset.activo === "Activo" ? "true" : "false";
-    document.getElementById('edit_linea').value = "";
-    document.getElementById('edit_estacion').innerHTML = '<option value="">— No cambiar —</option>';
+    document.getElementById('edit_linea').value = btn.dataset.linea;
+    const estacionSelect = document.getElementById('edit_estacion');
+    estacionSelect.innerHTML = `<option value="${btn.dataset.estacion}">${btn.dataset.estacionnombre}</option>`;
 });
 
 // MODAL: Desactivar
 document.getElementById('modalEliminar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
-    document.getElementById('formEliminar').action = "/usuarios/empleados/" + btn.dataset.numero + "/desactivar/";
+    document.getElementById('formEliminar').action = "/usuarios/empleados/desactivar/" + btn.dataset.numero + "/";
     document.getElementById('del_nombre').textContent = btn.dataset.nombre;
 });
-</script>
 
+
+// MODAL: Reactivar
+document.getElementById('modalReactivar')
+.addEventListener('show.bs.modal', function(event){
+    const btn = event.relatedTarget;
+    document.getElementById('formReactivar').action =
+        "/usuarios/empleados/reactivar/" + btn.dataset.numero + "/";
+
+    document.getElementById('rea_nombre').textContent =
+        btn.dataset.nombre;
+
+});
+</script>
 {% endblock %}

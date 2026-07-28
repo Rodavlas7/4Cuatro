@@ -31,38 +31,105 @@ API_EMPLEADO = "http://127.0.0.1:8000/api/usuarios/Empleado/"
 # ===============================
 class ListaEmpleados(generic.View):
     template_name = "usuarios/empleados.html"
+
     url_api_listar = API_EMPLEADO + "Listar/"
     url_api_buscar = API_EMPLEADO + "Buscar/"
     url_api_actualizar = API_EMPLEADO + "Actualizar/"
 
     def get(self, request):
+
         token = request.session.get("token")
         headers = {"Authorization": f"Bearer {token}"}
 
+
+        # filtros
         buscar = request.GET.get("buscar", "").strip()
+        rol = request.GET.get("rol", "")
+        estado = request.GET.get("estado", "")
+        linea = request.GET.get("linea", "")
+
+
+        params = {}
 
         if buscar:
-            response = requests.get(self.url_api_buscar, headers=headers, params={"buscar": buscar})
-        else:
-            response = requests.get(self.url_api_listar, headers=headers)
+            params["buscar"] = buscar
 
-        empleados_lista = response.json() if response.status_code == 200 else []
+        if rol:
+            params["rol"] = rol
+
+        if estado:
+            params["estado"] = estado
+
+        if linea:
+            params["linea"] = linea
+
+
+
+        # Si hay filtros usa Buscar
+        if params:
+            response = requests.get(
+                self.url_api_buscar,
+                headers=headers,
+                params=params
+            )
+
+        else:
+            response = requests.get(
+                self.url_api_listar,
+                headers=headers
+            )
+
+
+        empleados_lista = (
+            response.json()
+            if response.status_code == 200
+            else []
+        )
+
 
         empleados = []
+
         for e in empleados_lista:
-            raw_resp = requests.get(self.url_api_actualizar + f"{e['numero']}/", headers=headers)
-            raw = raw_resp.json() if raw_resp.status_code == 200 else {}
-            empleados.append({**e, **raw})
+
+            raw_resp = requests.get(
+                self.url_api_actualizar + f"{e['numero']}/",
+                headers=headers
+            )
+
+            raw = (
+                raw_resp.json()
+                if raw_resp.status_code == 200
+                else {}
+            )
+
+            empleados.append({
+                **e,
+                **raw
+            })
+
 
         context = {
+
             "empleados": empleados,
+
             "lineas": get_choices_lineas(token),
             "estaciones": get_choices_estaciones(token),
             "roles": get_choices_roles(token),
             "turnos": get_choices_turnos(token),
+
+            # conservar filtros
             "buscar": buscar,
+            "rol": rol,
+            "estado": estado,
+            "linea": linea,
         }
-        return render(request, self.template_name, context)
+
+
+        return render(
+            request,
+            self.template_name,
+            context
+        )
 
 # ===============================
 # CREAR (CREATE)
@@ -202,6 +269,34 @@ class DesactivarEmpleado(generic.View):
                 f"No se pudo desactivar el empleado No. {numero}."
             )
 
+        return redirect("lista_empleados")
+    
+
+class ReactivarEmpleado(generic.View):
+
+    def post(self, request, numero):
+
+        token = request.session.get("token")
+
+        response = requests.patch(
+            API_EMPLEADO + f"Reactivar/{numero}/",
+            headers={
+                "Authorization": f"Bearer {token}"
+            }
+        )
+
+        if response.status_code == 200:
+            messages.success(
+                request,
+                f"Empleado No. {numero} reactivado correctamente."
+            )
+        else:
+            messages.error(
+                request,
+                f"No se pudo reactivar el empleado No. {numero}."
+            )
+
+        return redirect("lista_empleados")
 
 # ===============================
 # PUENTE: estaciones filtradas por línea (para el fetch del JS)
@@ -227,37 +322,73 @@ API_USUARIO = "http://127.0.0.1:8000/api/usuarios/Usuario/"
 # ===============================
 class ListaUsuarios(generic.View):
     template_name = "usuarios/usuarios.html"
+
     url_api_listar = API_USUARIO + "Listar/"
     url_api_buscar = API_USUARIO + "Buscar/"
     url_api_empleados = API_EMPLEADO + "Listar/"
 
     def get(self, request):
+
         token = request.session.get("token")
         headers = {"Authorization": f"Bearer {token}"}
 
-        buscar = request.GET.get("buscar", "").strip()
+        buscar = request.GET.get("buscar", "")
+        rol = request.GET.get("rol", "")
+        estado = request.GET.get("estado", "")
+
+        params = {}
 
         if buscar:
+            params["buscar"] = buscar
+
+        if rol:
+            params["rol"] = rol
+
+        if estado:
+            params["estado"] = estado
+
+
+        if params:
             response = requests.get(
                 self.url_api_buscar,
                 headers=headers,
-                params={"buscar": buscar}
+                params=params
             )
         else:
-            response = requests.get(self.url_api_listar, headers=headers)
+            response = requests.get(
+                self.url_api_listar,
+                headers=headers
+            )
+
 
         usuarios = response.json() if response.status_code == 200 else []
 
-        empleados_resp = requests.get(self.url_api_empleados, headers=headers)
-        empleados = empleados_resp.json() if empleados_resp.status_code == 200 else []
+
+        empleados_resp = requests.get(
+            self.url_api_empleados,
+            headers=headers
+        )
+
+        empleados_lista = empleados_resp.json() if empleados_resp.status_code == 200 else []
+
+        empleados = [
+            e for e in empleados_lista
+            if not e.get("usuario")
+        ]
+
 
         context = {
             "usuarios": usuarios,
             "empleados": empleados,
+            "roles": get_choices_roles(token),
             "buscar": buscar,
+            "rol": rol,
+            "estado": estado,
         }
+
         return render(request, self.template_name, context)
     
+       
 # ==================================================
 # CREAR (CREATE)
 # ==================================================
@@ -276,7 +407,6 @@ class CrearUsuario(generic.View):
             "empleado": request.POST.get("empleado"),
 
         }
-
 
         response = requests.post(
             self.url_api,

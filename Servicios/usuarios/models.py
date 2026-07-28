@@ -109,7 +109,6 @@ class Sesion(models.Model):
 #--------------------- VISTA EMPLEADO----------------------------------------------------
 
 class VistaEmpleado(models.Model):
-
     numero = models.IntegerField(primary_key=True)
     nombre_completo = models.CharField(max_length=116, blank=True, null=True)
     rol_codigo = models.CharField(max_length=8, blank=True, null=True)
@@ -117,13 +116,16 @@ class VistaEmpleado(models.Model):
     turno_codigo = models.CharField(max_length=8, blank=True, null=True)
     turno_nombre = models.CharField(max_length=32, blank=True, null=True)
     usuario = models.CharField(max_length=32, blank=True, null=True)
-    estado_usuario = models.CharField(max_length=11, blank=True, null=True)
-    estado_empleado = models.CharField(max_length=9, blank=True, null=True)
+    estado_usuario = models.CharField(max_length=12, blank=True, null=True)
+    estado_empleado = models.CharField(max_length=8, blank=True, null=True)
+    linea_codigo = models.CharField(max_length=8, blank=True, null=True)
+    linea_nombre = models.CharField(max_length=32, blank=True, null=True)
+    estacion_codigo = models.CharField(max_length=8, blank=True, null=True)
+    estacion_nombre = models.CharField(max_length=32, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "vista_empleados"
-        
         
 #--------------- VISTA USUARIO-------------------------------------------------------
 class VistaUsuario(models.Model):
@@ -137,3 +139,4 @@ class VistaUsuario(models.Model):
     class Meta:
         managed = False
         db_table = "vista_usuarios"
+        
