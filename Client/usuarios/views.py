@@ -190,6 +190,9 @@ class DetalleEmpleado(generic.View):
 # ===============================
 # EDITAR (UPDATE)
 # ===============================
+# ===============================
+# EDITAR (UPDATE)
+# ===============================
 class EditarEmpleado(generic.View):
 
     def post(self, request, numero):
@@ -214,31 +217,17 @@ class EditarEmpleado(generic.View):
             data=data
         )
 
-        if response.status_code != 200:
-            error_data = response.json()
-            messages.error(
-                request,
-                f"No se pudo actualizar el empleado No. {numero}. "
-                + error_data.get("mensaje", "")
-            )
-            return redirect("lista_empleados")
-
-        activo = request.POST.get("activo") == "true"
-        estado_resp = requests.patch(
-            API_EMPLEADO + f"Desactivar/{numero}/",
-            headers=headers,
-            data={"activo": activo}
-        )
-
-        if estado_resp.status_code == 200:
+        if response.status_code == 200:
             messages.success(
                 request,
                 f"Empleado No. {numero} actualizado correctamente."
             )
         else:
-            messages.warning(
+            error_data = response.json()
+            messages.error(
                 request,
-                f"Empleado No. {numero} actualizado, pero no se pudo cambiar el estado."
+                f"No se pudo actualizar el empleado No. {numero}. "
+                + error_data.get("mensaje", "")
             )
 
         return redirect("lista_empleados")
