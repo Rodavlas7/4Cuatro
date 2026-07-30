@@ -43,7 +43,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Compartido por los tres paneles.
+    'core',
     'home',
+
+    # Un panel por rol. Cada uno es dueño de sus vistas, sus URLs y sus
+    # plantillas, para que los tres se puedan trabajar en paralelo.
+    'panel_admin',
+    'panel_calidad',
+    'panel_supervisor',
+
+    # Pantallas del panel de administrador (ya estaban cuando el cliente era
+    # uno solo, así que se quedaron en su lugar).
     'usuarios',
     'lineas',
     'produccion',
@@ -60,6 +72,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Va al final: necesita sesión y mensajes ya montados para poder decidir
+    # y para poder avisar por qué te sacó.
+    'core.middleware.AccesoPorRolMiddleware',
 ]
 
 ROOT_URLCONF = 'Client.urls'
@@ -67,13 +83,16 @@ ROOT_URLCONF = 'Client.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['templates'],
+        # Ruta absoluta: con 'templates' a secas, Django sólo encontraba las
+        # plantillas si el proceso se levantaba justo desde esta carpeta.
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.sesion',
             ],
         },
     },

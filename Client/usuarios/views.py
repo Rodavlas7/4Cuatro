@@ -16,6 +16,10 @@ from django.views import generic
 from django.contrib import messages
 from django.http import JsonResponse
 
+# Se importa con alias porque las vistas de este módulo tienen su propio
+# método get(); un `get` a secas adentro se leería como si fuera el método.
+from core.api import fallo, get as api_get, lista, mensaje_error, objeto
+
 from .forms import (
     get_choices_lineas,
     get_choices_estaciones,
@@ -67,40 +71,32 @@ class ListaEmpleados(generic.View):
 
         # Si hay filtros usa Buscar
         if params:
-            response = requests.get(
+            response = api_get(
                 self.url_api_buscar,
-                headers=headers,
-                params=params
+                headers,
+                params=params,
             )
 
         else:
-            response = requests.get(
+            response = api_get(
                 self.url_api_listar,
-                headers=headers
+                headers,
             )
 
 
-        empleados_lista = (
-            response.json()
-            if response.status_code == 200
-            else []
-        )
+        empleados_lista = lista(response)
 
 
         empleados = []
 
         for e in empleados_lista:
 
-            raw_resp = requests.get(
+            raw_resp = api_get(
                 self.url_api_actualizar + f"{e['numero']}/",
-                headers=headers
+                headers,
             )
 
-            raw = (
-                raw_resp.json()
-                if raw_resp.status_code == 200
-                else {}
-            )
+            raw = objeto(raw_resp)
 
             empleados.append({
                 **e,
@@ -176,12 +172,12 @@ class CrearEmpleado(generic.View):
 class DetalleEmpleado(generic.View):
     def get(self, request, numero):
         token = request.session.get("token")
-        response = requests.get(
+        response = api_get(
             API_EMPLEADO + f"Detalle/{numero}/",
-            headers={"Authorization": f"Bearer {token}"}
+            {"Authorization": f"Bearer {token}"},
         )
-        if response.status_code == 200:
-            return render(request, "usuarios/detalle_empleado.html", {"empleado": response.json()})
+        if not fallo(response):
+            return render(request, "usuarios/detalle_empleado.html", {"empleado": objeto(response)})
 
         messages.error(request, "No se pudo obtener el detalle del empleado.")
         return redirect("lista_empleados")
@@ -338,27 +334,27 @@ class ListaUsuarios(generic.View):
 
 
         if params:
-            response = requests.get(
+            response = api_get(
                 self.url_api_buscar,
-                headers=headers,
-                params=params
+                headers,
+                params=params,
             )
         else:
-            response = requests.get(
+            response = api_get(
                 self.url_api_listar,
-                headers=headers
+                headers,
             )
 
 
-        usuarios = response.json() if response.status_code == 200 else []
+        usuarios = lista(response)
 
 
-        empleados_resp = requests.get(
+        empleados_resp = api_get(
             self.url_api_empleados,
-            headers=headers
+            headers,
         )
 
-        empleados_lista = empleados_resp.json() if empleados_resp.status_code == 200 else []
+        empleados_lista = lista(empleados_resp)
 
         empleados = [
             e for e in empleados_lista
@@ -450,33 +446,30 @@ class DetalleUsuario(generic.View):
         token = request.session.get("token")
 
 
-        response = requests.get(
+        response = api_get(
             API_USUARIO + f"Detalle/{numero}/",
-            headers={
+            {
                 "Authorization": f"Bearer {token}"
-            }
+            },
         )
 
 
-        if response.status_code == 200:
+        if not fallo(response):
 
             return render(
                 request,
                 self.template_name,
                 {
-                    "usuario": response.json()
+                    "usuario": objeto(response)
                 }
             )
 
 
-        error = response.json()
-
+        # No se puede hacer response.json() aquí: si la API no contestó,
+        # `response` es None. mensaje_error() ya cubre los dos casos.
         messages.error(
             request,
-            error.get(
-                "mensaje",
-                "No se pudo obtener el usuario."
-            )
+            f"No se pudo obtener el usuario. {mensaje_error(response)}"
         )
 
 

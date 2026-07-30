@@ -1,0 +1,20 @@
+{% extends 'base/base_layout.html' %}
+{% load static %}
+
+{% comment %}
+   BASE DEL PANEL DE SUPERVISOR
+
+   Todas las pantallas del supervisor extienden de aquí. Este archivo es del
+   equipo del panel de supervisor: lo que le pongas sólo lo ven las pantallas de
+   este panel.
+{% endcomment %}
+
+{% block title %}{% block titulo_pagina %}Supervisión{% endblock %} · TraceX{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/panel_supervisor.css' %}">
+{% endblock %}
+
+{% block sidebar %}
+    {% include 'panel_supervisor/_sidebar.html' %}
+{% endblock %}

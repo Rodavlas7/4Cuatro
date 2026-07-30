@@ -2,7 +2,8 @@ import requests
 
 from django.contrib import messages
 from django.shortcuts import render, redirect
-# Create your views here.
+
+from core.api import fallo, get, lista, mensaje_error, objeto
 
 # URL base de la API (Servicios). Igual que en home/views.py.
 API = "http://127.0.0.1:8000/api"
@@ -12,18 +13,13 @@ def _headers(request):
     return {"Authorization": f"Bearer {request.session.get('token')}"}
 
 
-def _mensaje_api(response):
-    """Intenta sacar el mensaje de error que manda la API; si no puede, uno genérico."""
-    try:
-        datos = response.json()
-    except ValueError:
-        return "No se pudo comunicar con la API."
-    if isinstance(datos, dict):
-        if "mensaje" in datos:
-            return datos["mensaje"]
-        # errores de validación de DRF: {"campo": ["mensaje", ...]}
-        return " | ".join(f"{campo}: {', '.join(errores)}" for campo, errores in datos.items())
-    return "Ocurrió un error al procesar la solicitud."
+def _avisar_si_falla(request, respuesta, que):
+    """Avisa al usuario cuando la API no entregó los datos.
+
+    Sin esto la pantalla se ve vacía y parece que no hay registros dados de alta,
+    cuando en realidad la sesión venció o la API está caída."""
+    if fallo(respuesta):
+        messages.error(request, f"No se pudieron cargar {que}. {mensaje_error(respuesta)}")
 
 
 #COMPONENTES
@@ -53,25 +49,23 @@ def componentesListView(request):
         if respuesta.status_code == 201:
             messages.success(request, "Componente registrado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
         return redirect('componentes-lista')
 
-    componentes = requests.get(f"{API}/componentes/", headers=headers).json()
-    lineas = requests.get(f"{API}/lineas/", headers=headers).json()
-    modelos = requests.get(f"{API}/componentes/modelos/", headers=headers).json()
-    lotes = requests.get(f"{API}/componentes/lotes/", headers=headers).json()
-    estados = requests.get(f"{API}/componentes/estados/", headers=headers).json()
+    respuesta_componentes = get(f"{API}/componentes/", headers)
+
+    _avisar_si_falla(request, respuesta_componentes, "los componentes")
 
     return render(
         request,
         "componentes/lista.html",
         {
-            "componentes": componentes,
-            "lineas": lineas,
-            "modelos": modelos,
-            "lotes": lotes,
-            "estados": estados,
+            "componentes": lista(respuesta_componentes),
+            "lineas": lista(get(f"{API}/lineas/", headers)),
+            "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
+            "lotes": lista(get(f"{API}/componentes/lotes/", headers)),
+            "estados": lista(get(f"{API}/componentes/estados/", headers)),
         }
     )
 
@@ -101,7 +95,7 @@ def componenteEditarView(request, numero):
         if respuesta.status_code == 200:
             messages.success(request, "Componente actualizado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('componentes-lista')
 
@@ -120,7 +114,7 @@ def componenteBajaView(request, numero):
         if respuesta.status_code == 204:
             messages.success(request, "Componente marcado como Mermado.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('componentes-lista')
 
@@ -150,19 +144,20 @@ def modelosListView(request):
         if respuesta.status_code == 201:
             messages.success(request, "Modelo de componente registrado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
         return redirect('modelos-lista')
 
-    modelos = requests.get(f"{API}/componentes/modelos/", headers=headers).json()
-    tipos = requests.get(f"{API}/componentes/tipos/", headers=headers).json()
+    respuesta_modelos = get(f"{API}/componentes/modelos/", headers)
+
+    _avisar_si_falla(request, respuesta_modelos, "los modelos")
 
     return render(
         request,
         "componentes/modelos.html",
         {
-            "modelos": modelos,
-            "tipos": tipos,
+            "modelos": lista(respuesta_modelos),
+            "tipos": lista(get(f"{API}/componentes/tipos/", headers)),
         }
     )
 
@@ -187,7 +182,7 @@ def modeloEditarView(request, codigo):
         if respuesta.status_code == 200:
             messages.success(request, "Modelo actualizado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('modelos-lista')
 
@@ -205,7 +200,7 @@ def modeloEliminarView(request, codigo):
         if respuesta.status_code == 204:
             messages.success(request, "Modelo eliminado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('modelos-lista')
 
@@ -231,13 +226,15 @@ def lotesListView(request):
         if respuesta.status_code == 201:
             messages.success(request, "Lote registrado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
         return redirect('lotes-lista')
 
-    lotes = requests.get(f"{API}/componentes/lotes/", headers=headers).json()
+    respuesta_lotes = get(f"{API}/componentes/lotes/", headers)
 
-    return render(request, "componentes/lotes.html", {"lotes": lotes})
+    _avisar_si_falla(request, respuesta_lotes, "los lotes")
+
+    return render(request, "componentes/lotes.html", {"lotes": lista(respuesta_lotes)})
 
 
 def loteEditarView(request, codigo):
@@ -255,7 +252,7 @@ def loteEditarView(request, codigo):
         if respuesta.status_code == 200:
             messages.success(request, "Lote actualizado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('lotes-lista')
 
@@ -273,7 +270,7 @@ def loteEliminarView(request, codigo):
         if respuesta.status_code == 204:
             messages.success(request, "Lote eliminado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('lotes-lista')
 
@@ -300,19 +297,20 @@ def ordenesListView(request):
         if respuesta.status_code == 201:
             messages.success(request, "Orden de material registrada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
         return redirect('ordenes-lista')
 
-    ordenes = requests.get(f"{API}/componentes/ordenes/", headers=headers).json()
-    lineas = requests.get(f"{API}/lineas/", headers=headers).json()
+    respuesta_ordenes = get(f"{API}/componentes/ordenes/", headers)
+
+    _avisar_si_falla(request, respuesta_ordenes, "las órdenes de material")
 
     return render(
         request,
         "componentes/ordenes.html",
         {
-            "ordenes": ordenes,
-            "lineas": lineas,
+            "ordenes": lista(respuesta_ordenes),
+            "lineas": lista(get(f"{API}/lineas/", headers)),
         }
     )
 
@@ -337,7 +335,7 @@ def ordenEditarView(request, numero):
         if respuesta.status_code == 200:
             messages.success(request, "Orden actualizada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('ordenes-lista')
 
@@ -355,7 +353,7 @@ def ordenEliminarView(request, numero):
         if respuesta.status_code == 204:
             messages.success(request, "Orden eliminada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('ordenes-lista')
 
@@ -381,19 +379,24 @@ def ordenDetalleView(request, numero):
         if respuesta.status_code == 201:
             messages.success(request, "Renglón agregado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
         return redirect('orden-detalle', numero=numero)
 
-    orden = requests.get(f"{API}/componentes/ordenes/{numero}/", headers=headers).json()
-    modelos = requests.get(f"{API}/componentes/modelos/", headers=headers).json()
+    respuesta_orden = get(f"{API}/componentes/ordenes/{numero}/", headers)
+
+    # En un detalle no hay nada que pintar si la API falla: se regresa a la lista
+    # con el motivo en lugar de una pantalla de campos en blanco.
+    if fallo(respuesta_orden):
+        messages.error(request, f"No se pudo cargar la orden {numero}. {mensaje_error(respuesta_orden)}")
+        return redirect('ordenes-lista')
 
     return render(
         request,
         "componentes/orden_detalle.html",
         {
-            "orden": orden,
-            "modelos": modelos,
+            "orden": objeto(respuesta_orden),
+            "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
         }
     )
 
@@ -411,7 +414,7 @@ def renglonEliminarView(request, numero, modelo):
         if respuesta.status_code == 204:
             messages.success(request, "Renglón eliminado correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('orden-detalle', numero=numero)
 

@@ -1,0 +1,71 @@
+{% extends 'panel_supervisor/base.html' %}
+
+{% block titulo_pagina %}Dashboard{% endblock %}
+{% block topbar_titulo %}Panel de Supervisión{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h2 class="mb-1">Panel de Supervisión</h2>
+    <p class="text-muted mb-0">
+        Bienvenido{% if sesion_nombre %}, {{ sesion_nombre }}{% endif %}. Aquí sigues la producción de tus líneas.
+    </p>
+</div>
+
+<div class="row g-3">
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-gear-wide-connected me-2"></i>
+                    Producción
+                </h5>
+                <p class="card-text text-muted small">Órdenes de producción, laptops y ensamblaje.</p>
+                <a href="{% url 'panel_supervisor:ordenes-produccion-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Incidencias
+                </h5>
+                <p class="card-text text-muted small">Paros de línea abiertos y cerrados.</p>
+                <a href="{% url 'panel_supervisor:lista_paros' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-check2-circle me-2"></i>
+                    Calidad
+                </h5>
+                <p class="card-text text-muted small">Inspecciones de calidad de las líneas.</p>
+                <a href="{% url 'panel_supervisor:inspecciones' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-boxes me-2"></i>
+                    Materiales
+                </h5>
+                <p class="card-text text-muted small">Componentes, modelos, lotes y órdenes de material.</p>
+                <a href="{% url 'panel_supervisor:componentes-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

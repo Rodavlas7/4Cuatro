@@ -1,0 +1,138 @@
+{% extends 'panel_supervisor/base.html' %}
+
+{% block title %}Orden de Producción #{{ orden.folio }}{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'panel_supervisor:ordenes-produccion-lista' %}" class="text-decoration-none">
+    <i class="bi bi-arrow-left"></i> Volver a órdenes de producción
+</a>
+
+<div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+    <div>
+        <h2 class="mb-0">Orden de Producción #{{ orden.folio }}</h2>
+        <p class="text-muted mb-0">
+            Modelo: {{ orden.modelo_nombre|default:"—" }}
+            {% if orden.modelo_codigo %}({{ orden.modelo_codigo }}){% endif %}
+            · Fecha: {{ orden.fecha|default:"—" }}
+            · Hora: {{ orden.hora|default:"—" }}
+        </p>
+    </div>
+    <span class="badge fs-6
+        {% if orden.estado_codigo == 'COMP' %}text-bg-success
+        {% elif orden.estado_codigo == 'PROC' %}text-bg-primary
+        {% elif orden.estado_codigo == 'CANC' %}text-bg-secondary
+        {% else %}text-bg-warning{% endif %}">
+        {{ orden.estado_nombre|default:"—" }}
+    </span>
+</div>
+
+<!-- ...................................................................
+     Resumen: lo planificado contra lo que de verdad hay registrado
+...................................................................... -->
+<div class="row g-3 mb-3">
+
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <span class="text-muted small">Planificadas</span>
+            <span class="fs-3 fw-semibold">{{ planificadas }}</span>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <span class="text-muted small">Laptops registradas</span>
+            <span class="fs-3 fw-semibold">{{ registradas }}</span>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <span class="text-muted small">Ensamblajes terminados</span>
+            <span class="fs-3 fw-semibold">{{ terminados }}</span>
+            {% if en_proceso %}
+            <span class="text-muted small">{{ en_proceso }} en proceso</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <span class="text-muted small">Embaladas</span>
+            <span class="fs-3 fw-semibold">{{ embaladas }}</span>
+            <span class="text-muted small">
+                Producidas en la orden: {{ orden.cant_producida|default_if_none:"—" }}
+            </span>
+        </div>
+    </div>
+
+</div>
+
+<div class="card p-3 mb-3 bg-white">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <strong>Avance de registro</strong>
+        <span class="text-muted small">{{ registradas }} de {{ planificadas }} laptops</span>
+    </div>
+    <div class="progress" role="progressbar" aria-valuenow="{{ porcentaje }}" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar {% if orden.estado_codigo == 'CANC' %}bg-secondary{% endif %}"
+             style="width: {{ porcentaje }}%;">{{ porcentaje }}%</div>
+    </div>
+</div>
+
+<!-- ...................................................................
+     Laptops de la orden y en qué va el ensamblaje de cada una
+...................................................................... -->
+<div class="card bg-white mb-3">
+    <div class="card-header bg-white">
+        <strong>Laptops de la orden</strong>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Num. Serie</th>
+                    <th>Descripción</th>
+                    <th>Línea</th>
+                    <th>Lote</th>
+                    <th>Estado</th>
+                    <th>Ensamblaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in laptops %}
+                <tr>
+                    <td>{{ l.numero }}</td>
+                    <td>{{ l.num_serie|default:"—" }}</td>
+                    <td>{{ l.descripcion|default:"—" }}</td>
+                    <td>{{ l.linea_nombre|default:"—" }}</td>
+                    <td>{{ l.lote_codigo|default:"—" }}</td>
+                    <td>
+                        <span class="badge
+                            {% if l.estado_codigo == 'EMBALA' %}text-bg-success
+                            {% elif l.estado_codigo == 'RECHA' %}text-bg-danger
+                            {% elif l.estado_codigo == 'APROV' %}text-bg-primary
+                            {% elif l.estado_codigo == 'PENSAM' %}text-bg-warning
+                            {% else %}text-bg-light{% endif %}">
+                            {{ l.estado_nombre|default:"—" }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge {{ l.avance.clase }}">{{ l.avance.texto }}</span>
+                        {% if l.avance.detalle %}
+                        <span class="text-muted small d-block">{{ l.avance.detalle }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">
+                    Esta orden todavía no tiene laptops registradas.
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

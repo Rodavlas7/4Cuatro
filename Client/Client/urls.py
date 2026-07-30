@@ -19,7 +19,19 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('',include('home.urls')),
+
+    # Login, logout y el repartidor que manda a cada rol a su panel.
+    path('', include('home.urls')),
+
+    # Un panel por rol. Cada uno con su propio namespace, así que los tres
+    # pueden nombrar sus pantallas igual sin estorbarse.
+    path('panel/admin/', include('panel_admin.urls')),
+    path('panel/calidad/', include('panel_calidad.urls')),
+    path('panel/supervisor/', include('panel_supervisor.urls')),
+
+    # Pantallas del panel de administrador. Se quedaron en su ruta original
+    # porque son las que ya estaban hechas cuando el cliente era uno solo; el
+    # middleware de core sólo deja entrar al rol ADMIN.
     path('componentes/', include('componentes.urls')),
     path('produccion/', include('produccion.urls')),
     path('lineas/', include('lineas.urls')),

@@ -3,6 +3,8 @@ from django.shortcuts import render
 from django.shortcuts import render, redirect
 import requests
 
+from core.roles import panel_inicio
+
 
 # Create your views here.
 
@@ -94,17 +96,30 @@ def indexView(request):
 
 
 '''-----------------------------------------------------------------------------
-    D A S H B O A R D   V I E W (luego dividir en carpetas correspondientes)
+    D A S H B O A R D   V I E W
 -----------------------------------------------------------------------------'''
 def dashboardView(request):
+    """Repartidor: manda a cada rol al dashboard de su panel.
+
+    Ya no pinta nada. El dashboard de verdad vive en panel_admin,
+    panel_calidad o panel_supervisor, según el rol. Esta vista se conserva para
+    que cualquier enlace viejo a /dashboard/ siga llegando a buen lugar."""
 
     if 'token' not in request.session:
         return redirect('login')
 
-    return render(
-        request,
-        'dashboard/dashboard.html'
-    )
+    destino = panel_inicio(request.session.get('rol'))
+
+    if not destino:
+        # Sin rol reconocido no hay panel que mostrar. Puede ser una sesión
+        # creada antes de que el cliente se dividiera en paneles.
+        request.session.flush()
+        respuesta = redirect('login')
+        respuesta.delete_cookie(TOKEN_COOKIE)
+        messages.info(request, "Vuelve a iniciar sesión.")
+        return respuesta
+
+    return redirect(destino)
 
 '''def dashboardView(request):
 
@@ -153,12 +168,34 @@ def loginView(request):
         datos = respuesta.json()
 
         if respuesta.status_code == 200:
+            rol = datos.get('rol')
+            destino = panel_inicio(rol)
+
+            if not destino:
+                # La API ya filtra los roles con acceso, así que llegar aquí
+                # significa que allá se dio de alta un rol que en el cliente
+                # todavía no tiene panel (ver core/roles.py).
+                return render(
+                    request,
+                    'home/login.html',
+                    {
+                        'error': "Tu rol no tiene un panel asignado. "
+                                 "Contacta al administrador."
+                    }
+                )
+
             request.session['token'] = datos.get('token')
             request.session['usuario'] = usuario
 
+            # El rol define a qué panel entra y qué puede ver, así que se guarda
+            # en la sesión: es lo que revisan el middleware y los sidebars.
+            request.session['rol'] = rol
+            request.session['nombre'] = datos.get('nombre')
+            request.session['empleado'] = datos.get('empleado')
+
             # El token va también en la cookie compartida, para no tener que
             # iniciar sesión otra vez al entrar a la API desde el navegador.
-            respuesta_http = redirect('dashboard')
+            respuesta_http = redirect(destino)
             respuesta_http.set_cookie(
                 TOKEN_COOKIE,
                 datos.get('token'),

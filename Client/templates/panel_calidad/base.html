@@ -1,0 +1,20 @@
+{% extends 'base/base_layout.html' %}
+{% load static %}
+
+{% comment %}
+   BASE DEL PANEL DE CALIDAD
+
+   Todas las pantallas de calidad extienden de aquí. Este archivo es del equipo
+   del panel de calidad: lo que le pongas sólo lo ven las pantallas de este
+   panel.
+{% endcomment %}
+
+{% block title %}{% block titulo_pagina %}Calidad{% endblock %} · TraceX{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/panel_calidad.css' %}">
+{% endblock %}
+
+{% block sidebar %}
+    {% include 'panel_calidad/_sidebar.html' %}
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends 'panel_supervisor/base.html' %}
+
+{% block title %}Lotes de Componente{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Lotes de Componente</h2>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+        <i class="bi bi-plus-lg me-1"></i> Nuevo lote
+    </button>
+</div>
+
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:componentes-lista' %}">Componentes</a></li>
+    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:modelos-lista' %}">Modelos</a></li>
+    <li class="nav-item"><a class="nav-link active" href="{% url 'panel_supervisor:lotes-lista' %}">Lotes</a></li>
+    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:ordenes-lista' %}">Órdenes de Material</a></li>
+</ul>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle bg-white">
+        <thead class="table-light">
+            <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lotes %}
+            <tr>
+                <td>{{ l.codigo }}</td>
+                <td>{{ l.descripcion|default:"—" }}</td>
+                <td class="text-end">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalEditar"
+                        data-codigo="{{ l.codigo }}"
+                        data-descripcion="{{ l.descripcion|default:'' }}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+
+                    <form method="POST" action="{% url 'panel_supervisor:lote-eliminar' l.codigo %}" class="d-inline" onsubmit="return confirm('¿Eliminar este lote?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-4">No hay lotes registrados.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!-- MODAL: CREAR -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{% url 'panel_supervisor:lotes-lista' %}">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo lote</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código</label>
+                        <input type="text" name="codigo" class="form-control" maxlength="12" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" name="descripcion" class="form-control" maxlength="64">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- MODAL: EDITAR -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formEditar" action="">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar lote</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código</label>
+                        <input type="text" id="edit_codigo" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" name="descripcion" id="edit_descripcion" class="form-control" maxlength="64">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formEditar').action = "/panel/supervisor/componentes/lotes/editar/" + btn.dataset.codigo + "/";
+    document.getElementById('edit_codigo').value = btn.dataset.codigo;
+    document.getElementById('edit_descripcion').value = btn.dataset.descripcion;
+});
+</script>
+
+{% endblock %}

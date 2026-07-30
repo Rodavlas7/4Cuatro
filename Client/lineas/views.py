@@ -3,23 +3,13 @@ import requests
 from django.contrib import messages
 from django.shortcuts import render, redirect
 
+from core.api import fallo, get, lista, mensaje_error, objeto
+
 API = "http://127.0.0.1:8000/api"
 
 
 def _headers(request):
     return {"Authorization": f"Bearer {request.session.get('token')}"}
-
-
-def _mensaje_api(response):
-    try:
-        datos = response.json()
-    except ValueError:
-        return "No se pudo comunicar con la API."
-    if isinstance(datos, dict):
-        if "mensaje" in datos:
-            return datos["mensaje"]
-        return " | ".join(f"{campo}: {', '.join(errores)}" for campo, errores in datos.items())
-    return "Ocurrió un error al procesar la solicitud."
 
 
 
@@ -48,19 +38,24 @@ def lineasListView(request):
         if respuesta.status_code == 201:
             messages.success(request, "Línea registrada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
         return redirect('lineas-lista')
 
-    lineas = requests.get(f"{API}/lineas/", headers=headers).json()
-    estados = requests.get(f"{API}/lineas/estados/", headers=headers).json()
+    respuesta_lineas = get(f"{API}/lineas/", headers)
+    respuesta_estados = get(f"{API}/lineas/estados/", headers)
+
+    # Si la API falla se pinta la tabla vacía, pero avisando por qué: una lista
+    # en blanco y sin explicación se confunde con "no hay líneas dadas de alta".
+    if fallo(respuesta_lineas):
+        messages.error(request, f"No se pudieron cargar las líneas. {mensaje_error(respuesta_lineas)}")
 
     return render(
         request,
         "lineas/lista.html",
         {
-            "lineas": lineas,
-            "estados": estados,
+            "lineas": lista(respuesta_lineas),
+            "estados": lista(respuesta_estados),
         }
     )
 
@@ -86,7 +81,7 @@ def lineaEditarView(request, codigo):
         if respuesta.status_code == 200:
             messages.success(request, "Línea actualizada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('lineas-lista')
 
@@ -105,7 +100,7 @@ def lineaBajaView(request, codigo):
         if respuesta.status_code == 204:
             messages.success(request, "Línea desactivada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('lineas-lista')
 
@@ -117,9 +112,15 @@ def lineaDetalleView(request, codigo):
         return redirect('login')
 
     headers = _headers(request)
-    linea = requests.get(f"{API}/lineas/{codigo}/", headers=headers).json()
+    respuesta = get(f"{API}/lineas/{codigo}/", headers)
 
-    return render(request, "lineas/linea_detalle.html", {"linea": linea})
+    # En un detalle no hay nada que pintar si la API falla: una pantalla de
+    # campos en blanco confunde más que regresar a la lista con el motivo.
+    if fallo(respuesta):
+        messages.error(request, f"No se pudo cargar la línea {codigo}. {mensaje_error(respuesta)}")
+        return redirect('lineas-lista')
+
+    return render(request, "lineas/linea_detalle.html", {"linea": objeto(respuesta)})
 
 
 
@@ -147,19 +148,22 @@ def estacionesListView(request):
         if respuesta.status_code == 201:
             messages.success(request, "Estación registrada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
         return redirect('estaciones-lista')
 
-    estaciones = requests.get(f"{API}/lineas/estaciones/", headers=headers).json()
-    lineas = requests.get(f"{API}/lineas/", headers=headers).json()
+    respuesta_estaciones = get(f"{API}/lineas/estaciones/", headers)
+    respuesta_lineas = get(f"{API}/lineas/", headers)
+
+    if fallo(respuesta_estaciones):
+        messages.error(request, f"No se pudieron cargar las estaciones. {mensaje_error(respuesta_estaciones)}")
 
     return render(
         request,
         "lineas/estaciones.html",
         {
-            "estaciones": estaciones,
-            "lineas": lineas,
+            "estaciones": lista(respuesta_estaciones),
+            "lineas": lista(respuesta_lineas),
         }
     )
 
@@ -185,7 +189,7 @@ def estacionEditarView(request, codigo):
         if respuesta.status_code == 200:
             messages.success(request, "Estación actualizada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('estaciones-lista')
 
@@ -204,6 +208,6 @@ def estacionBajaView(request, codigo):
         if respuesta.status_code == 204:
             messages.success(request, "Estación desactivada correctamente.")
         else:
-            messages.error(request, _mensaje_api(respuesta))
+            messages.error(request, mensaje_error(respuesta))
 
     return redirect('estaciones-lista')

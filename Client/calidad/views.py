@@ -5,6 +5,10 @@ from django.views import generic
 from django.contrib import messages
 from django.http import JsonResponse
 
+# Se importa con alias porque las vistas de este módulo tienen su propio
+# método get(); un `get` a secas adentro se leería como si fuera el método.
+from core.api import get as api_get, lista, objeto
+
 from .forms import get_choices_laptops, get_choices_lineas_produccion
 
 API_INSPECCION = "http://127.0.0.1:8000/api/calidad/Inspeccion/"
@@ -50,19 +54,19 @@ class ListaInspecciones(generic.View):
             params["fecha_fin"] = fecha_fin
 
 
-        response = requests.get(
+        response = api_get(
             API_INSPECCION + "Buscar/",
-            headers=headers,
-            params=params
+            headers,
+            params=params,
         )
 
-        items = response.json() if response.status_code == 200 else []
+        items = lista(response)
         inspecciones_base = [normalizar_listar(i) for i in items]
 
         inspecciones = []
         for i in inspecciones_base:
-            det_resp = requests.get(API_INSPECCION + f"Detalle/{i['numero']}/", headers=headers)
-            detalle = det_resp.json() if det_resp.status_code == 200 else {}
+            det_resp = api_get(API_INSPECCION + f"Detalle/{i['numero']}/", headers)
+            detalle = objeto(det_resp)
             inspecciones.append({
                 **i,
                 "resultado_codigo": detalle.get("resultado"),

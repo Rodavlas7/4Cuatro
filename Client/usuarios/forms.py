@@ -1,59 +1,37 @@
-import requests
-from django import forms
+"""Catálogos que llenan los selects de los formularios de personal."""
 
-
-import requests
+from core.api import get, headers_token, lista, url
 
 
 def get_choices_lineas(token):
-    resp = requests.get(
-        "http://127.0.0.1:8000/api/lineas/lineas/activas/",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    if resp.status_code == 200:
-        return [(l["codigo"], l["nombre"]) for l in resp.json()]
-    return []
+    """Líneas activas."""
+    lineas = lista(get(url('lineas/lineas/activas/'), headers_token(token)))
+
+    return [(l["codigo"], l["nombre"]) for l in lineas]
 
 
 def get_choices_estaciones(token, linea_id=None):
-    url = "http://127.0.0.1:8000/api/lineas/lineas/estaciones/"
+    """Estaciones activas; si se pasa `linea_id`, sólo las de esa línea."""
+    params = {"linea": linea_id} if linea_id else None
 
-    if linea_id:
-        url += f"?linea={linea_id}"
-
-    resp = requests.get(
-        url,
-        headers={"Authorization": f"Bearer {token}"}
+    estaciones = lista(
+        get(url('lineas/lineas/estaciones/'), headers_token(token), params=params)
     )
 
-    if resp.status_code == 200:
-
-        estaciones = resp.json()
-
-        return [
-            (e["codigo"], e["nombre"])
-            for e in estaciones
-            if e.get("activo") is True
-        ]
-
-    return []
+    return [
+        (e["codigo"], e["nombre"])
+        for e in estaciones
+        if e.get("activo") is True
+    ]
 
 
 def get_choices_roles(token):
-    resp = requests.get(
-        "http://127.0.0.1:8000/api/usuarios/Rol/Listar/",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    if resp.status_code == 200:
-        return [(r["codigo"], r["nombre"]) for r in resp.json()]
-    return []
+    roles = lista(get(url('usuarios/Rol/Listar/'), headers_token(token)))
+
+    return [(r["codigo"], r["nombre"]) for r in roles]
 
 
 def get_choices_turnos(token):
-    resp = requests.get(
-        "http://127.0.0.1:8000/api/usuarios/Turno/Listar/",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    if resp.status_code == 200:
-        return [(t["codigo"], t["nombre"]) for t in resp.json()]
-    return []
+    turnos = lista(get(url('usuarios/Turno/Listar/'), headers_token(token)))
+
+    return [(t["codigo"], t["nombre"]) for t in turnos]

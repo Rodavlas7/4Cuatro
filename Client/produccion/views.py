@@ -4,9 +4,9 @@ from datetime import datetime, time
 
 from django.contrib import messages
 from django.shortcuts import render, redirect
-import requests
 from django.views import generic
 
+from core.api import get, lista, objeto
 
 from .forms import get_choices_lineas_paro
 
@@ -29,6 +29,27 @@ EDO_ORDEN_PENDIENTE = "PEND"
 EDO_LAPTOP_EMBALADA = "EMBALA"
 
 
+def _json(url, headers, params=None):
+    """GET a la API que devuelve el JSON, o None si algo falló.
+
+    Antes se hacía `requests.get(...).json()` a pelo. Eso funciona mientras la
+    API contesta, pero si está apagada la excepción de requests sube hasta la
+    vista y la pantalla revienta con un 500.
+
+    Devolver None es suficiente porque todas las funciones de este módulo ya
+    revisan el tipo (`isinstance(x, list)`) antes de usar el resultado, y None no
+    pasa esa revisión."""
+    respuesta = get(url, headers, params=params)
+
+    if respuesta is None or respuesta.status_code != 200:
+        return None
+
+    try:
+        return respuesta.json()
+    except ValueError:
+        return None
+
+
 def _headers(request):
     return {"Authorization": f"Bearer {request.session.get('token')}"}
 
@@ -49,7 +70,7 @@ def _mensaje_api(response):
 
 def _laptops_disponibles(headers):
     """Laptops que todavía pueden recibir ensamblaje (no embaladas ni ya aprobadas)."""
-    laptops = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+    laptops = _json(f"{API}/produccion/laptops/", headers)
     if not isinstance(laptops, list):
         return []
     return [l for l in laptops
@@ -58,10 +79,10 @@ def _laptops_disponibles(headers):
 
 def _bom(headers, modelo_laptop):
     """Filas de modelo_laptop_componente para un modelo de laptop."""
-    detalle = requests.get(
+    detalle = _json(
         f"{API}/produccion/modelos/{modelo_laptop}/",
-        headers=headers,
-    ).json()
+        headers,
+    )
     return detalle.get("componentes", []) if isinstance(detalle, dict) else []
 
 
@@ -76,7 +97,7 @@ def _capacidad_por_tipo(filas_bom):
 
 
 def _todos_los_componentes(headers):
-    comps = requests.get(f"{API}/componentes/", headers=headers).json()
+    comps = _json(f"{API}/componentes/", headers)
     return comps if isinstance(comps, list) else []
 
 
@@ -99,7 +120,7 @@ def _componentes_libres(comps, linea=None):
 def _registro_abierto(headers, laptop):
     """El ensamblaje SIN TERMINAR (sin fecha_fin) de esa laptop, si existe.
     Se reutiliza en vez de abrir uno nuevo en cada registro parcial."""
-    regs = requests.get(f"{API}/produccion/registros-ensamblaje/", headers=headers).json()
+    regs = _json(f"{API}/produccion/registros-ensamblaje/", headers)
     if not isinstance(regs, list):
         return None
     abiertos = [r for r in regs
@@ -287,7 +308,7 @@ def ensamblajeRegistrarView(request):
     # ------------------------------------------------------------------- GET
     laptops = _laptops_disponibles(headers)
 
-    lineas = requests.get(f"{API}/lineas/", headers=headers).json()
+    lineas = _json(f"{API}/lineas/", headers)
     if not isinstance(lineas, list):
         lineas = []
 
@@ -387,7 +408,7 @@ def ensamblajeRegistrarView(request):
 def _laptops_de_orden(headers, folio):
     """Laptops registradas a esa orden. vista_laptops ya trae orden_folio, así
     que basta con filtrar la consulta general."""
-    laptops = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+    laptops = _json(f"{API}/produccion/laptops/", headers)
     if not isinstance(laptops, list):
         return []
     propias = [l for l in laptops if str(l.get("orden_folio")) == str(folio)]
@@ -397,7 +418,7 @@ def _laptops_de_orden(headers, folio):
 def _ensamblajes_por_laptop(headers):
     """Todos los registros de ensamblaje agrupados por laptop. Se piden de una
     sola vez para no llamar a la API una vez por renglón de la tabla."""
-    regs = requests.get(f"{API}/produccion/registros-ensamblaje/", headers=headers).json()
+    regs = _json(f"{API}/produccion/registros-ensamblaje/", headers)
     if not isinstance(regs, list):
         return {}
     por_laptop = {}
@@ -472,10 +493,10 @@ def ordenesProduccionListView(request):
 
         return redirect('ordenes-produccion-lista')
 
-    ordenes = requests.get(f"{API}/produccion/", headers=headers).json()
-    modelos = requests.get(f"{API}/produccion/modelos/", headers=headers).json()
-    estados = requests.get(f"{API}/produccion/estados/", headers=headers).json()
-    lotes = requests.get(f"{API}/produccion/lotes/", headers=headers).json()
+    ordenes = _json(f"{API}/produccion/", headers)
+    modelos = _json(f"{API}/produccion/modelos/", headers)
+    estados = _json(f"{API}/produccion/estados/", headers)
+    lotes = _json(f"{API}/produccion/lotes/", headers)
 
     ahora = datetime.now()
 
@@ -552,7 +573,7 @@ def ordenProduccionDetalleView(request, folio):
 
     headers = _headers(request)
 
-    orden = requests.get(f"{API}/produccion/{folio}/", headers=headers).json()
+    orden = _json(f"{API}/produccion/{folio}/", headers)
     if not isinstance(orden, dict) or not orden.get("folio"):
         messages.error(request, "No se encontró esa orden de producción.")
         return redirect('ordenes-produccion-lista')
@@ -710,18 +731,18 @@ def _inspecciones_de_laptop(headers, numero):
     que se usa solo para saber CUÁLES son de esta laptop y luego se pide el
     detalle de cada una, que sí trae todo. Son pocas por laptop, así que el
     costo es aceptable y no hay que tocar el módulo de calidad."""
-    lista = requests.get(f"{API}/calidad/Inspeccion/Listar/", headers=headers).json()
-    if not isinstance(lista, list):
+    inspecciones = _json(f"{API}/calidad/Inspeccion/Listar/", headers)
+    if not isinstance(inspecciones, list):
         return []
 
     completas = []
-    for fila in lista:
+    for fila in inspecciones:
         if str(fila.get("laptop_numero")) != str(numero):
             continue
-        detalle = requests.get(
+        detalle = _json(
             f"{API}/calidad/Inspeccion/Detalle/{fila.get('numero')}/",
-            headers=headers,
-        ).json()
+            headers,
+        )
         # Si el detalle falla nos quedamos con lo que traía la lista.
         completas.append(detalle if isinstance(detalle, dict) and detalle.get("numero") else fila)
 
@@ -734,10 +755,10 @@ def _embalajes_de_laptop(headers, num_serie):
     alcanza para cruzar sin pedir el detalle de cada registro."""
     if not num_serie:
         return []
-    lista = requests.get(f"{API}/embalaje/Embalaje/Listar/", headers=headers).json()
-    if not isinstance(lista, list):
+    embalajes = _json(f"{API}/embalaje/Embalaje/Listar/", headers)
+    if not isinstance(embalajes, list):
         return []
-    propios = [e for e in lista
+    propios = [e for e in embalajes
                if str(e.get("laptop_num_serie") or "") == str(num_serie)]
     return sorted(propios, key=lambda e: (str(e.get("fecha") or ""), str(e.get("hora") or "")))
 
@@ -899,11 +920,11 @@ def _registros_enriquecidos(headers, nombres_linea):
     """Todos los registros de ensamblaje de la planta con el contexto que el
     endpoint no trae: de qué laptop son, el nombre de la línea, cuánto duraron
     y cuántas piezas llevan montadas."""
-    regs = requests.get(f"{API}/produccion/registros-ensamblaje/", headers=headers).json()
+    regs = _json(f"{API}/produccion/registros-ensamblaje/", headers)
     if not isinstance(regs, list):
         return []
 
-    laptops = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+    laptops = _json(f"{API}/produccion/laptops/", headers)
     laptops = {str(l.get("numero")): l for l in laptops} if isinstance(laptops, list) else {}
 
     # Piezas por registro, contadas de una sola pasada sobre el inventario.
@@ -975,7 +996,7 @@ def ensamblajeSeguimientoView(request):
 
     headers = _headers(request)
 
-    lineas = requests.get(f"{API}/lineas/", headers=headers).json()
+    lineas = _json(f"{API}/lineas/", headers)
     lineas = lineas if isinstance(lineas, list) else []
     nombres_linea = {l.get("codigo"): l.get("nombre") for l in lineas}
 
@@ -1014,17 +1035,17 @@ def _catalogos_laptop(headers):
 
     `ordenes` trae todas (los filtros de la lista necesitan poder buscar por
     cualquiera) y `ordenes_abiertas` solo las que admiten producción nueva."""
-    def lista(url):
-        datos = requests.get(url, headers=headers).json()
+    def catalogo(url):
+        datos = _json(url, headers)
         return datos if isinstance(datos, list) else []
 
-    ordenes = lista(f"{API}/produccion/")
+    ordenes = catalogo(f"{API}/produccion/")
 
     return {
-        "modelos": lista(f"{API}/produccion/modelos/"),
-        "estados": lista(f"{API}/produccion/estados-laptop/"),
-        "lineas": lista(f"{API}/lineas/"),
-        "lotes": lista(f"{API}/produccion/lotes/"),
+        "modelos": catalogo(f"{API}/produccion/modelos/"),
+        "estados": catalogo(f"{API}/produccion/estados-laptop/"),
+        "lineas": catalogo(f"{API}/lineas/"),
+        "lotes": catalogo(f"{API}/produccion/lotes/"),
         "ordenes": ordenes,
         # Solo contra estas se puede registrar: una Completada o Cancelada ya
         # no admite laptops nuevas.
@@ -1044,7 +1065,7 @@ def laptopsListView(request):
 
     if request.method == "POST":
 
-        laptops_actuales = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+        laptops_actuales = _json(f"{API}/produccion/laptops/", headers)
         if not isinstance(laptops_actuales, list):
             laptops_actuales = []
 
@@ -1074,7 +1095,7 @@ def laptopsListView(request):
 
         return redirect('laptops-lista')
 
-    laptops = requests.get(f"{API}/produccion/laptops/", headers=headers).json()
+    laptops = _json(f"{API}/produccion/laptops/", headers)
     laptops = laptops if isinstance(laptops, list) else []
 
     filtros = {
@@ -1113,7 +1134,7 @@ def laptopDetalleView(request, numero):
 
     headers = _headers(request)
 
-    laptop = requests.get(f"{API}/produccion/laptops/{numero}/", headers=headers).json()
+    laptop = _json(f"{API}/produccion/laptops/{numero}/", headers)
     if not isinstance(laptop, dict) or not laptop.get("numero"):
         messages.error(request, "No se encontró esa laptop.")
         return redirect('laptops-lista')
@@ -1142,7 +1163,7 @@ def laptopDetalleView(request, numero):
 
     # Estados a los que puede pasar un componente al desmontarlo. Se excluye
     # "En Uso": si sigue En Uso es que no se liberó.
-    estados_comp = requests.get(f"{API}/componentes/estados/", headers=headers).json()
+    estados_comp = _json(f"{API}/componentes/estados/", headers)
     estados_comp = ([e for e in estados_comp if e.get("codigo") != EDO_COMP_EN_USO]
                     if isinstance(estados_comp, list) else [])
 
@@ -1234,7 +1255,7 @@ def laptopComponenteLiberarView(request, numero, componente):
 
         # Se vuelve a consultar el estado de la laptop: el bloqueo no puede
         # depender de que el botón no se haya pintado, el POST se puede forzar.
-        laptop = requests.get(f"{API}/produccion/laptops/{numero}/", headers=headers).json()
+        laptop = _json(f"{API}/produccion/laptops/{numero}/", headers)
         laptop = laptop if isinstance(laptop, dict) else {}
 
         if laptop.get("estado_codigo") in ESTADOS_LAPTOP_FINALIZADOS:
@@ -1292,11 +1313,11 @@ class ListaParos(generic.View):
 
         if buscar:
             params["buscar"] = buscar
-            response = requests.get(API_PARO + "buscar/", headers=headers, params=params)
+            response = get(API_PARO + "buscar/", headers, params=params)
         else:
-            response = requests.get(API_PARO, headers=headers, params=params)
+            response = get(API_PARO, headers, params=params)
 
-        paros = response.json() if response.status_code == 200 else []
+        paros = lista(response)
 
         context = {
             "paros": paros,
@@ -1341,8 +1362,8 @@ class EditarParo(generic.View):
         token = request.session.get("token")
         headers = {"Authorization": f"Bearer {token}"}
 
-        det_resp = requests.get(API_PARO + f"{numero}/", headers=headers)
-        detalle = det_resp.json() if det_resp.status_code == 200 else {}
+        det_resp = get(API_PARO + f"{numero}/", headers)
+        detalle = objeto(det_resp)
 
         data = {
             "razon": request.POST.get("razon"),
