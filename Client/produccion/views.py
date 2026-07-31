@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect
 from django.views import generic
 
 from core.api import get, lista, objeto
+from core.templatetags.formato import fecha_hora
 
 from .forms import get_choices_lineas_paro
 
@@ -297,8 +298,9 @@ def ensamblajeRegistrarView(request):
             if cierre.status_code in (200, 202):
                 messages.success(
                     request,
-                    f"Ensamblaje #{numero_registro} TERMINADO el {fecha_hoy} a las "
-                    f"{hora_ahora} (se agregaron {montados} componente(s))."
+                    f"Ensamblaje #{numero_registro} TERMINADO el "
+                    f"{fecha_hora(fecha_hoy, hora_ahora)} "
+                    f"(se agregaron {montados} componente(s))."
                 )
                 return redirect('ensamblaje-registrar')
             messages.error(request, "Se registraron las piezas pero no se pudo marcar el fin.")
@@ -444,8 +446,8 @@ def _avance_ensamblaje(registros):
             "estado": "proceso",
             "texto": f"En proceso #{abierto.get('numero')}",
             "clase": "text-bg-warning",
-            "detalle": f"Inició {abierto.get('fecha_inicio') or '—'} "
-                       f"{abierto.get('hora_inicio') or ''}".strip(),
+            "detalle": "Inició " + (fecha_hora(abierto.get("fecha_inicio"),
+                                               abierto.get("hora_inicio")) or "—"),
         }
 
     cerrados = [r for r in registros if r.get("fecha_fin")]
@@ -455,8 +457,8 @@ def _avance_ensamblaje(registros):
             "estado": "terminado",
             "texto": f"Terminado #{ultimo.get('numero')}",
             "clase": "text-bg-success",
-            "detalle": f"Terminó {ultimo.get('fecha_fin')} "
-                       f"{ultimo.get('hora_fin') or ''}".strip(),
+            "detalle": "Terminó " + (fecha_hora(ultimo.get("fecha_fin"),
+                                                ultimo.get("hora_fin")) or "—"),
         }
 
     return {

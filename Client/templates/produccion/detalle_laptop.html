@@ -1,4 +1,5 @@
 {% extends 'panel_admin/base.html' %}
+{% load formato %}
 
 {% block topbar_titulo %}Producción{% endblock %}
 {% block breadcrumbs %}
@@ -128,7 +129,7 @@
                         {{ ultima_inspeccion.resultado_nombre|default:"—" }}
                     </h5>
                     <span class="text-secondary small mt-1 text-truncate" style="font-size: 11px;">
-                        {{ ultima_inspeccion.fecha }} · {{ ultima_inspeccion.empleado_nombre|default:"—" }}
+                        {{ ultima_inspeccion.fecha|fecha }} · {{ ultima_inspeccion.empleado_nombre|default:"—" }}
                     </span>
                 {% else %}
                     <span class="text-muted fs-6 mt-1">Sin inspección</span>
@@ -375,7 +376,7 @@
                                 <div class="d-flex flex-column mb-1">
                                     <strong class="text-dark">{{ ev.titulo }}</strong>
                                     <span class="text-muted" style="font-size: 11px;">
-                                        <i class="bi bi-calendar3 me-1"></i> {% if ev.fecha %}{{ ev.fecha }} {{ ev.hora|default:"" }}{% else %}Sin fecha{% endif %}
+                                        <i class="bi bi-calendar3 me-1"></i> {% if ev.fecha %}{{ ev.fecha|fecha_hora:ev.hora }}{% else %}Sin fecha{% endif %}
                                     </span>
                                 </div>
                                 {% if ev.detalle %}

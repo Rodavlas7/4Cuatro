@@ -1,4 +1,5 @@
 {% extends 'panel_admin/base.html' %}
+{% load formato %}
 
 
 {% block topbar_titulo %}Trazabilidad{% endblock %}
@@ -138,8 +139,8 @@
                     </span>
                 </td>
                 <td>{{ r.linea_nombre|default:"—" }}</td>
-                <td>{{ r.fecha_inicio|default:"—" }} {{ r.hora_inicio|default:"" }}</td>
-                <td>{{ r.fecha_fin|default:"—" }} {{ r.hora_fin|default:"" }}</td>
+                <td>{{ r.fecha_inicio|fecha_hora:r.hora_inicio|default:"—" }}</td>
+                <td>{{ r.fecha_fin|fecha_hora:r.hora_fin|default:"—" }}</td>
                 <td>{{ r.duracion|default:"—" }}</td>
                 <td class="text-center">
                     <span class="badge {% if r.piezas %}text-bg-primary{% else %}text-bg-light{% endif %}">

@@ -1,4 +1,5 @@
 {% extends 'panel_admin/base.html' %}
+{% load formato %}
 
 {% block topbar_titulo %}Incidencias{% endblock %}
 
@@ -108,16 +109,16 @@
                             </div>
                         </td>
                         <td>
-                            <div class="text-dark small fw-medium">{{ p.fecha_inicio|default:"—" }}</div>
+                            <div class="text-dark small fw-medium">{{ p.fecha_inicio|fecha|default:"—" }}</div>
                             <div class="text-secondary small" style="font-size: 11px;">
-                                <i class="bi bi-clock me-1"></i>{{ p.hora_inicio|default:"—" }}
+                                <i class="bi bi-clock me-1"></i>{{ p.hora_inicio|hora|default:"—" }}
                             </div>
                         </td>
                         <td>
                             {% if p.fecha_fin %}
-                                <div class="text-dark small fw-medium">{{ p.fecha_fin }}</div>
+                                <div class="text-dark small fw-medium">{{ p.fecha_fin|fecha }}</div>
                                 <div class="text-secondary small" style="font-size: 11px;">
-                                    <i class="bi bi-clock me-1"></i>{{ p.hora_fin|default:"—" }}
+                                    <i class="bi bi-clock me-1"></i>{{ p.hora_fin|hora|default:"—" }}
                                 </div>
                             {% else %}
                                 <span class="text-muted small">—</span>
@@ -145,8 +146,8 @@
                                     data-numero="{{ p.numero }}"
                                     data-razon="{{ p.razon|default:'' }}"
                                     data-linea="{{ p.linea_nombre|default:'' }}"
-                                    data-inicio="{{ p.fecha_inicio|default:'—' }} {{ p.hora_inicio|default:'' }}"
-                                    data-fin="{{ p.fecha_fin|default:'—' }} {{ p.hora_fin|default:'' }}"
+                                    data-inicio="{{ p.fecha_inicio|fecha_hora:p.hora_inicio|default:'—' }}"
+                                    data-fin="{{ p.fecha_fin|fecha_hora:p.hora_fin|default:'—' }}"
                                     data-estado="{% if p.abierto %}Abierto{% else %}Cerrado{% endif %}"
                                     title="Ver detalle">
                                     <i class="bi bi-eye"></i>
