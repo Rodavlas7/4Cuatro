@@ -214,32 +214,39 @@ INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
 --  EST-X2  Ensamblaje de placa y procesador
 --  EST-X3  Integración de pantalla, teclado y chasis
 --  EST-X4  Pruebas funcionales y cierre
+--
+-- Cada línea de ensamblaje cierra con una estación de calidad, que es donde se
+-- para el empleado con rol OPCALI de esa línea.
 INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
 ('EST-A1', 'A1 — Chasis y Touchpad',    'Inspección del chasis superior e instalación y atornillado del touchpad',                 'LIN001', TRUE),
 ('EST-A2', 'A2 — Módulo de Teclado',    'Colocación del teclado retroiluminado, fijación y ruteo inicial del flexor',              'LIN001', TRUE),
 ('EST-A3', 'A3 — Audio y Conexiones',   'Montaje de altavoces, enrutamiento de cables de audio y fijación acústica',               'LIN001', TRUE),
-('EST-A4', 'A4 — Conector de Carga',    'Instalación del conector de carga USB-C, anclaje al chasis y revisión de puertos',        'LIN001', TRUE);
+('EST-A4', 'A4 — Conector de Carga',    'Instalación del conector de carga USB-C, anclaje al chasis y revisión de puertos',        'LIN001', TRUE),
+('EST-A5', 'A5 — Inspección de Calidad','Revisión del inspector sobre chasis, teclado, audio y conector, y registro del resultado','LIN001', TRUE);
 
 -- Línea B: Tarjeta Madre y Procesamiento
 INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
 ('EST-B1', 'B1 — Tarjeta Madre',        'Colocación de la tarjeta madre en el chasis superior y fijación con tornillos',           'LIN002', TRUE),
 ('EST-B2', 'B2 — Conexión de Periféricos','Conexión de los flexores del teclado, touchpad y altavoces a la tarjeta madre',         'LIN002', TRUE),
 ('EST-B3', 'B3 — CPU y Pasta Térmica',  'Montaje del procesador en el socket y aplicación de pasta térmica',                       'LIN002', TRUE),
-('EST-B4', 'B4 — Memoria RAM',          'Inserción de módulos de memoria RAM en las ranuras SO-DIMM y aseguramiento',              'LIN002', TRUE);
+('EST-B4', 'B4 — Memoria RAM',          'Inserción de módulos de memoria RAM en las ranuras SO-DIMM y aseguramiento',              'LIN002', TRUE),
+('EST-B5', 'B5 — Inspección de Calidad','Revisión del inspector sobre tarjeta madre, CPU, RAM y flexores, y registro del resultado','LIN002', TRUE);
 
 -- Línea C: Almacenamiento, Red y Refrigeración
 INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
 ('EST-C1', 'C1 — Almacenamiento SSD',   'Instalación de la unidad NVMe M.2 y fijación del tornillo de retención',                  'LIN003', TRUE),
 ('EST-C2', 'C2 — Tarjeta de Red',       'Instalación del módulo Wi-Fi y conexión cuidadosa de las antenas de red',                 'LIN003', TRUE),
 ('EST-C3', 'C3 — Disipador Térmico',    'Montaje del módulo térmico sobre el procesador y atornillado en cruz',                    'LIN003', TRUE),
-('EST-C4', 'C4 — Conexión de Ventilación','Conexión del cable de alimentación del ventilador a la tarjeta madre',                  'LIN003', TRUE);
+('EST-C4', 'C4 — Conexión de Ventilación','Conexión del cable de alimentación del ventilador a la tarjeta madre',                  'LIN003', TRUE),
+('EST-C5', 'C5 — Inspección de Calidad','Revisión del inspector sobre SSD, tarjeta de red y módulo térmico, y registro del resultado','LIN003', TRUE);
 
 -- Línea D: Ensamblaje de Pantalla y Energía
 INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
 ('EST-D1', 'D1 — Módulo de Pantalla',   'Preparación de la pantalla e instalación de la cámara web en el marco',                   'LIN004', TRUE),
 ('EST-D2', 'D2 — Bisagras y Enrutamiento','Acoplamiento de las bisagras de pantalla al chasis principal y enrutamiento de cables', 'LIN004', TRUE),
 ('EST-D3', 'D3 — Conexión de Video',    'Conexión del cable de video (eDP) y cable de cámara a la tarjeta madre',                  'LIN004', TRUE),
-('EST-D4', 'D4 — Batería Principal',    'Colocación de la batería de Li-Ion, atornillado y conexión de alimentación a la placa',   'LIN004', TRUE);
+('EST-D4', 'D4 — Batería Principal',    'Colocación de la batería de Li-Ion, atornillado y conexión de alimentación a la placa',   'LIN004', TRUE),
+('EST-D5', 'D5 — Inspección de Calidad','Revisión del inspector sobre pantalla, bisagras, video y batería, y registro del resultado','LIN004', TRUE);
 
 -- Línea E: Cierre de Equipo y Calidad
 INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
@@ -322,6 +329,18 @@ INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno,
 (2607028, 'Arturo',    'Jiménez',  'Cruz',     'SUPER',  'MAT', TRUE);
 
 
+-- OPERARIOS DE ENSAMBLAJE QUE CUBREN LA CUARTA ESTACIÓN
+-- El inspector de calidad de cada línea se pasó a la estación de calidad (X5),
+-- así que la estación X4 en la que estaba se quedó sin operario. Estos empleados
+-- la cubren. Van con número nuevo al final de la secuencia para no renumerar a
+-- los de arriba (datos_pruebas.sql y la tabla usuario los referencian por número).
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607031, 'Andrés',    'Salazar',  'Ibarra',   'OPENSA', 'MAT', TRUE),   -- LINEA A, EST-A4
+(2607032, 'Nadia',     'Quiroga',  'Estrada',  'OPENSA', 'MAT', TRUE),   -- LINEA B, EST-B4
+(2607033, 'Emilio',    'Bustos',   'Arellano', 'OPENSA', 'MAT', TRUE),   -- LINEA C, EST-C4
+(2607034, 'Rebeca',    'Zamora',   'Iglesias', 'OPENSA', 'MAT', TRUE);   -- LINEA D, EST-D4
+
+
 
 -- 15.1 ASIGNACION DE UN EMPLEADO A SU LINEA
 
@@ -377,43 +396,58 @@ INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
 (2607028, 'LIN006', '2026-07-15', NULL);
 
 
+-- OPERARIOS NUEVOS DE LA CUARTA ESTACIÓN
+INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
+(2607031, 'LIN001', '2026-07-15', NULL),
+(2607032, 'LIN002', '2026-07-15', NULL),
+(2607033, 'LIN003', '2026-07-15', NULL),
+(2607034, 'LIN004', '2026-07-15', NULL);
+
+
 
 -- 15.2 ASIGNACION DE UN EMPLEADO A SU ESTACION
+
+-- El empleado con rol OPCALI de cada línea va en la última estación (la de
+-- calidad) y la estación anterior la cubre un operario de ensamblaje.
 
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 -- LINEA A
 (2607001, 'EST-A1', '2026-07-15', NULL),
 (2607002, 'EST-A2', '2026-07-15', NULL),
 (2607003, 'EST-A3', '2026-07-15', NULL),
-(2607004, 'EST-A4', '2026-07-15', NULL);
+(2607031, 'EST-A4', '2026-07-15', NULL),
+(2607004, 'EST-A5', '2026-07-15', NULL);   -- Lucía Torres Vargas (OPCALI)
 
 -- LINEA B
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607006, 'EST-B1', '2026-07-15', NULL),
 (2607007, 'EST-B2', '2026-07-15', NULL),
 (2607008, 'EST-B3', '2026-07-15', NULL),
-(2607009, 'EST-B4', '2026-07-15', NULL);
+(2607032, 'EST-B4', '2026-07-15', NULL),
+(2607009, 'EST-B5', '2026-07-15', NULL);   -- Roberto Flores Silva (OPCALI)
 
 -- LINEA C
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607011, 'EST-C1', '2026-07-15', NULL),
 (2607012, 'EST-C2', '2026-07-15', NULL),
 (2607013, 'EST-C3', '2026-07-15', NULL),
-(2607014, 'EST-C4', '2026-07-15', NULL);
+(2607033, 'EST-C4', '2026-07-15', NULL),
+(2607014, 'EST-C5', '2026-07-15', NULL);   -- Héctor Paz Mora (OPCALI)
 
--- LINEA D 
+-- LINEA D
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607016, 'EST-D1', '2026-07-15', NULL),
 (2607017, 'EST-D2', '2026-07-15', NULL),
 (2607018, 'EST-D3', '2026-07-15', NULL),
-(2607019, 'EST-D4', '2026-07-15', NULL);
+(2607034, 'EST-D4', '2026-07-15', NULL),
+(2607019, 'EST-D5', '2026-07-15', NULL);   -- Carmen Sosa Molina (OPCALI)
 
--- LINEA E
+-- LINEA E — ya cerraba con estación de calidad (EST-E4), no se agregó ninguna
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607021, 'EST-E1', '2026-07-15', NULL),
 (2607022, 'EST-E2', '2026-07-15', NULL),
 (2607023, 'EST-E3', '2026-07-15', NULL),
-(2607024, 'EST-E4', '2026-07-15', NULL);
+(2607024, 'EST-E4', '2026-07-15', NULL);   -- Ramón Blanco Cruz (OPCALI)
 
 -- LINEA F (EMBALAJE)
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
