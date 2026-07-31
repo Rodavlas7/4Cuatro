@@ -1,138 +1,206 @@
 {% extends 'panel_admin/base.html' %}
 
+{% block topbar_titulo %}Producción{% endblock %}
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'ordenes-produccion-lista' %}">Producción</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Detalles de Orden</li>
+{% endblock %}
+
 {% block title %}Orden de Producción #{{ orden.folio }}{% endblock %}
 
 {% block content %}
 
-<a href="{% url 'ordenes-produccion-lista' %}" class="text-decoration-none">
-    <i class="bi bi-arrow-left"></i> Volver a órdenes de producción
-</a>
-
-<div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-    <div>
-        <h2 class="mb-0">Orden de Producción #{{ orden.folio }}</h2>
-        <p class="text-muted mb-0">
-            Modelo: {{ orden.modelo_nombre|default:"—" }}
-            {% if orden.modelo_codigo %}({{ orden.modelo_codigo }}){% endif %}
-            · Fecha: {{ orden.fecha|default:"—" }}
-            · Hora: {{ orden.hora|default:"—" }}
-        </p>
+<div class="wrap">
+    
+    <!-- Botón Volver -->
+    <div class="mb-3">
+        <a href="{% url 'ordenes-produccion-lista' %}" class="text-decoration-none text-muted small fw-medium hover-primary transition">
+            <i class="bi bi-arrow-left me-1"></i> Volver a órdenes de producción
+        </a>
     </div>
-    <span class="badge fs-6
-        {% if orden.estado_codigo == 'COMP' %}text-bg-success
-        {% elif orden.estado_codigo == 'PROC' %}text-bg-primary
-        {% elif orden.estado_codigo == 'CANC' %}text-bg-secondary
-        {% else %}text-bg-warning{% endif %}">
-        {{ orden.estado_nombre|default:"—" }}
-    </span>
-</div>
 
-<!-- ...................................................................
-     Resumen: lo planificado contra lo que de verdad hay registrado
-...................................................................... -->
-<div class="row g-3 mb-3">
+    <!--  ORDEN Y PROGRESO-->
+    <div class="emp-card mb-4">
+        <div class="emp-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom-0 pb-3">
+            
+            <!-- Info principal -->
+            <div>
+                <span class="emp-eyebrow"><span class="dot"></span> Producción</span>
+                <h2 class="fw-bold text-dark mb-2">Orden #{{ orden.folio }}</h2>
+                <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
+                    <span class="d-flex align-items-center gap-1">
+                        <i class="bi bi-laptop text-secondary"></i>
+                        {{ orden.modelo_nombre|default:"—" }} {% if orden.modelo_codigo %}({{ orden.modelo_codigo }}){% endif %}
+                    </span>
+                    <span class="d-flex align-items-center gap-1">
+                        <i class="bi bi-calendar-event text-secondary"></i>
+                        {{ orden.fecha|default:"—" }}
+                    </span>
+                    <span class="d-flex align-items-center gap-1">
+                        <i class="bi bi-clock text-secondary"></i>
+                        {{ orden.hora|default:"—" }}
+                    </span>
+                </div>
+            </div>
 
-    <div class="col-md-3">
-        <div class="card p-3 bg-white h-100">
-            <span class="text-muted small">Planificadas</span>
-            <span class="fs-3 fw-semibold">{{ planificadas }}</span>
+            <!-- Estado Global -->
+            <div class="text-md-end">
+                <span class="badge fs-6 rounded-pill px-3 py-2
+                    {% if orden.estado_codigo == 'COMP' %}bg-success-subtle text-success border border-success-subtle
+                    {% elif orden.estado_codigo == 'PROC' %}bg-primary-subtle text-primary border border-primary-subtle
+                    {% elif orden.estado_codigo == 'CANC' %}bg-secondary-subtle text-secondary border border-secondary-subtle
+                    {% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+                    {% if orden.estado_codigo == 'COMP' %}<i class="bi bi-check-circle-fill me-1 small"></i>{% endif %}
+                    {{ orden.estado_nombre|default:"—" }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Progress Bar Integrado -->
+        <div class="px-4 py-3 bg-light border-top">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-dark small">Avance general de registro</strong>
+                <span class="text-primary small fw-bold">{{ porcentaje }}% <span class="text-muted fw-normal ms-1">({{ registradas }} de {{ planificadas }} laptops)</span></span>
+            </div>
+            <div class="progress" style="height: 8px;" role="progressbar" aria-valuenow="{{ porcentaje }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar progress-bar-striped progress-bar-animated {% if orden.estado_codigo == 'CANC' %}bg-secondary{% else %}bg-primary{% endif %}" 
+                     style="width: {{ porcentaje }}%;"></div>
+            </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card p-3 bg-white h-100">
-            <span class="text-muted small">Laptops registradas</span>
-            <span class="fs-3 fw-semibold">{{ registradas }}</span>
+    <!-- ==========================================
+         WIDGETS DE RESUMEN (KPIs)
+         ========================================== -->
+    <div class="row g-3 mb-4">
+        
+        <!-- Planificadas -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-secondary">
+                <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
+                    <i class="bi bi-clipboard-data"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Planificadas</div>
+                    <div class="fs-4 fw-bold text-dark lh-1 mt-1">{{ planificadas }}</div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="col-md-3">
-        <div class="card p-3 bg-white h-100">
-            <span class="text-muted small">Ensamblajes terminados</span>
-            <span class="fs-3 fw-semibold">{{ terminados }}</span>
-            {% if en_proceso %}
-            <span class="text-muted small">{{ en_proceso }} en proceso</span>
-            {% endif %}
+        <!-- Registradas -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-info">
+                <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
+                    <i class="bi bi-upc-scan"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Registradas</div>
+                    <div class="fs-4 fw-bold text-dark lh-1 mt-1">{{ registradas }}</div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="col-md-3">
-        <div class="card p-3 bg-white h-100">
-            <span class="text-muted small">Embaladas</span>
-            <span class="fs-3 fw-semibold">{{ embaladas }}</span>
-            <span class="text-muted small">
-                Producidas en la orden: {{ orden.cant_producida|default_if_none:"—" }}
-            </span>
-        </div>
-    </div>
-
-</div>
-
-<div class="card p-3 mb-3 bg-white">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <strong>Avance de registro</strong>
-        <span class="text-muted small">{{ registradas }} de {{ planificadas }} laptops</span>
-    </div>
-    <div class="progress" role="progressbar" aria-valuenow="{{ porcentaje }}" aria-valuemin="0" aria-valuemax="100">
-        <div class="progress-bar {% if orden.estado_codigo == 'CANC' %}bg-secondary{% endif %}"
-             style="width: {{ porcentaje }}%;">{{ porcentaje }}%</div>
-    </div>
-</div>
-
-<!-- ...................................................................
-     Laptops de la orden y en qué va el ensamblaje de cada una
-...................................................................... -->
-<div class="card bg-white mb-3">
-    <div class="card-header bg-white">
-        <strong>Laptops de la orden</strong>
-    </div>
-
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th>Num. Serie</th>
-                    <th>Descripción</th>
-                    <th>Línea</th>
-                    <th>Lote</th>
-                    <th>Estado</th>
-                    <th>Ensamblaje</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for l in laptops %}
-                <tr>
-                    <td>{{ l.numero }}</td>
-                    <td>{{ l.num_serie|default:"—" }}</td>
-                    <td>{{ l.descripcion|default:"—" }}</td>
-                    <td>{{ l.linea_nombre|default:"—" }}</td>
-                    <td>{{ l.lote_codigo|default:"—" }}</td>
-                    <td>
-                        <span class="badge
-                            {% if l.estado_codigo == 'EMBALA' %}text-bg-success
-                            {% elif l.estado_codigo == 'RECHA' %}text-bg-danger
-                            {% elif l.estado_codigo == 'APROV' %}text-bg-primary
-                            {% elif l.estado_codigo == 'PENSAM' %}text-bg-warning
-                            {% else %}text-bg-light{% endif %}">
-                            {{ l.estado_nombre|default:"—" }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge {{ l.avance.clase }}">{{ l.avance.texto }}</span>
-                        {% if l.avance.detalle %}
-                        <span class="text-muted small d-block">{{ l.avance.detalle }}</span>
+        <!-- Ensamblajes -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-primary">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
+                    <i class="bi bi-tools"></i>
+                </div>
+                <div class="w-100">
+                    <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Ensamblajes Terminados</div>
+                    <div class="d-flex align-items-baseline gap-2 mt-1">
+                        <span class="fs-4 fw-bold text-dark lh-1">{{ terminados }}</span>
+                        {% if en_proceso %}
+                            <span class="badge bg-light text-primary border border-primary-subtle fw-medium" style="font-size: 10px;">{{ en_proceso }} en proceso</span>
                         {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="7" class="text-center text-muted py-4">
-                    Esta orden todavía no tiene laptops registradas.
-                </td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Embaladas -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-success">
+                <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Embaladas</div>
+                    <div class="fs-4 fw-bold text-dark lh-1 mt-1">{{ embaladas }}</div>
+                    <div class="text-muted mt-1" style="font-size: 10px;">Producidas total: {{ orden.cant_producida|default_if_none:"0" }}</div>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+    <!-- ==========================================
+         TABLA DE LAPTOPS
+         ========================================== -->
+    <div class="emp-card overflow-hidden mb-3">
+        <div class="emp-header bg-white py-3">
+            <h6 class="fw-bold text-dark mb-0">Detalle de Laptops</h6>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold"># ID</th>
+                        <th class="py-3 text-uppercase text-muted small fw-bold">Num. Serie</th>
+                        <th class="py-3 text-uppercase text-muted small fw-bold">Descripción</th>
+                        <th class="py-3 text-uppercase text-muted small fw-bold">Línea y Lote</th>
+                        <th class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
+                        <th class="pe-4 py-3 text-uppercase text-muted small fw-bold">Avance (Ensamblaje)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in laptops %}
+                    <tr>
+                        <td class="ps-4 text-muted small fw-medium">{{ l.numero }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-qr-code text-secondary fs-5"></i>
+                                <span class="fw-bold text-dark font-monospace">{{ l.num_serie|default:"—" }}</span>
+                            </div>
+                        </td>
+                        <td class="text-secondary small">{{ l.descripcion|default:"—" }}</td>
+                        <td>
+                            <div class="text-dark small fw-medium">{{ l.linea_nombre|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;"><i class="bi bi-box me-1"></i>Lote: {{ l.lote_codigo|default:"—" }}</div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold
+                                {% if l.estado_codigo == 'EMBALA' %}bg-success-subtle text-success border border-success-subtle
+                                {% elif l.estado_codigo == 'RECHA' %}bg-danger-subtle text-danger border border-danger-subtle
+                                {% elif l.estado_codigo == 'APROV' %}bg-primary-subtle text-primary border border-primary-subtle
+                                {% elif l.estado_codigo == 'PENSAM' %}bg-warning-subtle text-warning border border-warning-subtle
+                                {% else %}bg-light text-secondary border border-secondary-subtle{% endif %}">
+                                <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ l.estado_nombre|default:"—" }}
+                            </span>
+                        </td>
+                        <td class="pe-4">
+                            <div class="d-flex flex-column justify-content-center">
+                                <span class="badge {{ l.avance.clase }} align-self-start">{{ l.avance.texto }}</span>
+                                {% if l.avance.detalle %}
+                                    <span class="text-muted mt-1" style="font-size: 11px;">{{ l.avance.detalle }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-pc-display d-block mb-2 text-light" style="font-size: 2rem;"></i>
+                            Esta orden todavía no tiene laptops registradas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
 {% endblock %}
