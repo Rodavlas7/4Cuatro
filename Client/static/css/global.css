@@ -1,0 +1,190 @@
+/* ---------- Google Font ---------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ---------- Variables ---------- */
+
+:root {
+
+    /* ============================
+       BOOTSTRAP (theming)
+       ============================ */
+    --bs-primary: #0D1B2A;
+    --bs-primary-rgb: 13, 27, 42;
+
+    --bs-secondary: #2F3A46;
+    --bs-secondary-rgb: 47, 58, 70;
+
+    --bs-success: #422e7d;
+    --bs-success-rgb: 66, 46, 125;
+
+    --bs-warning: #D97706;
+    --bs-warning-rgb: 217, 119, 6;
+
+    --bs-danger: #B91C1C;
+    --bs-danger-rgb: 185, 28, 28;
+
+    --bs-info: #0369A1;
+    --bs-info-rgb: 3, 105, 161;
+
+    --bs-light: #F8FAFC;
+    --bs-light-rgb: 248, 250, 252;
+
+    --bs-dark: #1F2937;
+    --bs-dark-rgb: 31, 41, 55;
+
+    --bs-body-bg: #F8FAFC;
+    --bs-body-color: #1F2937;
+    --bs-border-color: #E5E7EB;
+
+    --bs-font-sans-serif: 'Inter', sans-serif;
+    --bs-body-font-size: 14px;
+    --bs-body-line-height: 1.5;
+
+    --bs-link-color: #0369A1;
+    --bs-link-color-rgb: 3, 105, 161;
+    --bs-link-hover-color: #0D1B2A;
+    --bs-link-hover-color-rgb: 13, 27, 42;
+
+    --bs-border-radius: 8px;
+    --bs-border-radius-sm: 6px;
+    --bs-border-radius-lg: 12px;
+    --bs-border-radius-pill: 999px;
+
+
+    /* ============================
+       COREUI (theming, mismo mapeo)
+       ============================ */
+    --cui-primary: #0D1B2A;
+    --cui-primary-rgb: 13, 27, 42;
+
+    --cui-secondary: #2F3A46;
+    --cui-secondary-rgb: 47, 58, 70;
+
+    --cui-success: #422e7d;
+    --cui-success-rgb: 66, 46, 125;
+
+    --cui-warning: #D97706;
+    --cui-warning-rgb: 217, 119, 6;
+
+    --cui-danger: #B91C1C;
+    --cui-danger-rgb: 185, 28, 28;
+
+    --cui-info: #0369A1;
+    --cui-info-rgb: 3, 105, 161;
+
+    --cui-light: #F8FAFC;
+    --cui-light-rgb: 248, 250, 252;
+
+    --cui-dark: #1F2937;
+    --cui-dark-rgb: 31, 41, 55;
+
+
+    /* ============================
+       PROPIAS DE TRACEX
+       ============================ */
+
+    /* Colores (referencia directa, por si se usan fuera de componentes bs/cui) */
+    --color-primary: #0D1B2A;
+    --color-secondary: #2F3A46;
+    --color-accent: #1D4ED8;
+    --color-white: #FFFFFF;
+
+    --color-success: #422e7d;
+    --color-warning: #D97706;
+    --color-danger: #B91C1C;
+    --color-info: #0369A1;
+
+    --color-bg: #F8FAFC;
+    --color-border: #E5E7EB;
+    --color-text: #1F2937;
+    --color-text-light: #6B7280;
+
+    /* Tipografía */
+    --font-family: 'Inter', sans-serif;
+
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-md: 16px;
+    --text-lg: 18px;
+    --text-xl: 24px;
+    --text-2xl: 32px;
+
+    /* Bordes */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 999px;
+
+    /* Sombras */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, .08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.16);
+
+    /* Espaciados */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+
+    /* Transiciones */
+    --transition: .25s ease;
+
+    /* Iconos */
+    --icon-size-sm: 16px;
+    --icon-size-md: 20px;
+    --icon-size-lg: 24px;
+
+    /* Botones (alturas propias, las clases de color ahora las da Bootstrap) */
+    --btn-height-sm: 32px;
+    --btn-height-md: 40px;
+    --btn-height-lg: 48px;
+
+    /* Layout */
+    --sidebar-width: 260px;
+    --topbar-height: 70px;
+    --avatar-size: 42px;
+
+}
+
+/* ---------- Base ----------
+   NOTA: el reset (*, margin, padding, box-sizing) y los estilos base de
+   a/button/ul ya los da el Reboot de Bootstrap. No se reescriben aquí
+   para evitar reglas duplicadas o en conflicto.
+------------------------------ */
+
+/* ---------- Base & Control de Desbordamiento ---------- */
+
+html {
+    scroll-behavior: smooth;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Layout principal para frenar desbordamiento horizontal seguro */
+.app-layout {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* ---------- Icon ---------- */
+.icon {
+    font-size: var(--icon-size-md);
+}
+
+/* ---------- Área de contenido ---------- */
+.content-area {
+    padding: var(--space-lg);
+}
+
+@media (max-width: 575.98px) {
+    .content-area {
+        padding: var(--space-md);
+    }
+}

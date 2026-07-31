@@ -1,145 +1,140 @@
+{% load static %}
+ 
 {% comment %}
    MENÚ DEL PANEL DE ADMINISTRADOR
-
+ 
    Este archivo es del equipo del panel admin. Nadie más lo lee, así que
    agregar, quitar o reordenar módulos aquí no le afecta a los otros paneles.
-
+ 
    Los enlaces apuntan a las apps originales del proyecto (produccion, calidad,
    componentes, lineas, usuarios), que son las pantallas del admin.
+ 
+   Diseño alineado con el sidebar de base.html (sidebar-panel / sidebar-header /
+   sidebar-divider / sidebar-menu). Los estilos viven en css/sidebar.css.
 {% endcomment %}
-
-<aside class="panel-sidebar bg-dark text-white p-3">
-
-    <!-- Marca -->
-    <h3 class="fw-bold mb-1">TraceX</h3>
-    <p class="text-secondary small mb-3">Administración</p>
-
-    <hr class="text-secondary">
-
-
+ 
+<aside class="sidebar-panel">
+ 
+    <!-- Logo -->
+    <div class="sidebar-header">
+        <img src="{% static 'img/logo2.svg' %}" alt="TraceX" class="sidebar-logo-full">
+        <img src="{% static 'img/isotipo-blanco.svg' %}" alt="TraceX" class="sidebar-logo-icon">
+    </div>
+ 
+    <hr class="sidebar-divider">
+ 
     <!-- Menú -->
     <ul class="nav flex-column sidebar-menu">
-
+ 
         <!-- Dashboard -->
         <li class="nav-item mb-2">
-            <a class="nav-link text-white" href="{% url 'panel_admin:dashboard' %}">
-                <i class="bi bi-speedometer2 me-2"></i>
-                Dashboard
+            <a class="nav-link" href="{% url 'panel_admin:dashboard' %}">
+                <i class="bi bi-speedometer2 me-2"></i><span class="nav-label">Dashboard</span>
             </a>
         </li>
-
+ 
         <!-- Producción -->
         <li class="nav-item mb-2">
-            <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
                href="#produccion" role="button" aria-expanded="false">
                 <span>
-                    <i class="bi bi-gear-wide-connected me-2"></i>
-                    Producción
+                    <i class="bi bi-gear-wide-connected me-2"></i><span class="nav-label">Producción</span>
                 </span>
                 <i class="bi bi-chevron-down chevron"></i>
             </a>
-
+ 
             <div class="collapse submenu" id="produccion">
-                <a href="{% url 'ordenes-produccion-lista' %}" class="nav-link text-white">Órdenes de Producción</a>
-                <a href="{% url 'laptops-lista' %}" class="nav-link text-white">Laptops</a>
-                <a href="{% url 'ensamblaje-registrar' %}" class="nav-link text-white">Registrar Ensamblaje</a>
-                <a href="{% url 'ensamblaje-seguimiento' %}" class="nav-link text-white">Seguimiento de Ensamblaje</a>
+                <a href="{% url 'ordenes-produccion-lista' %}" class="nav-link"><span class="nav-label">Órdenes de Producción</span></a>
+                <a href="{% url 'laptops-lista' %}" class="nav-link"><span class="nav-label">Laptops</span></a>
+                <a href="{% url 'ensamblaje-registrar' %}" class="nav-link"><span class="nav-label">Registrar Ensamblaje</span></a>
             </div>
         </li>
-
+ 
         <!-- Calidad -->
         <li class="nav-item mb-2">
-            <a href="{% url 'lista_inspeccion_calidad' %}" class="nav-link text-white">
-                <i class="bi bi-check2-circle me-2"></i>
-                Calidad
+            <a href="{% url 'lista_inspeccion_calidad' %}" class="nav-link">
+                <i class="bi bi-check2-circle me-2"></i><span class="nav-label">Calidad</span>
             </a>
         </li>
-
+ 
         <!-- Incidencias -->
         <li class="nav-item mb-2">
-            <a href="{% url 'lista_paros' %}" class="nav-link text-white">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                Incidencias
+            <a href="{% url 'lista_paros' %}" class="nav-link">
+                <i class="bi bi-exclamation-triangle me-2"></i><span class="nav-label">Incidencias</span>
             </a>
         </li>
-
+ 
         <!-- Embalaje -->
         <li class="nav-item mb-2">
-            <a href="#" class="nav-link text-white">
-                <i class="bi bi-box-arrow-up me-2"></i>
-                Embalaje
+            <a href="#" class="nav-link">
+                <i class="bi bi-box-seam me-2"></i><span class="nav-label">Embalaje</span>
             </a>
         </li>
-
+ 
         <!-- Trazabilidad -->
         <li class="nav-item mb-2">
-            <a href="#" class="nav-link text-white">
-                <i class="bi bi-search me-2"></i>
-                Trazabilidad
+            <a href="{% url 'ensamblaje-seguimiento' %}" class="nav-link">
+                <i class="bi bi-search me-2"></i><span class="nav-label">Trazabilidad</span>
             </a>
         </li>
-
+ 
         <!-- Planta -->
         <li class="nav-item mb-2">
-            <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
                href="#planta" role="button" aria-expanded="false">
                 <span>
-                    <i class="bi bi-diagram-3 me-2"></i>
-                    Planta
+                    <i class="bi bi-diagram-3 me-2"></i><span class="nav-label">Planta</span>
                 </span>
                 <i class="bi bi-chevron-down chevron"></i>
             </a>
-
+ 
             <div class="collapse submenu" id="planta">
-                <a href="{% url 'lineas-lista' %}" class="nav-link text-white small">Líneas de Ensamblaje</a>
-                <a href="{% url 'estaciones-lista' %}" class="nav-link text-white small">Estaciones de Trabajo</a>
+                <a href="{% url 'lineas-lista' %}" class="nav-link small"><span class="nav-label">Líneas de Ensamblaje</span></a>
+                <a href="{% url 'estaciones-lista' %}" class="nav-link small"><span class="nav-label">Estaciones de Trabajo</span></a>
             </div>
         </li>
-
+ 
         <!-- Materiales -->
         <li class="nav-item mb-2">
-            <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
                href="#materiales" role="button" aria-expanded="false">
                 <span>
-                    <i class="bi bi-boxes me-2"></i>
-                    Materiales
+                    <i class="bi bi-boxes me-2"></i><span class="nav-label">Materiales</span>
                 </span>
                 <i class="bi bi-chevron-down chevron"></i>
             </a>
-
+ 
             <div class="collapse submenu" id="materiales">
-                <a href="{% url 'componentes-lista' %}" class="nav-link text-white small">Componentes</a>
-                <a href="{% url 'modelos-lista' %}" class="nav-link text-white small">Modelos</a>
-                <a href="{% url 'lotes-lista' %}" class="nav-link text-white small">Lotes</a>
-                <a href="{% url 'ordenes-lista' %}" class="nav-link text-white small">Órdenes de Material</a>
+                <a href="{% url 'componentes-lista' %}" class="nav-link small"><span class="nav-label">Componentes</span></a>
+                <a href="{% url 'modelos-lista' %}" class="nav-link small"><span class="nav-label">Modelos</span></a>
+                <a href="{% url 'lotes-lista' %}" class="nav-link small"><span class="nav-label">Lotes</span></a>
+                <a href="{% url 'ordenes-lista' %}" class="nav-link small"><span class="nav-label">Órdenes de Material</span></a>
             </div>
         </li>
-
+ 
         <!-- Personal -->
-        <li class="nav-item mb-2 has-submenu">
-            <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+        <li class="nav-item mb-2">
+            <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
                href="#personal" role="button" aria-expanded="false">
                 <span>
-                    <i class="bi bi-people me-2"></i>
-                    Personal
+                    <i class="bi bi-people me-2"></i><span class="nav-label">Personal</span>
                 </span>
                 <i class="bi bi-chevron-down chevron"></i>
             </a>
-
+ 
             <div class="collapse submenu" id="personal">
-                <a href="{% url 'lista_usuarios' %}" class="nav-link text-white small">Usuarios</a>
-                <a href="{% url 'lista_empleados' %}" class="nav-link text-white small">Empleados</a>
+                <a href="{% url 'lista_usuarios' %}" class="nav-link small"><span class="nav-label">Usuarios</span></a>
+                <a href="{% url 'lista_empleados' %}" class="nav-link small"><span class="nav-label">Empleados</span></a>
             </div>
         </li>
-
+ 
         <!-- Reportes -->
         <li class="nav-item">
-            <a href="#" class="nav-link text-white">
-                <i class="bi bi-file-earmark-bar-graph me-2"></i>
-                Reportes
+            <a href="#" class="nav-link">
+                <i class="bi bi-file-earmark-bar-graph me-2"></i><span class="nav-label">Reportes</span>
             </a>
         </li>
-
+ 
     </ul>
-
+ 
 </aside>
