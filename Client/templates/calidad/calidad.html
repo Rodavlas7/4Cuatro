@@ -1,404 +1,904 @@
 {% extends 'panel_admin/base.html' %}
 
+
+
 {% block topbar_titulo %}Inspecciones de Calidad{% endblock %}
 
+
+
 {% block breadcrumbs %}
+
     <li class="breadcrumb-item active" aria-current="page">Calidad</li>
+
 {% endblock %}
 
+
+
 {% block title %}Inspecciones de Calidad{% endblock %}
+
+
+
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Inspecciones de Calidad</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg me-1"></i> Nueva inspección
-    </button>
-</div>
 
-<form method="GET" class="mb-3">
 
-    <div class="row g-2 align-items-end">
+<div class="wrap">
 
-        <!-- Buscar -->
-        <div class="col-md-4">
-            <label class="form-label">Buscar</label>
-            <div class="input-group">
 
-                <input 
-                    type="text" 
-                    name="buscar" 
-                    class="form-control"
-                    placeholder="Número, laptop, empleado o línea..."
-                    value="{{ buscar|default:'' }}"
-                >
 
-                <button type="submit" class="btn btn-outline-secondary">
-                    <i class="bi bi-search"></i>
+    <!-- ==========================================
+
+         TARJETA 1: ENCABEZADO Y FILTROS
+
+         ========================================== -->
+
+    <div class="emp-card mb-4">
+
+       
+
+        <!-- ENCABEZADO -->
+
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+
+            <div>
+
+                <h4 class="fw-bold text-dark mb-1">Inspecciones de Calidad</h4>
+
+                <p class="text-muted small mb-0">Gestiona y supervisa los resultados de calidad en las líneas de ensamblaje.</p>
+
+            </div>
+
+            <div>
+
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+
+                    <i class="bi bi-plus-lg"></i> Nueva inspección
+
                 </button>
 
             </div>
-        </div>
-
-
-        <!-- Fecha inicio -->
-        <div class="col-md-3">
-
-            <label class="form-label">
-                Desde
-            </label>
-
-            <input 
-                type="date"
-                name="fecha_inicio"
-                class="form-control"
-                value="{{ fecha_inicio|default:'' }}">
 
         </div>
 
+<!-- FILTROS -->
 
-        <!-- Fecha fin -->
-        <div class="col-md-3">
+        <div class="emp-toolbar px-4 py-3">
 
-            <label class="form-label">
-                Hasta
-            </label>
+            <form method="GET">
 
-            <input 
-                type="date"
-                name="fecha_fin"
-                class="form-control"
-                value="{{ fecha_fin|default:'' }}">
+                <div class="row g-3 align-items-end">
+
+
+
+                    <!-- Buscar -->
+
+                    <div class="col-12 col-md-12 col-lg-4">
+
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+
+                        <div class="input-group input-group-sm">
+
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+
+                                <i class="bi bi-search"></i>
+
+                            </span>
+
+                            <input
+
+                                type="text"
+
+                                name="buscar"
+
+                                class="form-control border-start-0 ps-1 py-2"
+
+                                placeholder="Número, laptop, empleado o línea..."
+
+                                value="{{ buscar|default:'' }}"
+
+                            >
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Fecha inicio -->
+
+                    <div class="col-6 col-md-3 col-lg-3">
+
+                        <label class="form-label text-muted small fw-bold mb-1">Desde</label>
+
+                        <input
+
+                            type="date"
+
+                            name="fecha_inicio"
+
+                            class="form-control form-control-sm py-2 text-secondary"
+
+                            value="{{ fecha_inicio|default:'' }}">
+
+                    </div>
+
+
+
+                    <!-- Fecha fin -->
+
+                    <div class="col-6 col-md-3 col-lg-3">
+
+                        <label class="form-label text-muted small fw-bold mb-1">Hasta</label>
+
+                        <input
+
+                            type="date"
+
+                            name="fecha_fin"
+
+                            class="form-control form-control-sm py-2 text-secondary"
+
+                            value="{{ fecha_fin|default:'' }}">
+
+                    </div>
+
+
+
+                    <!-- Botones de Acción -->
+
+                    <div class="col-12 col-md-2 col-lg-2 d-flex gap-2">
+
+                        <button class="btn btn-dark btn-sm py-2 fw-medium d-flex align-items-center justify-content-center gap-2 flex-grow-1" type="submit" title="Filtrar">
+
+                            <i class="bi bi-funnel"></i> Filtrar
+
+                        </button>
+
+                        {% if buscar or fecha_inicio or fecha_fin %}
+
+                            <a href="{% url 'lista_inspeccion_calidad' %}" class="btn btn-outline-danger btn-sm py-2 px-3 d-flex align-items-center justify-content-center" title="Limpiar filtros">
+
+                                <i class="bi bi-x-lg"></i>
+
+                            </a>
+
+                        {% endif %}
+
+                    </div>
+
+
+
+                </div>
+
+            </form>
 
         </div>
-
-
-        <!-- Botón filtrar -->
-        <div class="col-md-1">
-            <label class="form-label d-block">&nbsp;</label>
-            <button class="btn btn-primary w-100">
-                <i class="bi bi-funnel"></i>
-            </button>
-        </div>
-
-
-        <!-- Limpiar -->
-        {% if buscar or fecha_inicio or fecha_fin %}
-        <div class="col-md-1">
-            <label class="form-label d-block">&nbsp;</label>
-            <a href="{% url 'lista_inspeccion_calidad' %}" class="btn btn-outline-danger w-100">
-                <i class="bi bi-x-lg"></i>
-            </a>
-        </div>
-        {% endif %}
-
 
     </div>
 
-</form>
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>Número</th>
-                <th>Resultado</th>
-                <th>Fecha</th>
-                <th>Laptop</th>
-                <th>Empleado</th>
-                <th>Línea</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for i in inspecciones %}
-            <tr>
-                <td>{{ i.numero }}</td>
-                <td>
-                    {% if i.resultado == "Aprobada" %}
-                        <span class="badge bg-success">{{ i.resultado }}</span>
-                    {% elif i.resultado == "Rechazada" %}
-                        <span class="badge bg-danger">{{ i.resultado }}</span>
-                    {% else %}
-                        <span class="badge bg-warning text-dark">{{ i.resultado|default:"—" }}</span>
-                    {% endif %}
-                </td>
-                <td>{{ i.fecha|default:"—" }}{% if i.hora %} {{ i.hora }}{% endif %}</td>
-                <td>{{ i.laptop|default:"—" }}</td>
-                <td>{{ i.empleado|default:"—" }}</td>
-                <td>{{ i.linea|default:"—" }}</td>
-                <td class="text-end">
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-info"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalDetalle"
-                        data-numero="{{ i.numero }}"
-                        data-resultado="{{ i.resultado|default:'' }}"
-                        data-fecha="{{ i.fecha|default:'' }}{% if i.hora %} {{ i.hora }}{% endif %}"
-                        data-laptop="{{ i.laptop|default:'' }}"
-                        data-empleado="{{ i.empleado|default:'' }}"
-                        data-linea="{{ i.linea|default:'' }}"
-                        data-observaciones="{{ i.observaciones|default:'' }}">
-                        <i class="bi bi-eye"></i>
-                    </button>
 
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEditar"
-                        data-numero="{{ i.numero }}"
-                        data-resultado="{{ i.resultado_codigo|default:'' }}"
-                        data-observaciones="{{ i.observaciones|default:'' }}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+    <!-- ==========================================
 
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-danger"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEliminar"
-                        data-numero="{{ i.numero }}">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="7" class="text-center text-muted py-4">No hay inspecciones registradas.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+         TARJETA 2: TABLA DE DATOS
+
+         ========================================== -->
+
+    <div class="emp-card overflow-hidden">
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle mb-0 w-100">
+
+                <thead class="table-light">
+
+                    <tr>
+
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Número</th>
+
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Laptop</th>
+
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Fecha / Hora</th>
+
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Línea / Inspector</th>
+
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Resultado</th>
+
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for i in inspecciones %}
+
+                    <tr>
+
+                        <td class="ps-4"><span class="badge-id text-primary">#{{ i.numero }}</span></td>
+
+                        <td>
+
+                            <div class="d-flex align-items-center gap-2">
+
+                                <div>
+
+                                    <div class="font-monospace fw-bold text-dark">{{ i.laptop|default:"—" }}</div>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                        <td>
+
+                            <div class="text-dark small fw-medium">{{ i.fecha|default:"—" }}</div>
+
+                            <div class="text-secondary small" style="font-size: 11px;">
+
+                                {% if i.hora %}<i class="bi bi-clock me-1"></i>{{ i.hora }}{% endif %}
+
+                            </div>
+
+                        </td>
+
+                        <td>
+
+                            <div class="text-dark small fw-medium">{{ i.linea|default:"—" }}</div>
+
+                            <div class="text-secondary small" style="font-size: 11px;">
+
+                                <i class="bi bi-person me-1"></i>{{ i.empleado|default:"—" }}
+
+                            </div>
+
+                        </td>
+
+                        <td class="text-center">
+
+                            {% if i.resultado == "Aprobada" %}
+
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-semibold">
+
+                                    <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Aprobada
+
+                                </span>
+
+                            {% elif i.resultado == "Rechazada" %}
+
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 fw-semibold">
+
+                                    <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Rechazada
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1 fw-semibold">
+
+                                    <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ i.resultado|default:"—" }}
+
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td class="pe-4 text-end">
+
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+
+                                <!-- DETALLE -->
+
+                                <button
+
+                                    type="button"
+
+                                    class="btn text-info"
+
+                                    data-bs-toggle="modal"
+
+                                    data-bs-target="#modalDetalle"
+
+                                    data-numero="{{ i.numero }}"
+
+                                    data-resultado="{{ i.resultado|default:'' }}"
+
+                                    data-fecha="{{ i.fecha|default:'' }}{% if i.hora %} {{ i.hora }}{% endif %}"
+
+                                    data-laptop="{{ i.laptop|default:'' }}"
+
+                                    data-empleado="{{ i.empleado|default:'' }}"
+
+                                    data-linea="{{ i.linea|default:'' }}"
+
+                                    data-observaciones="{{ i.observaciones|default:'' }}"
+
+                                    title="Ver detalle">
+
+                                    <i class="bi bi-eye"></i>
+
+                                </button>
+
+
+
+                                <!-- EDITAR -->
+
+                                <button
+
+                                    type="button"
+
+                                    class="btn text-secondary"
+
+                                    data-bs-toggle="modal"
+
+                                    data-bs-target="#modalEditar"
+
+                                    data-numero="{{ i.numero }}"
+
+                                    data-resultado="{{ i.resultado_codigo|default:'' }}"
+
+                                    data-observaciones="{{ i.observaciones|default:'' }}"
+
+                                    title="Editar inspección">
+
+                                    <i class="bi bi-pencil"></i>
+
+                                </button>
+
+
+
+                                <!-- ELIMINAR -->
+
+                                <button
+
+                                    type="button"
+
+                                    class="btn text-danger"
+
+                                    data-bs-toggle="modal"
+
+                                    data-bs-target="#modalEliminar"
+
+                                    data-numero="{{ i.numero }}"
+
+                                    title="Eliminar inspección">
+
+                                    <i class="bi bi-trash"></i>
+
+                                </button>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+
+                        <td colspan="6" class="text-center text-muted py-5">
+
+                            <i class="bi bi-shield-check text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+
+                            No hay inspecciones de calidad registradas.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+
 </div>
+
+
+
+<!-- OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO -->
+
 
 
 <!-- MODAL: CREAR -->
+
 <div class="modal fade" id="modalCrear" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{% url 'inspeccion-crear' %}" class="needs-validation" novalidate>
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <form method="POST" action="{% url 'inspeccion-crear' %}" class="needs-validation w-100" novalidate>
+
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nueva inspección</h5>
+
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header border-bottom-0 pb-0">
+
+                    <h5 class="modal-title fw-bold">Nueva inspección</h5>
+
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
                 </div>
+
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Línea</label>
-                        <select name="linea" id="id_linea_calidad" class="form-select" required>
-                            <option value="">— Selecciona —</option>
-                            {% for codigo, nombre in lineas %}
-                            <option value="{{ codigo }}">{{ nombre }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="invalid-feedback">Selecciona una línea.</div>
+
+                   
+
+                    <div class="row g-3 mb-3">
+
+                        <div class="col-md-6">
+
+                            <label class="form-label small fw-medium">Línea</label>
+
+                            <select name="linea" id="id_linea_calidad" class="form-select" required>
+
+                                <option value="">— Selecciona —</option>
+
+                                {% for codigo, nombre in lineas %}
+
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <div class="invalid-feedback">Selecciona una línea.</div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label class="form-label small fw-medium">Empleado (Inspector)</label>
+
+                            <select name="empleado" id="id_empleado_calidad" class="form-select" required>
+
+                                <option value="">— Selecciona primero una línea —</option>
+
+                            </select>
+
+                            <div class="invalid-feedback">Selecciona un empleado.</div>
+
+                        </div>
+
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Empleado (inspector de calidad)</label>
-                        <select name="empleado" id="id_empleado_calidad" class="form-select" required>
-                            <option value="">— Selecciona primero una línea —</option>
-                        </select>
-                        <div class="invalid-feedback">Selecciona un empleado.</div>
+
+
+
+                    <div class="row g-3 mb-3">
+
+                        <div class="col-md-6">
+
+                            <label class="form-label small fw-medium">Laptop (solo en ensamblaje)</label>
+
+                            <select name="laptop" class="form-select" required>
+
+                                <option value="">— Selecciona —</option>
+
+                                {% for codigo, nombre in laptops %}
+
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+
+                                {% empty %}
+
+                                <option disabled>No hay laptops en ensamblaje</option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <div class="invalid-feedback">Selecciona una laptop.</div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label class="form-label small fw-medium">Resultado</label>
+
+                            <select name="resultado" class="form-select" required>
+
+                                <option value="">— Selecciona —</option>
+
+                                {% for valor, texto in resultados %}
+
+                                <option value="{{ valor }}">{{ texto }}</option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <div class="invalid-feedback">Selecciona un resultado.</div>
+
+                        </div>
+
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Laptop (solo en ensamblaje)</label>
-                        <select name="laptop" class="form-select" required>
-                            <option value="">— Selecciona —</option>
-                            {% for codigo, nombre in laptops %}
-                            <option value="{{ codigo }}">{{ nombre }}</option>
-                            {% empty %}
-                            <option disabled>No hay laptops en ensamblaje</option>
-                            {% endfor %}
-                        </select>
-                        <div class="invalid-feedback">Selecciona una laptop.</div>
+
+
+
+                    <div class="mb-2">
+
+                        <label class="form-label small fw-medium">Observaciones</label>
+
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Notas adicionales de la inspección..."></textarea>
+
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Resultado</label>
-                        <select name="resultado" class="form-select" required>
-                            <option value="">— Selecciona —</option>
-                            {% for valor, texto in resultados %}
-                            <option value="{{ valor }}">{{ texto }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="invalid-feedback">Selecciona un resultado.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Observaciones</label>
-                        <textarea name="observaciones" class="form-control" rows="2"></textarea>
-                    </div>
+
+
+
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+
+                <div class="modal-footer border-top-0 bg-light">
+
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar inspección</button>
+
                 </div>
+
             </div>
+
         </form>
+
     </div>
+
 </div>
+
+
 
 <!-- MODAL: DETALLE -->
+
 <div class="modal fade" id="modalDetalle" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Detalle de la inspección</h5>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow">
+
+            <div class="modal-header border-bottom-0 pb-0">
+
+                <h5 class="modal-title fw-bold">Detalle de la Inspección</h5>
+
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
             </div>
+
             <div class="modal-body">
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span class="fw-semibold text-secondary">Número</span>
-                    <span id="det_numero" class="text-muted"></span>
+
+               
+
+                <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
+
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+
+                        <i class="bi bi-clipboard-check"></i>
+
+                    </div>
+
+                    <div>
+
+                        <div id="det_laptop" class="fw-bold fs-5 text-dark font-monospace"></div>
+
+                        <span id="det_numero" class="badge-id mt-1 d-inline-block"></span>
+
+                    </div>
+
                 </div>
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span class="fw-semibold text-secondary">Resultado</span>
-                    <span id="det_resultado" class="text-muted"></span>
-                </div>
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span class="fw-semibold text-secondary">Fecha</span>
-                    <span id="det_fecha" class="text-muted"></span>
-                </div>
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span class="fw-semibold text-secondary">Laptop</span>
-                    <span id="det_laptop" class="text-muted"></span>
-                </div>
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span class="fw-semibold text-secondary">Empleado</span>
-                    <span id="det_empleado" class="text-muted"></span>
-                </div>
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span class="fw-semibold text-secondary">Línea</span>
-                    <span id="det_linea" class="text-muted"></span>
-                </div>
-                <div class="d-flex justify-content-between py-2">
-                    <span class="fw-semibold text-secondary">Observaciones</span>
-                    <span id="det_observaciones" class="text-muted"></span>
-                </div>
+
+
+
+                <ul class="list-group list-group-flush">
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+
+                        <span class="text-muted small fw-medium">Resultado</span>
+
+                        <span id="det_resultado" class="fw-semibold text-dark"></span>
+
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+
+                        <span class="text-muted small fw-medium">Fecha y Hora</span>
+
+                        <span id="det_fecha" class="fw-semibold text-dark"></span>
+
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+
+                        <span class="text-muted small fw-medium">Inspector</span>
+
+                        <span id="det_empleado" class="fw-semibold text-dark"></span>
+
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+
+                        <span class="text-muted small fw-medium">Línea</span>
+
+                        <span id="det_linea" class="fw-semibold text-dark"></span>
+
+                    </li>
+
+                    <li class="list-group-item px-0 py-3 border-bottom-0">
+
+                        <span class="text-muted small fw-medium d-block mb-1">Observaciones</span>
+
+                        <span id="det_observaciones" class="text-dark small d-block bg-light p-2 rounded"></span>
+
+                    </li>
+
+                </ul>
+
+
+
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+
+            <div class="modal-footer border-top-0 bg-light">
+
+                <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cerrar</button>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
 
+
+
 <!-- MODAL: EDITAR -->
+
 <div class="modal fade" id="modalEditar" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" id="formEditar" action="" class="needs-validation" novalidate>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate>
+
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar inspección</h5>
+
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header border-bottom-0 pb-0">
+
+                    <h5 class="modal-title fw-bold">Editar inspección</h5>
+
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
                 </div>
+
                 <div class="modal-body">
+
                     <div class="mb-3">
-                        <label class="form-label">Resultado</label>
+
+                        <label class="form-label small fw-medium">Resultado</label>
+
                         <select name="resultado" id="edit_resultado" class="form-select" required>
+
                             <option value="">— Selecciona —</option>
+
                             {% for valor, texto in resultados %}
+
                             <option value="{{ valor }}">{{ texto }}</option>
+
                             {% endfor %}
+
                         </select>
+
                         <div class="invalid-feedback">Selecciona un resultado.</div>
+
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Observaciones</label>
-                        <textarea name="observaciones" id="edit_observaciones" class="form-control" rows="2"></textarea>
+
+                    <div class="mb-2">
+
+                        <label class="form-label small fw-medium">Observaciones</label>
+
+                        <textarea name="observaciones" id="edit_observaciones" class="form-control" rows="3"></textarea>
+
                     </div>
+
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+
+                <div class="modal-footer border-top-0 bg-light">
+
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
+
                 </div>
+
             </div>
+
         </form>
+
     </div>
+
 </div>
+
 
 
 <!-- MODAL: ELIMINAR -->
+
 <div class="modal fade" id="modalEliminar" tabindex="-1">
-    <div class="modal-dialog">
+
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+
         <form method="POST" id="formEliminar" action="">
+
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-danger">Eliminar inspección</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-body text-center p-4">
+
+                    <div class="text-danger mb-3">
+
+                        <i class="bi bi-trash3" style="font-size: 3rem;"></i>
+
+                    </div>
+
+                    <h5 class="fw-bold">¿Eliminar inspección?</h5>
+
+                    <p class="text-muted small mb-4">Esta acción es permanente y los datos del registro no se podrán deshacer.</p>
+
+                    <div class="d-flex gap-2 justify-content-center">
+
+                        <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+
+                        <button type="submit" class="btn btn-danger shadow-sm w-50">Eliminar</button>
+
+                    </div>
+
                 </div>
-                <div class="modal-body">
-                    <p>¿Deseas eliminar esta inspección? <strong class="text-danger">Esta acción es permanente y no se puede deshacer.</strong></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
-                </div>
+
             </div>
+
         </form>
+
     </div>
+
 </div>
 
+
+
 <script>
+
+// Validación visual nativa de Bootstrap 5
+
 (function () {
+
   'use strict'
+
   var forms = document.querySelectorAll('.needs-validation')
+
   Array.prototype.slice.call(forms).forEach(function (form) {
+
     form.addEventListener('submit', function (event) {
+
       if (!form.checkValidity()) {
+
         event.preventDefault()
+
         event.stopPropagation()
+
       }
+
       form.classList.add('was-validated')
+
     }, false)
+
   })
+
 })()
 
+
+
+// Fetch para empleados por línea
+
 document.getElementById('id_linea_calidad').addEventListener('change', function () {
+
     const lineaId = this.value;
+
     const empleadoSelect = document.getElementById('id_empleado_calidad');
+
     empleadoSelect.innerHTML = '<option value="">— Selecciona —</option>';
+
+
 
     if (!lineaId) return;
 
+
+
     fetch("/calidad/empleados-calidad-por-linea/" + lineaId + "/")
+
         .then(response => response.json())
+
         .then(data => {
+
             if (data.length === 0) {
+
                 empleadoSelect.innerHTML = '<option value="">— Sin inspectores en esta línea —</option>';
+
                 return;
+
             }
+
             data.forEach(emp => {
+
                 const option = document.createElement('option');
+
                 option.value = emp.numero;
+
                 option.textContent = emp.numero + " - " + emp.nombre;
+
                 empleadoSelect.appendChild(option);
+
             });
+
         });
+
 });
+
+
+
+// Llenado de Modales
 
 document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {
+
     const btn = event.relatedTarget;
-    document.getElementById('det_numero').textContent = btn.dataset.numero;
+
+    document.getElementById('det_numero').textContent = "#" + btn.dataset.numero;
+
     document.getElementById('det_resultado').textContent = btn.dataset.resultado;
+
     document.getElementById('det_fecha').textContent = btn.dataset.fecha;
-    document.getElementById('det_laptop').textContent = btn.dataset.laptop;
+
+    document.getElementById('det_laptop').textContent = btn.dataset.laptop || "Sin Serie";
+
     document.getElementById('det_empleado').textContent = btn.dataset.empleado;
+
     document.getElementById('det_linea').textContent = btn.dataset.linea;
-    document.getElementById('det_observaciones').textContent = btn.dataset.observaciones;
+
+    document.getElementById('det_observaciones').textContent = btn.dataset.observaciones || "Sin observaciones registradas.";
+
 });
+
+
 
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
+
     const btn = event.relatedTarget;
+
     document.getElementById('formEditar').action = "/calidad/inspecciones/editar/" + btn.dataset.numero + "/";
+
     document.getElementById('edit_resultado').value = btn.dataset.resultado;
+
     document.getElementById('edit_observaciones').value = btn.dataset.observaciones;
+
 });
+
+
 
 document.getElementById('modalEliminar').addEventListener('show.bs.modal', function (event) {
+
     const btn = event.relatedTarget;
+
     document.getElementById('formEliminar').action = "/calidad/inspecciones/eliminar/" + btn.dataset.numero + "/";
+
 });
+
 </script>
 
-{% endblock %}
+
+
+{% endblock %} 
+
