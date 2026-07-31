@@ -156,21 +156,21 @@
 
 /* ---------- Base & Control de Desbordamiento ---------- */
 
-html {
-    scroll-behavior: smooth;
+/* ---------- Base & Control de Desbordamiento ---------- */
+
+html, body {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip; /* 'clip' evita el scroll horizontal SIN romper position: sticky */
 }
 
-body {
-    max-width: 100%;
-    overflow-x: hidden;
-}
-
-/* Layout principal para frenar desbordamiento horizontal seguro */
+/* Layout principal */
 .app-layout {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip; /* 'clip' mantiene seguros los sticky topbar/sidebar */
+}
+
+html {
+    scroll-behavior: smooth;
 }
 
 /* ---------- Icon ---------- */
