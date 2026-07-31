@@ -1325,8 +1325,7 @@ class ListaParos(generic.View):
         else:
             response = get(API_PARO, headers, params=params)
 
-        paros_raw = lista(response)
-        paros = [normalizar_paro(p) for p in paros_raw]   
+        paros = lista(response)
 
         context = {
             "paros": paros,
@@ -1336,6 +1335,7 @@ class ListaParos(generic.View):
             "fecha_hasta": fecha_hasta,
         }
         return render(request, self.template_name, context)
+
 
 
 class CrearParo(generic.View):
@@ -1413,28 +1413,4 @@ class CerrarParo(generic.View):
             messages.error(request, error_data.get("mensaje", "No se pudo cerrar el paro."))
 
         return redirect("lista_paros")
-    
-def normalizar_paro(item):
-    def fmt_fecha(valor):
-        if not valor:
-            return valor
-        try:
-            return datetime.strptime(valor, "%Y-%m-%d").strftime("%d-%m-%Y")
-        except ValueError:
-            return valor
-
-    def fmt_hora(valor):
-        if not valor:
-            return valor
-        try:
-            return datetime.strptime(valor, "%H:%M:%S").strftime("%H:%M:%S")
-        except ValueError:
-            return valor
-
-    return {
-        **item,
-        "fecha_inicio": fmt_fecha(item.get("fecha_inicio")),
-        "hora_inicio": fmt_hora(item.get("hora_inicio")),
-        "fecha_fin": fmt_fecha(item.get("fecha_fin")),
-        "hora_fin": fmt_hora(item.get("hora_fin")),
-    }
+   

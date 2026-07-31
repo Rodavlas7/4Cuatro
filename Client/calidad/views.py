@@ -25,6 +25,7 @@ def normalizar_listar(item):
         "numero": item.get("numero"),
         "resultado": item.get("resultado_nombre"),
         "fecha": item.get("fecha"),
+        "hora": item.get("hora"),
         "laptop": item.get("laptop_numero"),
         "empleado": item.get("empleado_nombre"),
         "linea": item.get("linea_nombre"),

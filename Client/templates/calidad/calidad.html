@@ -1,4 +1,5 @@
 {% extends 'panel_admin/base.html' %}
+{% load formato %}
 
 
 
@@ -188,212 +189,112 @@
 
         <div class="table-responsive">
 
-            <table class="table table-hover align-middle mb-0 w-100">
-
+           <table class="table table-hover align-middle mb-0 w-100">
                 <thead class="table-light">
-
                     <tr>
-
                         <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Número</th>
-
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Resultado</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Fecha</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Laptop</th>
-
-                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Fecha / Hora</th>
-
-                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Línea / Inspector</th>
-
-                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Resultado</th>
-
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Empleado</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Línea</th>
                         <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
-
                     </tr>
-
                 </thead>
-
                 <tbody>
-
                     {% for i in inspecciones %}
-
                     <tr>
-
-                        <td class="ps-4"><span class="badge-id text-primary">#{{ i.numero }}</span></td>
-
+                        <td class="ps-4"><span class="badge-id">{{ i.numero }}</span></td>
                         <td>
-
-                            <div class="d-flex align-items-center gap-2">
-
-                                <div>
-
-                                    <div class="font-monospace fw-bold text-dark">{{ i.laptop|default:"—" }}</div>
-
-                                </div>
-
-                            </div>
-
-                        </td>
-
-                        <td>
-
-                            <div class="text-dark small fw-medium">{{ i.fecha|default:"—" }}</div>
-
-                            <div class="text-secondary small" style="font-size: 11px;">
-
-                                {% if i.hora %}<i class="bi bi-clock me-1"></i>{{ i.hora }}{% endif %}
-
-                            </div>
-
-                        </td>
-
-                        <td>
-
-                            <div class="text-dark small fw-medium">{{ i.linea|default:"—" }}</div>
-
-                            <div class="text-secondary small" style="font-size: 11px;">
-
-                                <i class="bi bi-person me-1"></i>{{ i.empleado|default:"—" }}
-
-                            </div>
-
-                        </td>
-
-                        <td class="text-center">
-
                             {% if i.resultado == "Aprobada" %}
-
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-semibold">
-
+                                <span class="badge rounded-pill px-2 py-1 fw-semibold bg-success-subtle text-success border border-success-subtle">
                                     <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Aprobada
-
                                 </span>
-
                             {% elif i.resultado == "Rechazada" %}
-
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 fw-semibold">
-
+                                <span class="badge rounded-pill px-2 py-1 fw-semibold bg-danger-subtle text-danger border border-danger-subtle">
                                     <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Rechazada
-
                                 </span>
-
                             {% else %}
-
-                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1 fw-semibold">
-
+                                <span class="badge rounded-pill px-2 py-1 fw-semibold bg-warning-subtle text-warning border border-warning-subtle">
                                     <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ i.resultado|default:"—" }}
-
                                 </span>
-
                             {% endif %}
-
                         </td>
-
+                        <td>
+                            <div class="text-dark small fw-medium">{{ i.fecha|fecha|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">
+                                <i class="bi bi-clock me-1"></i>{{ i.hora|hora|default:"—" }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">
+                                <i class="bi bi-laptop me-1 text-muted"></i>{{ i.laptop|default:"—" }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="d-inline-block text-truncate text-dark small fw-medium" style="max-width: 200px;" title="{{ i.empleado|default:'' }}">
+                                {{ i.empleado|default:"—" }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">
+                                <i class="bi bi-diagram-3 me-1 text-muted"></i>{{ i.linea|default:"—" }}
+                            </div>
+                        </td>
                         <td class="pe-4 text-end">
-
                             <div class="emp-actions d-inline-flex gap-1 align-items-center">
-
-                                <!-- DETALLE -->
-
+                                <!-- VER DETALLE -->
                                 <button
-
                                     type="button"
-
                                     class="btn text-info"
-
                                     data-bs-toggle="modal"
-
                                     data-bs-target="#modalDetalle"
-
                                     data-numero="{{ i.numero }}"
-
                                     data-resultado="{{ i.resultado|default:'' }}"
-
-                                    data-fecha="{{ i.fecha|default:'' }}{% if i.hora %} {{ i.hora }}{% endif %}"
-
+                                    data-fecha="{{ i.fecha|fecha_hora:i.hora|default:'—' }}"
                                     data-laptop="{{ i.laptop|default:'' }}"
-
                                     data-empleado="{{ i.empleado|default:'' }}"
-
                                     data-linea="{{ i.linea|default:'' }}"
-
                                     data-observaciones="{{ i.observaciones|default:'' }}"
-
                                     title="Ver detalle">
-
                                     <i class="bi bi-eye"></i>
-
                                 </button>
-
-
 
                                 <!-- EDITAR -->
-
                                 <button
-
                                     type="button"
-
                                     class="btn text-secondary"
-
                                     data-bs-toggle="modal"
-
                                     data-bs-target="#modalEditar"
-
                                     data-numero="{{ i.numero }}"
-
                                     data-resultado="{{ i.resultado_codigo|default:'' }}"
-
                                     data-observaciones="{{ i.observaciones|default:'' }}"
-
                                     title="Editar inspección">
-
                                     <i class="bi bi-pencil"></i>
-
                                 </button>
-
-
 
                                 <!-- ELIMINAR -->
-
                                 <button
-
                                     type="button"
-
                                     class="btn text-danger"
-
                                     data-bs-toggle="modal"
-
                                     data-bs-target="#modalEliminar"
-
                                     data-numero="{{ i.numero }}"
-
                                     title="Eliminar inspección">
-
                                     <i class="bi bi-trash"></i>
-
                                 </button>
-
                             </div>
-
                         </td>
-
                     </tr>
-
                     {% empty %}
-
                     <tr>
-
-                        <td colspan="6" class="text-center text-muted py-5">
-
-                            <i class="bi bi-shield-check text-light d-block mb-2" style="font-size: 2.5rem;"></i>
-
-                            No hay inspecciones de calidad registradas.
-
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            No hay inspecciones registradas con los filtros seleccionados.
                         </td>
-
                     </tr>
-
                     {% endfor %}
-
                 </tbody>
-
             </table>
 
         </div>
