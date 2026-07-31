@@ -188,3 +188,150 @@ html {
         padding: var(--space-md);
     }
 }
+
+
+
+
+
+
+/* ==========================================
+   COMPONENTES ESPECÍFICOS DE EMPLEADOS
+   ========================================== */
+
+/* Tarjeta Principal */
+.emp-card {
+    background-color: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+/* Encabezado */
+.emp-header {
+    padding: var(--space-lg);
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.emp-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-accent);
+    margin-bottom: var(--space-xs);
+}
+
+.emp-eyebrow .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-accent);
+}
+
+/* Barra de Herramientas */
+.emp-toolbar {
+    background-color: var(--bs-light);
+}
+
+/* Botón Accent (Utiliza tu variable --color-accent) */
+.btn-accent {
+    background-color: var(--color-accent);
+    color: var(--color-white);
+    border: none;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn-accent:hover {
+    background-color: #1e40af;
+    color: var(--color-white);
+}
+
+/* Identificador en Badge */
+.badge-id {
+    font-family: monospace;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-secondary);
+    background-color: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+
+/* Pastillas de Estado */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+}
+
+.status-pill.active {
+    background-color: rgba(66, 46, 125, 0.1);
+    color: var(--color-success);
+    border: 1px solid rgba(66, 46, 125, 0.2);
+}
+
+.status-pill.inactive {
+    background-color: rgba(185, 28, 28, 0.1);
+    color: var(--color-danger);
+    border: 1px solid rgba(185, 28, 28, 0.2);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background-color: currentColor;
+}
+
+/* Botones de Acción en Tabla */
+.emp-actions .btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.emp-actions .btn:hover {
+    background-color: #e2e8f0;
+}
+
+
+
+
+/* ====================================================================
+   BLOQUEO DE SCROLL CON MODALES ACTIVOS
+==================================================================== */
+
+/* 1. Apoyamos el bloqueo nativo de Bootstrap y evitamos el "efecto rebote" */
+html.modal-open,
+body.modal-open {
+    overscroll-behavior: none !important;
+}
+
+/* 2. Evitamos que el scroll interno de la ventana modal se propague al fondo (Scroll chaining) */
+.modal {
+    overscroll-behavior: contain !important;
+}
+
+/* 3. REVERTIMOS explícitamente el error anterior para proteger el Sidebar y Topbar.
+   Restauramos el clip horizontal original y permitimos la visibilidad vertical 
+   para que el 'position: sticky' no vuelva a romperse. */
+body.modal-open .app-layout {
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+}
