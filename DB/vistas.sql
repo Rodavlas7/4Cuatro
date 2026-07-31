@@ -267,6 +267,7 @@ LEFT JOIN rol r ON r.codigo = e.rol;
 --            realizó y el nombre de su línea, para no resolver esos joins
 --            en cada consulta desde el backend.
 
+
 CREATE VIEW vista_inspeccion_calidad AS
 SELECT 
     ic.numero,
@@ -280,13 +281,22 @@ SELECT
     ic.fecha,
     ic.hora,
     ic.laptop AS laptop_numero,
+    lp.num_serie AS laptop_num_serie,
     ic.empleado AS empleado_id,
-    CONCAT( e.nombrePila,' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS empleado_nombre,
+    CONCAT(
+        e.nombrePila, ' ',
+        e.primerApell, ' ',
+        IFNULL(e.segundoApell, '')
+    ) AS empleado_nombre,
     ic.linea AS linea_codigo,
     l.nombre AS linea_nombre
 FROM inspeccion_calidad ic
-LEFT JOIN empleado e ON e.numero = ic.empleado
-LEFT JOIN linea l ON l.codigo = ic.linea;
+LEFT JOIN laptop lp
+    ON lp.numero = ic.laptop
+LEFT JOIN empleado e
+    ON e.numero = ic.empleado
+LEFT JOIN linea l
+    ON l.codigo = ic.linea;
 
 
 

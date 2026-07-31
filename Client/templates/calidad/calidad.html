@@ -228,7 +228,7 @@
                         </td>
                         <td>
                             <div class="text-dark small fw-medium">
-                                <i class="bi bi-laptop me-1 text-muted"></i>{{ i.laptop|default:"—" }}
+                                <i class="bi bi-laptop me-1 text-muted"></i>{{ i.num_serie|default:"—" }}
                             </div>
                         </td>
                         <td>
@@ -243,18 +243,19 @@
                         </td>
                         <td class="pe-4 text-end">
                             <div class="emp-actions d-inline-flex gap-1 align-items-center">
-                                <!-- VER DETALLE -->
+                               <!-- VER DETALLE -->
                                 <button
                                     type="button"
                                     class="btn text-info"
                                     data-bs-toggle="modal"
                                     data-bs-target="#modalDetalle"
                                     data-numero="{{ i.numero }}"
-                                    data-resultado="{{ i.resultado|default:'' }}"
+                                    data-resultado="{{ i.resultado_nombre|default:'' }}"
                                     data-fecha="{{ i.fecha|fecha_hora:i.hora|default:'—' }}"
-                                    data-laptop="{{ i.laptop|default:'' }}"
-                                    data-empleado="{{ i.empleado|default:'' }}"
-                                    data-linea="{{ i.linea|default:'' }}"
+                                    data-laptop-numero="{{ i.laptop_numero|default:'' }}"
+                                    data-laptop-serie="{{ i.laptop_num_serie|default:'' }}"
+                                    data-empleado="{{ i.empleado_nombre|default:'' }}"
+                                    data-linea="{{ i.linea_nombre|default:'' }}"
                                     data-observaciones="{{ i.observaciones|default:'' }}"
                                     title="Ver detalle">
                                     <i class="bi bi-eye"></i>
@@ -477,21 +478,24 @@
 
                 <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
 
-                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
-
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                        style="width: 50px; height: 50px; font-size: 20px;">
                         <i class="bi bi-clipboard-check"></i>
-
                     </div>
 
                     <div>
+                        <div id="det_laptop_serie" class="fw-bold fs-5 text-dark font-monospace"></div>
 
-                        <div id="det_laptop" class="fw-bold fs-5 text-dark font-monospace"></div>
+                        <div class="small text-muted mt-1">
+                            Laptop #
+                            <span id="det_laptop_numero" class="fw-semibold"></span>
+                        </div>
 
-                        <span id="det_numero" class="badge-id mt-1 d-inline-block"></span>
-
+                        <span id="det_numero" class="badge-id mt-2 d-inline-block"></span>
                     </div>
 
                 </div>
+                            
 
 
 
@@ -750,26 +754,35 @@ document.getElementById('id_linea_calidad').addEventListener('change', function 
 });
 
 
-
 // Llenado de Modales
 
 document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {
 
     const btn = event.relatedTarget;
 
-    document.getElementById('det_numero').textContent = "#" + btn.dataset.numero;
+    document.getElementById('det_numero').textContent =
+        "#" + btn.dataset.numero;
 
-    document.getElementById('det_resultado').textContent = btn.dataset.resultado;
+    document.getElementById('det_resultado').textContent =
+        btn.dataset.resultado;
 
-    document.getElementById('det_fecha').textContent = btn.dataset.fecha;
+    document.getElementById('det_fecha').textContent =
+        btn.dataset.fecha;
 
-    document.getElementById('det_laptop').textContent = btn.dataset.laptop || "Sin Serie";
+    document.getElementById('det_laptop_numero').textContent =
+        btn.dataset.laptopNumero || "Sin número";
 
-    document.getElementById('det_empleado').textContent = btn.dataset.empleado;
+    document.getElementById('det_laptop_serie').textContent =
+        btn.dataset.laptopSerie || "Sin serie";
 
-    document.getElementById('det_linea').textContent = btn.dataset.linea;
+    document.getElementById('det_empleado').textContent =
+        btn.dataset.empleado;
 
-    document.getElementById('det_observaciones').textContent = btn.dataset.observaciones || "Sin observaciones registradas.";
+    document.getElementById('det_linea').textContent =
+        btn.dataset.linea;
+
+    document.getElementById('det_observaciones').textContent =
+        btn.dataset.observaciones || "Sin observaciones registradas.";
 
 });
 

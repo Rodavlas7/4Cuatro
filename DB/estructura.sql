@@ -4,7 +4,10 @@
 -- Version: 2026-07-15
 
 DROP DATABASE IF EXISTS cuatro;
-CREATE DATABASE IF NOT EXISTS cuatro;
+CREATE DATABASE IF NOT EXISTS cuatro CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE cuatro;
+
+SET NAMES utf8mb4;
 USE cuatro;
 
 -- -------------------------------------mysql-------------------
@@ -397,4 +400,5 @@ CREATE UNIQUE INDEX IUK_serie_laptop ON laptop(num_serie);
 #Modificar el default de los usuarios al registrarlos
 ALTER TABLE usuario
 MODIFY estado TINYINT(1) NOT NULL DEFAULT 1;
+
 

@@ -36,9 +36,13 @@ class VistaInspeccionCalidad(models.Model):
     observaciones = models.CharField(max_length=256, blank=True, null=True)
     fecha = models.DateField(blank=True, null=True)
     hora = models.TimeField(blank=True, null=True)
+
     laptop_numero = models.IntegerField(blank=True, null=True)
+    laptop_num_serie = models.CharField(max_length=50, blank=True, null=True)
+
     empleado_id = models.IntegerField(blank=True, null=True)
     empleado_nombre = models.CharField(max_length=256, blank=True, null=True)
+
     linea_codigo = models.CharField(max_length=50, blank=True, null=True)
     linea_nombre = models.CharField(max_length=100, blank=True, null=True)
 

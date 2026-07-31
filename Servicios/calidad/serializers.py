@@ -67,13 +67,14 @@ class ListVistaInspeccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = VistaInspeccionCalidad
         fields = (
-            "numero", 
-            "resultado_nombre", 
-            "fecha", 
+            "numero",
+            "resultado_nombre",
+            "fecha",
             "hora",
             "laptop_numero",
-            "empleado_nombre", 
-            "linea_nombre"
+            "laptop_num_serie",
+            "empleado_nombre",
+            "linea_nombre",
         )
 
 class DetailVistaInspeccionSerializer(serializers.ModelSerializer):
