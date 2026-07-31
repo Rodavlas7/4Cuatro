@@ -44,6 +44,7 @@ avisa antes:
 | `core/middleware.py`                    | Quién puede entrar a qué ruta                 |
 | `core/guards.py`                        | Decorador y mixin de rol para vistas          |
 | `core/api.py`                           | URL base, headers y lectura de respuestas     |
+| `core/templatetags/formato.py`          | Filtros de fecha y hora para las plantillas   |
 | `core/context_processors.py`            | Datos de sesión que ven todas las plantillas  |
 | `home/views.py`                         | Login, logout y el repartidor por rol         |
 | `templates/base/base_layout.html`       | Cascarón común: `<head>`, topbar, mensajes    |
@@ -172,6 +173,71 @@ if respuesta is None:      # ✅
 if fallo(respuesta):       # ✅ lo de siempre
 ```
 
+## Cómo mostrar fechas y horas
+
+Todo lo que ve el usuario va en **`DD-MM-AAAA HH:MM:SS`**. Para eso están los
+filtros de `core/templatetags/formato.py`:
+
+```django
+{% extends 'panel_admin/base.html' %}
+{% load formato %}
+```
+
+| Filtro | Cómo se usa | Sale |
+|---|---|---|
+| `fecha` | `{{ o.fecha\|fecha }}` | `21-07-2026` |
+| `hora` | `{{ o.hora\|hora }}` | `08:00:00` |
+| `fecha_hora` | `{{ r.fecha_inicio\|fecha_hora:r.hora_inicio }}` | `21-07-2026 08:00:00` |
+
+`fecha_hora` recibe la hora como argumento porque la API manda las dos cosas en
+campos separados. Si sólo hay fecha, devuelve la fecha sola en lugar de inventar
+`00:00:00`: no es lo mismo "no se registró la hora" que "pasó a medianoche".
+
+Para armar un texto desde una vista, importa el mismo filtro en lugar de
+formatear a mano, así no se separan los formatos:
+
+```python
+from core.templatetags.formato import fecha_hora
+
+messages.success(request, f"Ensamblaje TERMINADO el {fecha_hora(fecha, hora)}.")
+```
+
+### No uses el filtro `date` de Django
+
+Es la trampa de esta sección:
+
+```django
+{{ "2026-07-21"|date:"d-m-Y" }}   ❌ devuelve CADENA VACÍA
+{{ objeto_date|date:"d-m-Y" }}    ✅ '21-07-2026'
+```
+
+Las fechas llegan como **cadena** dentro del JSON de la API, no como objeto
+`date`. El filtro `date` espera un `date`/`datetime`, y cuando recibe otra cosa
+se traga el `AttributeError` y responde `""`. O sea que no truena: **borra la
+fecha de la pantalla sin avisar**, y te enteras cuando alguien pregunta por qué
+la columna salió vacía.
+
+Los filtros de `formato.py` parsean la cadena y, si no pueden, **devuelven el
+valor original** en vez de vaciarlo. Que se vea raro es mejor que que desaparezca.
+También aceptan objetos `date`/`time`, horas sin segundos (`08:00`) y con
+microsegundos.
+
+### Los `<input type="date">` se quedan en ISO
+
+No los toques con los filtros. El estándar HTML exige `AAAA-MM-DD` en el
+atributo `value`; con otro formato el navegador muestra el campo **vacío**.
+
+```django
+<input type="date" name="fecha" value="{{ hoy }}">              ✅ ISO
+<input type="date" name="fecha" value="{{ hoy|fecha }}">        ❌ campo vacío
+```
+
+Lo mismo con los `data-*` que alimentan esos inputs por JavaScript. Antes de
+formatear un `data-*`, revisa a dónde va:
+
+- si termina en `.value` de un input de fecha u hora → **déjalo en ISO**;
+- si termina en `.textContent` → **fórmatealo**, es display.
+
 ## Control de acceso
 
 Hay dos candados y los dos importan:
@@ -287,6 +353,28 @@ cd /home/rodavlas/4Cuatro/Client && ../venv/bin/python manage.py runserver 127.0
     también les abre el resto de las pantallas de personal), o
   - sacar ese endpoint a un módulo propio y más angosto, tipo
     `consultas_empleados`, y dárselo sólo a quien lo necesita (más cerrado).
+- **Falta aplicar el formato de fecha fuera de producción.** Los filtros de
+  `core/templatetags/formato.py` ya están y producción ya los usa, pero el resto
+  de las pantallas siguen pintando la fecha en ISO tal como llega de la API:
+
+  | Módulo | Candidatos por revisar |
+  |---|---:|
+  | `templates/panel_supervisor/` | 33 |
+  | `templates/componentes/` | 5 |
+  | `templates/calidad/` | 5 |
+  | `templates/panel_calidad/` | 4 |
+
+  Es mecánico: `{% load formato %}` y aplicar el filtro. Para encontrarlos:
+
+  ```bash
+  grep -rnE '\{\{ *[a-zA-Z_.]*(fecha|hora)' templates/ | grep -v '|fecha' | grep -v '|hora'
+  ```
+
+  Ojo: ese grep marca **candidatos**, no pendientes. También caza los
+  `<input type="date" value="...">` y los `data-*` que los alimentan, que deben
+  quedarse en ISO. De hecho corre en producción, que ya está terminado, y
+  devuelve 5 hits: los 5 son ISO correcto. Revisa cada uno antes de cambiarlo.
+
 - **Embalaje**, **Trazabilidad** y **Reportes** están en los sidebars con
   `href="#"`: todavía no tienen pantalla.
 - El panel de calidad sólo tiene inspecciones. El rol `OPCALI` también trae

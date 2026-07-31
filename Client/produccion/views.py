@@ -7,15 +7,22 @@ from django.shortcuts import render, redirect
 from django.views import generic
 
 from core.api import get, lista, objeto
+from core.templatetags.formato import fecha_hora
 
 from .forms import get_choices_lineas_paro
 
 # URL base de la API (Servicios). Igual que en home/views.py y componentes/views.py.
 API = "http://127.0.0.1:8000/api"
 
-# Estados de laptop que YA no admiten registrar ensamblaje:
-# EMBALA = Embalada, APROV = Aprobada (ya pasó calidad, va camino a embalaje).
-ESTADOS_LAPTOP_EXCLUIDOS = {"EMBALA", "APROV"}
+# Estados en los que la laptop ya cerró su ciclo productivo: ni admite un
+# ensamblaje nuevo ni se le pueden quitar piezas.
+#   APROV  = Aprobada  (ya pasó calidad, va camino a embalaje)
+#   RECHA  = Rechazada (salió de la línea)
+#   EMBALA = Embalada  (terminada)
+# Es la misma lista que bloquea el trigger
+# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql): si aquí se
+# ofreciera una de esas laptops, el registro tronaría hasta la base de datos.
+ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
 
 # Estados de componente.
 EDO_COMP_DISPONIBLE = "EDC001"
@@ -69,12 +76,13 @@ def _mensaje_api(response):
 
 
 def _laptops_disponibles(headers):
-    """Laptops que todavía pueden recibir ensamblaje (no embaladas ni ya aprobadas)."""
+    """Laptops que todavía pueden recibir ensamblaje: quedan fuera las que ya
+    cerraron su proceso (aprobadas, rechazadas y embaladas)."""
     laptops = _json(f"{API}/produccion/laptops/", headers)
     if not isinstance(laptops, list):
         return []
     return [l for l in laptops
-            if l.get("estado_codigo") not in ESTADOS_LAPTOP_EXCLUIDOS]
+            if l.get("estado_codigo") not in ESTADOS_LAPTOP_FINALIZADOS]
 
 
 def _bom(headers, modelo_laptop):
@@ -290,8 +298,9 @@ def ensamblajeRegistrarView(request):
             if cierre.status_code in (200, 202):
                 messages.success(
                     request,
-                    f"Ensamblaje #{numero_registro} TERMINADO el {fecha_hoy} a las "
-                    f"{hora_ahora} (se agregaron {montados} componente(s))."
+                    f"Ensamblaje #{numero_registro} TERMINADO el "
+                    f"{fecha_hora(fecha_hoy, hora_ahora)} "
+                    f"(se agregaron {montados} componente(s))."
                 )
                 return redirect('ensamblaje-registrar')
             messages.error(request, "Se registraron las piezas pero no se pudo marcar el fin.")
@@ -437,8 +446,8 @@ def _avance_ensamblaje(registros):
             "estado": "proceso",
             "texto": f"En proceso #{abierto.get('numero')}",
             "clase": "text-bg-warning",
-            "detalle": f"Inició {abierto.get('fecha_inicio') or '—'} "
-                       f"{abierto.get('hora_inicio') or ''}".strip(),
+            "detalle": "Inició " + (fecha_hora(abierto.get("fecha_inicio"),
+                                               abierto.get("hora_inicio")) or "—"),
         }
 
     cerrados = [r for r in registros if r.get("fecha_fin")]
@@ -448,8 +457,8 @@ def _avance_ensamblaje(registros):
             "estado": "terminado",
             "texto": f"Terminado #{ultimo.get('numero')}",
             "clase": "text-bg-success",
-            "detalle": f"Terminó {ultimo.get('fecha_fin')} "
-                       f"{ultimo.get('hora_fin') or ''}".strip(),
+            "detalle": "Terminó " + (fecha_hora(ultimo.get("fecha_fin"),
+                                                ultimo.get("hora_fin")) or "—"),
         }
 
     return {
@@ -622,10 +631,9 @@ def ordenProduccionDetalleView(request, folio):
 #   LAPTOPS
 # 
 
-# Estados en los que la laptop ya cerró su ciclo productivo y no se le deben
-# quitar piezas. Es el mismo criterio del trigger
-# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql).
-ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
+# ESTADOS_LAPTOP_FINALIZADOS está declarado arriba del archivo: lo comparten el
+# selector de ensamblaje (no ofrece esas laptops) y el detalle (no deja quitarles
+# componentes). Es una sola lista para que no se desincronicen.
 
 # Estado con el que nace una laptop.
 EDO_LAPTOP_REGISTRADA = "REGIS"

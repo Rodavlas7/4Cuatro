@@ -1,219 +1,254 @@
 {% extends 'panel_admin/base.html' %}
 
+{% block topbar_titulo %}Producción{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'ordenes-produccion-lista' %}">Producción</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Registro de Laptops</li>
+{% endblock %}
+
 {% block title %}Laptops{% endblock %}
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Laptops</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg me-1"></i> Nueva laptop
-    </button>
-</div>
+<div class="wrap">
 
-<!-- ...................................................................
-     F I L T R O S
-...................................................................... -->
-<form method="GET" class="card p-3 mb-3 bg-white">
-    <div class="row g-3">
-
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Buscar</label>
-            <input type="text" name="q" class="form-control"
-                   value="{{ filtros.q }}"
-                   placeholder="Número o num. de serie">
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
+        
+        <!-- ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Registro de Laptops</h4>
+                <p class="text-muted small mb-0">Consulta y gestiona el estado individual de cada equipo fabricado.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                    <i class="bi bi-plus-lg"></i> Nueva laptop
+                </button>
+            </div>
         </div>
 
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Estado</label>
-            <select name="estado" class="form-select">
-                <option value="">— Todos —</option>
-                {% for e in estados %}
-                <option value="{{ e.codigo }}" {% if filtros.estado == e.codigo %}selected{% endif %}>
-                    {{ e.nombre }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3">
+            <form method="GET">
+                <div class="row g-3 mb-3">
+                    
+                    <!-- Fila 1 de filtros -->
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" value="{{ filtros.q }}" placeholder="Número o num. serie...">
+                        </div>
+                    </div>
 
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Modelo</label>
-            <select name="modelo" class="form-select">
-                <option value="">— Todos —</option>
-                {% for m in modelos %}
-                <option value="{{ m.codigo }}" {% if filtros.modelo == m.codigo %}selected{% endif %}>
-                    {{ m.codigo }} — {{ m.nombre }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
+                    <div class="col-md-4 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Estado</label>
+                        <select name="estado" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for e in estados %}
+                            <option value="{{ e.codigo }}" {% if filtros.estado == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Línea</label>
-            <select name="linea" class="form-select">
-                <option value="">— Todas —</option>
-                {% for l in lineas %}
-                <option value="{{ l.codigo }}" {% if filtros.linea == l.codigo %}selected{% endif %}>
-                    {{ l.codigo }} — {{ l.nombre }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
+                    <div class="col-md-4 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Modelo</label>
+                        <select name="modelo" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for m in modelos %}
+                            <option value="{{ m.codigo }}" {% if filtros.modelo == m.codigo %}selected{% endif %}>{{ m.codigo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Lote</label>
-            <select name="lote" class="form-select">
-                <option value="">— Todos —</option>
-                {% for lo in lotes %}
-                <option value="{{ lo.codigo }}" {% if filtros.lote == lo.codigo %}selected{% endif %}>
-                    {{ lo.codigo }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
+                    <div class="col-md-4 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Línea</label>
+                        <select name="linea" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todas —</option>
+                            {% for l in lineas %}
+                            <option value="{{ l.codigo }}" {% if filtros.linea == l.codigo %}selected{% endif %}>{{ l.codigo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Orden de producción</label>
-            <select name="orden" class="form-select">
-                <option value="">— Todas —</option>
-                {% for o in ordenes %}
-                <option value="{{ o.folio }}" {% if filtros.orden == o.folio|stringformat:"s" %}selected{% endif %}>
-                    #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }} ({{ o.estado_nombre }})
-                </option>
-                {% endfor %}
-            </select>
-        </div>
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Orden de Producción</label>
+                        <select name="orden" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todas —</option>
+                            {% for o in ordenes %}
+                            <option value="{{ o.folio }}" {% if filtros.orden == o.folio|stringformat:"s" %}selected{% endif %}>
+                                #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-    </div>
+                </div>
 
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <span class="text-muted small">
-            {% if hay_filtros %}
-                Mostrando <strong>{{ mostradas }}</strong> de {{ total }} laptops.
-            {% else %}
-                {{ total }} laptop{{ total|pluralize:"s" }} registrada{{ total|pluralize:"s" }}.
-            {% endif %}
-        </span>
-        <div class="d-flex gap-2">
-            {% if hay_filtros %}
-            <a href="{% url 'laptops-lista' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-x-lg me-1"></i> Limpiar
-            </a>
-            {% endif %}
-            <button type="submit" class="btn btn-outline-primary">
-                <i class="bi bi-funnel me-1"></i> Filtrar
-            </button>
-        </div>
-    </div>
-</form>
-
-
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>#</th>
-                <th>Num. Serie</th>
-                <th>Descripción</th>
-                <th>Modelo</th>
-                <th>Orden</th>
-                <th>Línea</th>
-                <th>Lote</th>
-                <th>Estado</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for l in laptops %}
-            <tr>
-                <td><a href="{% url 'laptop-detalle' l.numero %}">{{ l.numero }}</a></td>
-                <td>
-                    <span class="font-monospace small">{{ l.num_serie|default:"—" }}</span>
-                </td>
-                <td>{{ l.descripcion|default:"—" }}</td>
-                <td>{{ l.modelo_nombre|default:"—" }}</td>
-                <td>
-                    {% if l.orden_folio %}
-                    <a href="{% url 'orden-produccion-detalle' l.orden_folio %}">#{{ l.orden_folio }}</a>
-                    {% else %}—{% endif %}
-                </td>
-                <td>{{ l.linea_nombre|default:"—" }}</td>
-                <td>{{ l.lote_codigo|default:"—" }}</td>
-                <td>
-                    <span class="badge
-                        {% if l.estado_codigo == 'EMBALA' %}text-bg-success
-                        {% elif l.estado_codigo == 'APROV' %}text-bg-primary
-                        {% elif l.estado_codigo == 'RECHA' %}text-bg-danger
-                        {% elif l.estado_codigo == 'PENSAM' %}text-bg-warning
-                        {% else %}text-bg-light{% endif %}">
-                        {{ l.estado_nombre|default:"—" }}
+                <!-- Resumen y Botones -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 pt-3 border-top gap-3">
+                    <span class="text-muted small">
+                        {% if hay_filtros %}
+                            <i class="bi bi-funnel-fill text-primary me-1"></i> Mostrando <strong class="text-dark">{{ mostradas }}</strong> de {{ total }} laptops.
+                        {% else %}
+                            <i class="bi bi-laptop text-secondary me-1"></i> {{ total }} laptop{{ total|pluralize:"s" }} registrada{{ total|pluralize:"s" }}.
+                        {% endif %}
                     </span>
-                </td>
-                <td class="text-end">
-                    <a href="{% url 'laptop-detalle' l.numero %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-pencil-square"></i> Abrir
-                    </a>
-
-                    {% if l.estado_codigo == 'RECHA' %}
-                        <button type="button" class="btn btn-sm btn-outline-danger" disabled
-                                title="Ya está rechazada">
-                            <i class="bi bi-x-lg"></i>
+                    <div class="d-flex gap-2">
+                        {% if hay_filtros %}
+                        <a href="{% url 'laptops-lista' %}" class="btn btn-white border btn-sm py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-x-lg text-danger"></i> Limpiar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-filter"></i> Filtrar resultados
                         </button>
-                    {% else %}
-                        <form method="POST" action="{% url 'laptop-rechazar' l.numero %}" class="d-inline"
-                              onsubmit="return confirm('¿Marcar la laptop #{{ l.numero }} como Rechazada? No se borra el registro.');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Rechazar laptop">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="9" class="text-center text-muted py-4">
-                {% if hay_filtros %}
-                    Ninguna laptop coincide con los filtros.
-                {% else %}
-                    No hay laptops registradas.
-                {% endif %}
-            </td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">#</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Identificación</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo y Orden</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Ubicación (Línea/Lote)</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in laptops %}
+                    <tr>
+                        <td class="ps-4">
+                            <a href="{% url 'laptop-detalle' l.numero %}" class="text-decoration-none">
+                                <span class="badge-id text-primary">{{ l.numero }}</span>
+                            </a>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-upc-scan text-secondary fs-5"></i>
+                                <div>
+                                    <div class="font-monospace fw-bold text-dark">{{ l.num_serie|default:"—" }}</div>
+                                    <div class="text-muted small text-truncate" style="max-width: 200px; font-size: 11px;" title="{{ l.descripcion|default:'' }}">
+                                        {{ l.descripcion|default:"Sin descripción" }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ l.modelo_nombre|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">
+                                {% if l.orden_folio %}
+                                    <a href="{% url 'orden-produccion-detalle' l.orden_folio %}" class="text-decoration-none text-muted hover-primary">
+                                        <i class="bi bi-link-45deg"></i> Orden #{{ l.orden_folio }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Sin orden</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">{{ l.linea_nombre|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;"><i class="bi bi-box me-1"></i>Lote: {{ l.lote_codigo|default:"—" }}</div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold
+                                {% if l.estado_codigo == 'EMBALA' %}bg-success-subtle text-success border border-success-subtle
+                                {% elif l.estado_codigo == 'APROV' %}bg-primary-subtle text-primary border border-primary-subtle
+                                {% elif l.estado_codigo == 'RECHA' %}bg-danger-subtle text-danger border border-danger-subtle
+                                {% elif l.estado_codigo == 'PENSAM' %}bg-warning-subtle text-warning border border-warning-subtle
+                                {% else %}bg-light text-secondary border border-secondary-subtle{% endif %}">
+                                <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ l.estado_nombre|default:"—" }}
+                            </span>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <!-- ABRIR DETALLE -->
+                                <a href="{% url 'laptop-detalle' l.numero %}" class="btn text-primary" title="Ver Detalles">
+                                    <i class="bi bi-list-ul"></i>
+                                </a>
+
+                                <!-- RECHAZAR LAPTOP -->
+                                {% if l.estado_codigo == 'RECHA' %}
+                                    <button type="button" class="btn text-muted" disabled title="Ya está rechazada">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn text-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalRechazar" 
+                                        data-numero="{{ l.numero }}"
+                                        data-serie="{{ l.num_serie|default:'Sin serie' }}"
+                                        title="Rechazar laptop">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-laptop text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            {% if hay_filtros %}
+                                Ninguna laptop coincide con los filtros de búsqueda.
+                            {% else %}
+                                No hay laptops registradas en el sistema.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
+<!-- OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO -->
 
 <!-- MODAL: CREAR -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <form method="POST" action="{% url 'laptops-lista' %}">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form method="POST" action="{% url 'laptops-lista' %}" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nueva laptop</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nueva Laptop</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
 
                     {% if not ordenes_abiertas %}
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        No hay órdenes de producción <strong>Pendientes</strong> ni
-                        <strong>En Proceso</strong>. Registra una orden antes de dar
-                        de alta laptops.
+                    <div class="alert bg-warning-subtle text-warning-emphasis border border-warning-subtle d-flex gap-2">
+                        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                        <div>
+                            No hay órdenes de producción <strong>Pendientes</strong> ni <strong>En Proceso</strong>. 
+                            Debes registrar o activar una orden antes de dar de alta laptops.
+                        </div>
                     </div>
                     {% endif %}
 
-                    <div class="row g-3">
-
+                    <div class="row g-3 mb-3">
                         <div class="col-12">
-                            <label class="form-label">
-                                Orden de producción <span class="text-danger">*</span>
-                            </label>
-                            <select name="orden" id="crear_orden" class="form-select" required
-                                    {% if not ordenes_abiertas %}disabled{% endif %}>
-                                <option value="">— Selecciona la orden —</option>
+                            <label class="form-label small fw-medium">Orden de producción <span class="text-danger">*</span></label>
+                            <select name="orden" id="crear_orden" class="form-select" required {% if not ordenes_abiertas %}disabled{% endif %}>
+                                <option value="">— Selecciona la orden a la que pertenece —</option>
                                 {% for o in ordenes_abiertas %}
                                 <option value="{{ o.folio }}"
                                         data-modelo="{{ o.modelo_nombre|default:'sin modelo' }}"
@@ -223,56 +258,77 @@
                                 {% endfor %}
                             </select>
                         </div>
+                    </div>
 
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Modelo</label>
-                            <input type="text" id="crear_modelo" class="form-control"
-                                   value="—" disabled>
+                            <label class="form-label small fw-medium text-muted">Modelo (Heredado)</label>
+                            <input type="text" id="crear_modelo" class="form-control bg-light" value="—" disabled>
                         </div>
-
                         <div class="col-md-6">
-                            <label class="form-label">Lote</label>
-                            <input type="text" id="crear_lote" class="form-control"
-                                   value="—" disabled>
+                            <label class="form-label small fw-medium text-muted">Lote (Heredado)</label>
+                            <input type="text" id="crear_lote" class="form-control bg-light" value="—" disabled>
                         </div>
+                    </div>
 
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Núm. de serie</label>
-                            <input type="text" name="num_serie" class="form-control"
-                                   value="{{ serie_sugerida }}" maxlength="50">
-                            <div class="form-text">
-                                Provisional. Calidad la reemplaza por la definitiva
-                                (TP-AAAAMMDD-…) al aprobar la laptop.
+                            <label class="form-label small fw-medium">Núm. de serie provisional</label>
+                            <input type="text" name="num_serie" class="form-control font-monospace" value="{{ serie_sugerida }}" maxlength="50">
+                            <div class="form-text" style="font-size: 11px;">
+                                Calidad reemplazará esto por la definitiva (TP-AAAAMMDD-...) al aprobar.
                             </div>
                         </div>
-
                         <div class="col-md-6">
-                            <label class="form-label">Línea</label>
+                            <label class="form-label small fw-medium">Línea de Ensamblaje</label>
                             <select name="linea" class="form-select">
-                                <option value="">— Sin línea —</option>
+                                <option value="">— Sin línea asignada —</option>
                                 {% for l in lineas %}
                                 <option value="{{ l.codigo }}">{{ l.codigo }} — {{ l.nombre }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-
-                        <div class="col-12">
-                            <label class="form-label">Descripción</label>
-                            <input type="text" name="descripcion" class="form-control" maxlength="256">
-                        </div>
-
                     </div>
 
-                    <div class="alert alert-secondary mt-3 mb-0 py-2 small">
-                        <i class="bi bi-info-circle me-1"></i>
-                        La laptop se registra en estado <strong>Registrada</strong>. Si es
-                        la primera de su orden, la orden pasará sola a
-                        <strong>En Proceso</strong>.
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Descripción / Notas adicionales</label>
+                        <input type="text" name="descripcion" class="form-control" maxlength="256" placeholder="Opcional">
+                    </div>
+
+                    <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start mt-4">
+                        <i class="bi bi-info-circle-fill text-primary mt-1"></i>
+                        <div>
+                            La laptop se registrará en estado <strong>Registrada</strong>. Si es la primera de su orden, la orden pasará automáticamente a <strong>En Proceso</strong>.
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm" {% if not ordenes_abiertas %}disabled{% endif %}>Guardar laptop</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: RECHAZAR LAPTOP -->
+<div class="modal fade" id="modalRechazar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" id="formRechazar" action="">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-octagon" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold">¿Rechazar Laptop?</h5>
+                    <p class="text-muted small mb-4">
+                        La laptop con Num. Serie <strong id="rechazar_serie" class="text-dark font-monospace"></strong> cambiará su estado a Rechazada permanentemente. El registro no se borrará.
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger shadow-sm w-50">Rechazar</button>
+                    </div>
                 </div>
             </div>
         </form>
@@ -280,9 +336,7 @@
 </div>
 
 <script>
-// El modelo y el lote no se capturan: los hereda de la orden. Aquí solo se
-// reflejan para que se vea qué se va a guardar; quien los asigna de verdad es
-// la API (LaptopSerializer.validate).
+// Lógica para heredar Modelo y Lote en el Formulario de Crear
 var selOrden = document.getElementById('crear_orden');
 
 if (selOrden) {
@@ -291,6 +345,22 @@ if (selOrden) {
         var hayOrden = !!selOrden.value;
         document.getElementById('crear_modelo').value = hayOrden ? op.dataset.modelo : '—';
         document.getElementById('crear_lote').value = hayOrden ? op.dataset.lote : '—';
+    });
+}
+
+// MODAL: Rechazar Laptop
+const modalRechazar = document.getElementById('modalRechazar');
+if (modalRechazar) {
+    modalRechazar.addEventListener('show.bs.modal', function (event) {
+        const btn = event.relatedTarget;
+        const numero = btn.dataset.numero; // Se usa para la URL de Django
+        const serie = btn.dataset.serie;   // Se usa para mostrar al usuario
+        
+        // Inyectar la URL de acción dinámicamente
+        document.getElementById('formRechazar').action = "/produccion/laptops/rechazar/" + numero + "/";
+        
+        // Mostrar el número de serie en el modal
+        document.getElementById('rechazar_serie').textContent = serie;
     });
 }
 </script>
