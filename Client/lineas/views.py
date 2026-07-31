@@ -70,6 +70,7 @@ def lineaEditarView(request, codigo):
         headers = _headers(request)
 
         payload = {
+            "codigo": codigo,
             "nombre": request.POST.get("nombre") or None,
             "descripcion": request.POST.get("descripcion") or None,
             "estado": request.POST.get("estado") or None,
@@ -178,6 +179,7 @@ def estacionEditarView(request, codigo):
         headers = _headers(request)
 
         payload = {
+            "codigo": codigo,
             "nombre": request.POST.get("nombre") or None,
             "descripcion": request.POST.get("descripcion") or None,
             "linea": request.POST.get("linea") or None,
