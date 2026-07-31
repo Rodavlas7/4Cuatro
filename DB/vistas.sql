@@ -66,10 +66,14 @@ GROUP BY e.codigo, e.nombre, e.descripcion, e.linea, l.nombre, e.activo;
 -- VISTA: vista_ordenes_produccion
 --
 -- Objetivo : Consulta general del módulo de producción — une la orden con
---            el nombre de su estado (edo_produccion) y el nombre de su
---            modelo de laptop (modelo_laptop). Las cantidades planificada
---            y producida ya vienen guardadas en la propia orden, así que
---            no requieren agregación.
+--            el nombre de su estado (edo_produccion), el nombre de su
+--            modelo de laptop (modelo_laptop) y su lote (lote_laptop). Las
+--            cantidades planificada y producida ya vienen guardadas en la
+--            propia orden, así que no requieren agregación.
+--
+--            El lote se expone aquí porque las laptops lo heredan de su orden
+--            al registrarse; el cliente lo necesita para mostrarlo sin pedir
+--            el catálogo aparte.
 
 CREATE VIEW vista_ordenes_produccion AS
 SELECT
@@ -81,10 +85,13 @@ SELECT
     op.cant_planificada,
     op.cant_producida,
     op.estado           AS estado_codigo,
-    ep.nombre            AS estado_nombre
+    ep.nombre            AS estado_nombre,
+    op.lote              AS lote_codigo,
+    ll.fecha             AS lote_fecha
 FROM orden_produccion op
 LEFT JOIN modelo_laptop ml ON ml.codigo = op.modelo_laptop
-LEFT JOIN edo_produccion ep ON ep.codigo = op.estado;
+LEFT JOIN edo_produccion ep ON ep.codigo = op.estado
+LEFT JOIN lote_laptop ll ON ll.codigo = op.lote;
 
 
 -- VISTA: vista_paros
@@ -172,29 +179,64 @@ LEFT JOIN edo_componente    ec ON ec.codigo = c.estado;
 --            usuario y el estado (empleado y usuario), para no resolver
 --            esos joins en cada consulta desde el backend.
 
-CREATE VIEW vista_empleados AS
+CREATE OR REPLACE VIEW vista_empleados AS
 SELECT
     e.numero,
-    CONCAT(e.nombrePila, ' ', e.primerApell, ' ', IFNULL(e.segundoApell, '')) AS nombre_completo,
+    CONCAT(
+        e.nombrePila, ' ',
+        e.primerApell, ' ',
+        IFNULL(e.segundoApell, '')
+    ) AS nombre_completo,
+
     e.rol AS rol_codigo,
     r.nombre AS rol_nombre,
+
     e.turno AS turno_codigo,
     t.nombre AS turno_nombre,
+
     u.usuario,
+
     CASE
         WHEN u.numero IS NULL THEN 'Sin usuario'
         WHEN u.estado = 1 THEN 'Activo'
         ELSE 'Inactivo'
     END AS estado_usuario,
+
     CASE
         WHEN e.activo = 1 THEN 'Activo'
         ELSE 'Inactivo'
-    END AS estado_empleado
+    END AS estado_empleado,
+
+    l.codigo AS linea_codigo,
+    l.nombre AS linea_nombre,
+
+    es.codigo AS estacion_codigo,
+    es.nombre AS estacion_nombre
+
 FROM empleado e
 
-LEFT JOIN rol r ON r.codigo = e.rol
-LEFT JOIN turno t ON t.codigo = e.turno
-LEFT JOIN usuario u ON u.empleado = e.numero;
+LEFT JOIN rol r
+    ON e.rol = r.codigo
+
+LEFT JOIN turno t
+    ON e.turno = t.codigo
+
+LEFT JOIN usuario u
+    ON u.empleado = e.numero
+
+LEFT JOIN empleado_linea el
+    ON el.empleado = e.numero
+   AND el.fecha_fin IS NULL
+
+LEFT JOIN linea l
+    ON l.codigo = el.linea
+
+LEFT JOIN empleado_estacion ee
+    ON ee.empleado = e.numero
+   AND ee.fecha_fin IS NULL
+
+LEFT JOIN estacion es
+    ON es.codigo = ee.estacion;
 
 
 

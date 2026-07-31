@@ -1,0 +1,19 @@
+{% extends 'base/base_layout.html' %}
+{% load static %}
+
+{% comment %}
+   BASE DEL PANEL DE ADMINISTRADOR
+
+   Todas las pantallas del admin extienden de aquí. Este archivo es del equipo
+   del panel admin: lo que le pongas sólo lo ven las pantallas de este panel.
+{% endcomment %}
+
+{% block title %}{% block titulo_pagina %}Administración{% endblock %} · TraceX{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/panel_admin.css' %}">
+{% endblock %}
+
+{% block sidebar %}
+    {% include 'panel_admin/_sidebar.html' %}
+{% endblock %}

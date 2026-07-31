@@ -9,4 +9,6 @@ urlpatterns = [
     path("estaciones/<str:codigo>/", EstacionDetailAPIView.as_view(), name="estacion-detail"),
     path("mod/<str:codigo>/", LineaModifyAPIView.as_view(), name="linea-modify"),
     path("<str:codigo>/", LineaDetailAPIView.as_view(), name="linea-detail"),
+    path("lineas/estaciones/", ListaEstacionesAPIView.as_view(), name="linea-estacion"),
+    path("lineas/activas/", LineasActivasAPIView.as_view(), name="lineas-activas"),
 ]

@@ -45,14 +45,7 @@ class ListEmpleadoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VistaEmpleado
-        fields = (
-            "numero",
-            "nombre_completo",
-            "rol_nombre",
-            "turno_nombre",
-            "estado_usuario",
-            "estado_empleado",
-        )
+        fields = "__all__"
 
 class DetailEmpleadoSerializer(serializers.ModelSerializer):
 

@@ -1,0 +1,190 @@
+{% extends 'panel_admin/base.html' %}
+
+{% block topbar_titulo %}Planta{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'lineas-lista' %}">Líneas de Planta</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Estaciones de Trabajo</li>
+{% endblock %}
+
+
+{% block title %}Estaciones de Trabajo{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Estaciones de Trabajo</h2>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+        <i class="bi bi-plus-lg me-1"></i> Nueva estación
+    </button>
+</div>
+
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item"><a class="nav-link" href="{% url 'lineas-lista' %}">Líneas</a></li>
+    <li class="nav-item"><a class="nav-link active" href="{% url 'estaciones-lista' %}">Estaciones</a></li>
+</ul>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle bg-white">
+        <thead class="table-light">
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Línea</th>
+                <th>Empleados</th>
+                <th>Activo</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in estaciones %}
+            <tr>
+                <td>{{ e.codigo }}</td>
+                <td>{{ e.nombre|default:"—" }}</td>
+                <td>{{ e.descripcion|default:"—" }}</td>
+                <td>{{ e.linea_nombre|default:"—" }}</td>
+                <td>{{ e.total_empleados|default:"0" }}</td>
+                <td>
+                    {% if e.activo %}
+                        <span class="badge text-bg-success">Activa</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">Inactiva</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalEditar"
+                        data-codigo="{{ e.codigo }}"
+                        data-nombre="{{ e.nombre|default:'' }}"
+                        data-descripcion="{{ e.descripcion|default:'' }}"
+                        data-linea="{{ e.linea_codigo|default:'' }}"
+                        data-activo="{{ e.activo|yesno:'true,false' }}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+
+                    <form method="POST" action="{% url 'estacion-baja' e.codigo %}" class="d-inline" onsubmit="return confirm('¿Desactivar esta estación?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No hay estaciones registradas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!-- MODAL: CREAR -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{% url 'estaciones-lista' %}">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva estación de trabajo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código</label>
+                        <input type="text" name="codigo" class="form-control" maxlength="8" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" maxlength="32">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" name="descripcion" class="form-control" maxlength="128">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Línea</label>
+                        <select name="linea" class="form-select">
+                            <option value="">— Selecciona —</option>
+                            {% for l in lineas %}
+                            <option value="{{ l.codigo }}">{{ l.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="activo" class="form-check-input" id="crear_activo" checked>
+                        <label class="form-check-label" for="crear_activo">Activa</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- MODAL: EDITAR -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formEditar" action="">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar estación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código</label>
+                        <input type="text" id="edit_codigo" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" id="edit_nombre" class="form-control" maxlength="32">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" name="descripcion" id="edit_descripcion" class="form-control" maxlength="128">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Línea</label>
+                        <select name="linea" id="edit_linea" class="form-select">
+                            <option value="">— Selecciona —</option>
+                            {% for l in lineas %}
+                            <option value="{{ l.codigo }}">{{ l.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="activo" class="form-check-input" id="edit_activo">
+                        <label class="form-check-label" for="edit_activo">Activa</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formEditar').action = "/lineas/estaciones/editar/" + btn.dataset.codigo + "/";
+    document.getElementById('edit_codigo').value = btn.dataset.codigo;
+    document.getElementById('edit_nombre').value = btn.dataset.nombre;
+    document.getElementById('edit_descripcion').value = btn.dataset.descripcion;
+    document.getElementById('edit_linea').value = btn.dataset.linea;
+    document.getElementById('edit_activo').checked = (btn.dataset.activo === 'true');
+});
+</script>
+
+{% endblock %}

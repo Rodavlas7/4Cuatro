@@ -1,0 +1,591 @@
+{% extends 'panel_admin/base.html' %}
+
+{% block topbar_titulo %}Personal{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Personal</li>
+{% endblock %}
+
+{% block title %}Empleados{% endblock %}
+
+{% block content %}
+
+<div class="wrap">
+
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
+        
+        <!-- 1. ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <!--<span class="emp-eyebrow"><span class="dot"></span> Recursos Humanos</span>-->
+                <h4 class="fw-bold text-dark mb-1">Empleados</h4>
+                <p class="text-muted small mb-0">Consulta, filtra y administra el personal registrado en planta.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                    <i class="bi bi-plus-lg"></i> Nuevo empleado
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. FILTROS -->
+        <div class="emp-toolbar px-4 py-3">
+            <form method="GET">
+                <div class="row g-3 align-items-end">
+
+                    <!-- Buscar (4 cols en lg) -->
+                    <div class="col-12 col-md-12 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="buscar" class="form-control border-start-0 ps-1 py-2" placeholder="Buscar por número, nombre..." value="{{ buscar|default:'' }}">
+                        </div>
+                    </div>
+
+                    <!-- Selects (2 cols en lg c/u) -->
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Rol</label>
+                        <select name="rol" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">Todos</option>
+                            {% for codigo, nombre in roles %}
+                                <option value="{{ codigo }}" {% if rol == codigo %}selected{% endif %}>{{ nombre }}</option>
+                            {% empty %}
+                                <option>Operador</option>
+                                <option>Supervisor</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Estado</label>
+                        <select name="estado" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">Todos</option>
+                            <option value="Activo" {% if estado == "Activo" %}selected{% endif %}>Activo</option>
+                            <option value="Inactivo" {% if estado == "Inactivo" %}selected{% endif %}>Inactivo</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Línea</label>
+                        <select name="linea" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">Todas</option>
+                            {% for codigo, nombre in lineas %}
+                                <option value="{{ codigo }}" {% if linea == codigo %}selected{% endif %}>{{ nombre }}</option>
+                            {% empty %}
+                                <option>Línea 1</option>
+                                <option>Línea 2</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="col-6 col-md-3 col-lg-2 d-flex gap-2">
+                        <button class="btn btn-dark btn-sm py-2 w-100 fw-medium d-flex align-items-center justify-content-center gap-2" type="submit" title="Filtrar">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                        {% if buscar or rol or estado or linea %}
+                            <a href="{% url 'lista_empleados' %}" class="btn btn-outline-danger btn-sm py-2 px-3 d-flex align-items-center justify-content-center" title="Limpiar filtros">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Número</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Empleado</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Turno</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Ubicación</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in empleados %}
+                    <tr>
+                        <td class="ps-4"><span class="badge-id">#{{ e.numero }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <!--<div class="bg-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 35px; height: 35px; font-size: 14px;">
+                                    {{ e.nombre_completo|first|upper|default:"U" }}
+                                </div>-->
+                                <div>
+                                    <div class="fw-semibold text-dark">{{ e.nombre_completo|default:"—" }}</div>
+                                    <div class="text-secondary small" style="font-size: 11px;">{{ e.rol_nombre|default:"—" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium"><i class="bi bi-clock me-1 text-muted"></i> {{ e.turno_nombre|default:"—" }}</div>
+                        </td>
+                        <td>
+                            <div class="text-dark small">{{ e.linea_nombre|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">{{ e.estacion_nombre|default:"—" }}</div>
+                        </td>
+                        <td class="text-center">
+                            {% if e.estado_empleado == "Activo" %}
+                                <span class="status-pill active">
+                                    <span class="status-dot"></span> Activo
+                                </span>
+                            {% else %}
+                                <span class="status-pill inactive">
+                                    <span class="status-dot"></span> Inactivo
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1">
+                                <!-- DETALLE -->
+                                <button type="button" class="btn text-info" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalDetalle" 
+                                    data-numero="{{ e.numero }}"
+                                    data-nombre="{{ e.nombre_completo|default:'' }}"
+                                    data-rol="{{ e.rol_nombre|default:'' }}"
+                                    data-turno="{{ e.turno_nombre|default:'' }}"
+                                    data-linea="{{ e.linea_nombre|default:'' }}"
+                                    data-estacion="{{ e.estacion_nombre|default:'' }}"
+                                    data-estado="{{ e.estado_empleado|default:'' }}"
+                                    title="Ver detalle">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <!-- EDITAR -->
+                                <button type="button" class="btn text-secondary" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalEditar" 
+                                    data-numero="{{ e.numero }}"
+                                    data-nombrepila="{{ e.nombrepila|default:'' }}"
+                                    data-primerapell="{{ e.primerapell|default:'' }}"
+                                    data-segundoapell="{{ e.segundoapell|default:'' }}"
+                                    data-rol="{{ e.rol_codigo|default:'' }}"
+                                    data-turno="{{ e.turno_codigo|default:'' }}"
+                                    data-linea="{{ e.linea_codigo|default:'' }}"
+                                    data-lineanombre="{{ e.linea_nombre|default:'' }}"
+                                    data-estacion="{{ e.estacion_codigo|default:'' }}"
+                                    data-estacionnombre="{{ e.estacion_nombre|default:'' }}"
+                                    data-activo="{{ e.estado_empleado|default:'' }}"
+                                    title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <!-- ELIMINAR / REACTIVAR -->
+                                {% if e.estado_empleado == "Activo" %}
+                                    <button type="button" class="btn text-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalEliminar" 
+                                        data-numero="{{ e.numero }}"
+                                        data-nombre="{{ e.nombre_completo }}"
+                                        title="Desactivar">
+                                        <i class="bi bi-person-x"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn text-success" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalReactivar" 
+                                        data-numero="{{ e.numero }}"
+                                        data-nombre="{{ e.nombre_completo }}"
+                                        title="Reactivar">
+                                        <i class="bi bi-person-check"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <!-- EJEMPLO DEMO -->
+                    <tr>
+                        <td class="ps-4"><span class="badge-id">#2607001</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 35px; height: 35px; font-size: 14px;">C</div>
+                                <div>
+                                    <div class="fw-semibold text-dark">Carlos García López</div>
+                                    <div class="text-secondary small" style="font-size: 11px;">Operario Ensamblaje</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium"><i class="bi bi-clock me-1 text-muted"></i> Matutino</div>
+                        </td>
+                        <td>
+                            <div class="text-dark small">Línea A - Ensamblaje</div>
+                            <div class="text-secondary small" style="font-size: 11px;">A1 - Chasis y Touchpad</div>
+                        </td>
+                        <td class="text-center">
+                            <span class="status-pill active"><span class="status-dot"></span> Activo</span>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1">
+                                <button type="button" class="btn text-info" title="Ver detalle"><i class="bi bi-eye"></i></button>
+                                <button type="button" class="btn text-secondary" title="Editar"><i class="bi bi-pencil"></i></button>
+                                <button type="button" class="btn text-danger" title="Desactivar"><i class="bi bi-person-x"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO -->
+
+<!-- MODAL: CREAR -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form method="POST" action="{% url 'empleado-crear' %}" class="needs-validation w-100" novalidate>
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nuevo empleado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-medium">Nombre</label>
+                            <input type="text" name="nombrepila" class="form-control" required>
+                            <div class="invalid-feedback">Obligatorio.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-medium">Primer apellido</label>
+                            <input type="text" name="primerapell" class="form-control" required>
+                            <div class="invalid-feedback">Obligatorio.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-medium">Segundo apellido</label>
+                            <input type="text" name="segundoapell" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Rol</label>
+                            <select name="rol" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for codigo, nombre in roles %}
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">Selecciona un rol.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Turno</label>
+                            <select name="turno" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for codigo, nombre in turnos %}
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">Selecciona un turno.</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Línea</label>
+                            <select name="linea" id="id_linea_crear" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for codigo, nombre in lineas %}
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">Selecciona una línea.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Estación</label>
+                            <select name="estacion" id="id_estacion_crear" class="form-select" required>
+                                <option value="">— Selecciona primero una línea —</option>
+                            </select>
+                            <div class="invalid-feedback">Selecciona una estación.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar empleado</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: DETALLE -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold">Ficha de Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    <div>
+                        <div id="det_nombre" class="fw-bold fs-5 text-dark"></div>
+                        <span id="det_numero" class="badge-id mt-1 d-inline-block"></span>
+                    </div>
+                </div>
+                
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                        <span class="text-muted small fw-medium">Rol</span>
+                        <span id="det_rol" class="fw-semibold text-dark"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                        <span class="text-muted small fw-medium">Turno</span>
+                        <span id="det_turno" class="fw-semibold text-dark"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                        <span class="text-muted small fw-medium">Línea</span>
+                        <span id="det_linea" class="fw-semibold text-dark"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                        <span class="text-muted small fw-medium">Estación</span>
+                        <span id="det_estacion" class="fw-semibold text-dark"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom-0">
+                        <span class="text-muted small fw-medium">Estado</span>
+                        <span id="det_estado" class="fw-semibold text-dark"></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate>
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Editar empleado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted">ID de Empleado</label>
+                        <input type="text" id="edit_numero" class="form-control form-control-sm bg-light w-25" readonly>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-medium">Nombre</label>
+                            <input type="text" name="nombrepila" id="edit_nombrepila" class="form-control" required>
+                            <div class="invalid-feedback">Obligatorio.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-medium">Primer apellido</label>
+                            <input type="text" name="primerapell" id="edit_primerapell" class="form-control" required>
+                            <div class="invalid-feedback">Obligatorio.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-medium">Segundo apellido</label>
+                            <input type="text" name="segundoapell" id="edit_segundoapell" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Rol</label>
+                            <select name="rol" id="edit_rol" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for codigo, nombre in roles %}
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Turno</label>
+                            <select name="turno" id="edit_turno" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                {% for codigo, nombre in turnos %}
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Línea actual</label>
+                            <select name="linea" id="edit_linea" class="form-select">
+                                <option value="">Selecciona una línea</option>
+                                {% for codigo, nombre in lineas %}
+                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Estación actual</label>
+                            <select name="estacion" id="edit_estacion" class="form-select">
+                                <option value="">Selecciona una estación</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: DESACTIVAR -->
+<div class="modal fade" id="modalEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" id="formEliminar" action="">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-circle" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold">¿Desactivar empleado?</h5>
+                    <p class="text-muted small mb-4">El empleado <strong id="del_nombre" class="text-dark"></strong> ya no tendrá acceso ni aparecerá como activo.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger shadow-sm w-50">Desactivar</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: REACTIVAR -->
+<div class="modal fade" id="modalReactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" id="formReactivar" action="">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="text-success mb-3">
+                        <i class="bi bi-person-check" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold">¿Reactivar empleado?</h5>
+                    <p class="text-muted small mb-4">El empleado <strong id="rea_nombre" class="text-dark"></strong> volverá a figurar en las operaciones regulares.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success shadow-sm w-50">Reactivar</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Validación Bootstrap por campo
+(function () {
+  'use strict'
+  var forms = document.querySelectorAll('.needs-validation')
+  Array.prototype.slice.call(forms).forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+
+// Filtro dinámico de estaciones según línea elegida
+function filtrarEstaciones(lineaSelectId, estacionSelectId) {
+    const lineaSelect = document.getElementById(lineaSelectId);
+    const estacionSelect = document.getElementById(estacionSelectId);
+
+    lineaSelect.addEventListener('change', function () {
+        const lineaId = lineaSelect.value;
+        estacionSelect.innerHTML = '<option value="">— Selecciona —</option>';
+
+        if (!lineaId) return;
+
+        fetch("/usuarios/estaciones-por-linea/" + lineaId + "/")
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(est => {
+                    const option = document.createElement('option');
+                    option.value = est.codigo;
+                    option.textContent = est.nombre;
+                    estacionSelect.appendChild(option);
+                });
+            });
+    });
+}
+
+filtrarEstaciones('id_linea_crear', 'id_estacion_crear');
+filtrarEstaciones('edit_linea', 'edit_estacion');
+
+// MODAL: Detalle
+document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('det_numero').textContent = "#" + btn.dataset.numero;
+    document.getElementById('det_nombre').textContent = btn.dataset.nombre;
+    document.getElementById('det_rol').textContent = btn.dataset.rol;
+    document.getElementById('det_turno').textContent = btn.dataset.turno;
+    document.getElementById('det_linea').textContent = btn.dataset.linea || "—";
+    document.getElementById('det_estacion').textContent = btn.dataset.estacion || "—";
+    
+    const estadoSpan = document.getElementById('det_estado');
+    if (btn.dataset.estado === "Activo") {
+        estadoSpan.innerHTML = '<span class="status-pill active"><span class="status-dot"></span> Activo</span>';
+    } else {
+        estadoSpan.innerHTML = '<span class="status-pill inactive"><span class="status-dot"></span> Inactivo</span>';
+    }
+});
+
+// MODAL: Editar
+document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formEditar').action = "/usuarios/empleados/Actualizar/" + btn.dataset.numero + "/";
+    document.getElementById('edit_numero').value = btn.dataset.numero;
+    document.getElementById('edit_nombrepila').value = btn.dataset.nombrepila;
+    document.getElementById('edit_primerapell').value = btn.dataset.primerapell;
+    document.getElementById('edit_segundoapell').value = btn.dataset.segundoapell;
+    document.getElementById('edit_rol').value = btn.dataset.rol;
+    document.getElementById('edit_turno').value = btn.dataset.turno;
+    document.getElementById('edit_linea').value = btn.dataset.linea;
+    const estacionSelect = document.getElementById('edit_estacion');
+    estacionSelect.innerHTML = `<option value="${btn.dataset.estacion}">${btn.dataset.estacionnombre}</option>`;
+});
+
+// MODAL: Desactivar
+document.getElementById('modalEliminar').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formEliminar').action = "/usuarios/empleados/desactivar/" + btn.dataset.numero + "/";
+    document.getElementById('del_nombre').textContent = btn.dataset.nombre;
+});
+
+// MODAL: Reactivar
+document.getElementById('modalReactivar').addEventListener('show.bs.modal', function(event){
+    const btn = event.relatedTarget;
+    document.getElementById('formReactivar').action = "/usuarios/empleados/reactivar/" + btn.dataset.numero + "/";
+    document.getElementById('rea_nombre').textContent = btn.dataset.nombre;
+});
+</script>
+{% endblock %}

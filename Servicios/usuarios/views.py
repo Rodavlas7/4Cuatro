@@ -17,6 +17,8 @@ from usuarios import models, serializers
 from .models import Sesion, Usuario, Empleado, VistaEmpleado, VistaUsuario, EmpleadoEstacion, EmpleadoLinea
 from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleadoSerializer, UpdateEmpleadoSerializer, BajaEmpleadoSerializer
 from usuarios.permissions import TienePermisoModulo
+from .models import Rol, Turno
+from .serializers import RolSerializer, TurnoSerializer
 
 from django.db.models import Q
 #################################
@@ -25,14 +27,35 @@ from django.db.models import Q
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
-│   - Empleado          (FALTA PONER ESTE)
+│   - Empleado         
 │   - Usuario           
-│   - Rol               (NO PONDREMOS)
-│   - Turno             (NO PONDREMOS)
-│   - EmpleadoLinea   (FALTA PONER ESTE)
-│   - EmpleadoEstacion (FALTA PONER ESTE)
+│   - Rol           
+│   - Turno        
+│   - EmpleadoLinea  
+│   - EmpleadoEstacion 
 '''
 # Create your models here.
+
+
+#rol
+class ListaRolesAPIView(APIView):
+    permission_classes = [AllowAny]
+    modulo = "usuarios"
+
+    def get(self, request):
+        roles = Rol.objects.all()
+        serializer = RolSerializer(roles, many=True)
+        return Response(serializer.data)
+
+#turno
+class ListaTurnosAPIView(APIView):
+    permission_classes = [AllowAny]
+    modulo = "usuarios"
+
+    def get(self, request):
+        turnos = Turno.objects.all()
+        serializer = TurnoSerializer(turnos, many=True)
+        return Response(serializer.data)
 
 
 #----------------------------------------------------------------------------------------------
@@ -138,16 +161,19 @@ class LoginAPIView(APIView):
             )
 
         # GENERAR TOKEN
-        # Eliminar sesiones anteriores
-        Sesion.objects.filter(
-            usuario=usuario_db
-        ).delete()
-
         token = token_hex(32)
-        
+
         ahora = timezone.now()
         expiracion = ahora + timedelta(hours=10)
-        
+
+        # Limpiar sólo las sesiones ya vencidas: si se borraran todas, iniciar
+        # sesión en la API tumbaría el token que el cliente ya tenía guardado
+        # (y al revés), porque ambos usan este mismo endpoint.
+        Sesion.objects.filter(
+            usuario=usuario_db,
+            fecha_expiracion__lt=ahora
+        ).delete()
+
         # Crear nueva sesión
         Sesion.objects.create(
             usuario=usuario_db,
@@ -174,8 +200,9 @@ class LoginAPIView(APIView):
 class RegistroUsuarioAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "usuarios"
      
@@ -227,8 +254,9 @@ class RegistroUsuarioAPIView(APIView):
 class ListaUsuariosAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -248,8 +276,9 @@ class ListaUsuariosAPIView(APIView):
 class DetailUsuarioAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -276,9 +305,10 @@ class DetailUsuarioAPIView(APIView):
 class UpdateUsuarioAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
-        ]
+        AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
+    ]
     modulo = "usuarios" 
 
     def put(self, request, numero):
@@ -322,9 +352,10 @@ class UpdateUsuarioAPIView(APIView):
 class BajaUsuarioAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
-        ]
+        AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
+    ]
     modulo = "usuarios" 
 
     def patch(self, request, numero):
@@ -364,9 +395,10 @@ class BajaUsuarioAPIView(APIView):
 class ReactivarUsuarioAPIView(APIView):
 
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
-        ]
+        AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
+    ]
     modulo = "usuarios" 
 
     def patch(self, request, numero):
@@ -412,9 +444,10 @@ class ReactivarUsuarioAPIView(APIView):
 class RegistroEmpleadoAPIView(APIView):
     
     permission_classes = [
-            IsAuthenticated,
-            TienePermisoModulo
-        ]
+        AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
+    ]
     modulo = "empleados" 
 
     @transaction.atomic
@@ -551,8 +584,9 @@ class RegistroEmpleadoAPIView(APIView):
 #. . . . . .  . LISTA
 class ListaEmpleadosAPIView(APIView):
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "empleados"
 
@@ -566,11 +600,14 @@ class ListaEmpleadosAPIView(APIView):
         )
 
         return Response(serializer.data)
+    
+    
 #. . . . . .  . DETAIL
 class DetailEmpleadoAPIView(APIView):
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
     modulo = "empleados"
 
@@ -593,11 +630,30 @@ class DetailEmpleadoAPIView(APIView):
 class UpdateEmpleadoAPIView(APIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "empleados"
+    
+    def get(self, request, numero):
+        try:
+            empleado = Empleado.objects.get(numero=numero)
+        except Empleado.DoesNotExist:
+            return Response(
+                {"mensaje": "Empleado no encontrado"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({
+            "numero": empleado.numero,
+            "nombrepila": empleado.nombrepila,
+            "primerapell": empleado.primerapell,
+            "segundoapell": empleado.segundoapell,
+            "rol": empleado.rol_id,
+            "turno": empleado.turno_id,
+        })
 
 
     def put(self, request, numero):
@@ -706,98 +762,49 @@ class UpdateEmpleadoAPIView(APIView):
 # chavalines, no os preocupeis, es la desactivación de empleado, es decir, cambia el estado activo a False para conservar trazabilidad histórica
 class BajaEmpleadoView(generics.UpdateAPIView):
     permission_classes = [
-                IsAuthenticated,
-                TienePermisoModulo
-            ]
+            AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
+        ]
     modulo = "empleados" 
     queryset = Empleado.objects.all()
     serializer_class = BajaEmpleadoSerializer
     lookup_field = "numero"
     
-#
-
-
-
-#Buscar empleado
-class BuscarEmpleadoView(generics.ListAPIView):
-
-    permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
-    ]
-
-    modulo = "empleados"
-
-    serializer_class = serializers.ListEmpleadoSerializer
-
-
-    def get_queryset(self):
-
-        queryset = Empleado.objects.all()
-
-        buscar = self.request.GET.get("buscar")
-
-
-        if buscar:
-
-            queryset = queryset.filter(
-
-                Q(numero__icontains=buscar) |
-                Q(nombrepila__icontains=buscar) |
-                Q(primerapell__icontains=buscar) |
-                Q(segundoapell__icontains=buscar) |
-                Q(rol__nombre__icontains=buscar) |
-                Q(turno__nombre__icontains=buscar)
-
-            )
-
-
-        return queryset
     
     
-#buscar usuario
-class BuscarUsuarioView(generics.ListAPIView):
 
-    permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
-    ]
+class ReactivarEmpleadoAPIView(APIView):
 
-    modulo = "usuarios"
+    def patch(self, request, numero):
 
+        try:
+            empleado = Empleado.objects.get(numero=numero)
 
-    serializer_class = serializers.ListUsuarioSerializer
+            empleado.activo = True
+            empleado.save()
 
+            return Response({
+                "mensaje": "Empleado reactivado correctamente"
+            }, status=status.HTTP_200_OK)
 
-    def get_queryset(self):
-
-        queryset = Usuario.objects.all()
-
-        buscar = self.request.GET.get("buscar")
-
-
-        if buscar:
-
-            queryset = queryset.filter(
-
-                Q(numero__icontains=buscar) |
-                Q(usuario__icontains=buscar) |
-                Q(empleado__nombrepila__icontains=buscar) |
-                Q(empleado__primerapell__icontains=buscar)
-
-            )
+        except Empleado.DoesNotExist:
+            return Response({
+                "mensaje": "Empleado no encontrado"
+            }, status=status.HTTP_404_NOT_FOUND)
 
 
-        return queryset
+
     
-    
+
     
 #Buscar empleados lineas
 class BuscarEmpleadoLineaView(generics.ListAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -823,6 +830,7 @@ class BuscarEmpleadoLineaView(generics.ListAPIView):
                 Q(linea__nombre__icontains=buscar)
 
             )
+        
 
 
         return queryset
@@ -832,8 +840,9 @@ class BuscarEmpleadoLineaView(generics.ListAPIView):
 class BuscarEmpleadoEstacionView(generics.ListAPIView):
 
     permission_classes = [
-        IsAuthenticated,
-        TienePermisoModulo
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
     ]
 
     modulo = "usuarios"
@@ -862,5 +871,122 @@ class BuscarEmpleadoEstacionView(generics.ListAPIView):
 
             )
 
+
+        return queryset
+    
+
+
+class EmpleadosCalidadPorLineaAPIView(APIView):
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+    modulo = "empleados"
+
+    def get(self, request, linea_id):
+        asignaciones = EmpleadoLinea.objects.filter(
+            linea_id=linea_id,
+            fecha_fin__isnull=True,
+            empleado__rol__codigo="OPCALI"
+        ).select_related("empleado")
+
+        data = [
+            {
+                "numero": a.empleado.numero,
+                "nombre": f"{a.empleado.nombrepila} {a.empleado.primerapell}",
+            }
+            for a in asignaciones
+        ]
+        return Response(data)
+    
+    
+    
+# Buscar usuario
+class BuscarUsuarioView(generics.ListAPIView):
+
+    permission_classes = [
+        AllowAny
+        # IsAuthenticated,
+        # TienePermisoModulo
+    ]
+
+    modulo = "usuarios"
+
+    serializer_class = serializers.ListUsuarioSerializer
+
+    def get_queryset(self):
+
+        queryset = VistaUsuario.objects.all()
+
+        buscar = self.request.GET.get("buscar")
+        rol = self.request.GET.get("rol")
+        estado = self.request.GET.get("estado")
+
+        if buscar:
+            queryset = queryset.filter(
+                Q(numero__icontains=buscar) |
+                Q(usuario__icontains=buscar) |
+                Q(empleado_nombre__icontains=buscar)
+            )
+
+        if rol:
+            queryset = queryset.filter(
+                rol_nombre__iexact=rol
+            )
+
+        if estado:
+            queryset = queryset.filter(
+                estado_usuario__iexact=estado
+            )
+
+        return queryset
+    
+
+
+# Buscar empleado
+class BuscarEmpleadoView(generics.ListAPIView):
+
+    permission_classes = [
+        AllowAny
+        # IsAuthenticated,
+        # TienePermisoModulo
+    ]
+
+    modulo = "empleados"
+
+    serializer_class = serializers.ListEmpleadoSerializer
+
+    def get_queryset(self):
+
+        queryset = VistaEmpleado.objects.all()
+
+        buscar = self.request.GET.get("buscar")
+        rol = self.request.GET.get("rol")
+        estado = self.request.GET.get("estado")
+        linea = self.request.GET.get("linea")  # NUEVO
+
+        if buscar:
+            queryset = queryset.filter(
+                Q(numero__icontains=buscar) |
+                Q(nombre_completo__icontains=buscar) |
+                Q(rol_nombre__icontains=buscar) |
+                Q(turno_nombre__icontains=buscar) |
+                Q(linea_nombre__icontains=buscar)  # NUEVO
+            )
+
+        if rol:
+            queryset = queryset.filter(
+                rol_codigo=rol
+            )
+
+        if estado:
+            queryset = queryset.filter(
+                estado_empleado__iexact=estado
+            )
+
+        if linea:
+            queryset = queryset.filter(
+                linea_codigo=linea
+            )
 
         return queryset

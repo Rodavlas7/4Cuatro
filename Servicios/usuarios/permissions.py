@@ -86,12 +86,5 @@ class TienePermisoModulo(BasePermission):
             rol,
             []
         )
-        print("====================")
-        print("USUARIO:", request.user.usuario)
-        print("ROL:", rol)
-        print("MODULO:", modulo)
-        print("PERMISOS:", permisos)
-        print("TIENE PERMISO:", modulo in permisos)
-        print("====================")
 
         return modulo in permisos

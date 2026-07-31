@@ -259,7 +259,8 @@ INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
 -- 13. LOTE DE LAPTOPS
 
 INSERT INTO lote_laptop (codigo, fecha) VALUES
-('LOT2026A', '2026-07-15');
+('LOT2026A', '2026-07-15'),
+('LOT2026B', '2026-07-20');
 
 
 -- 14. LOTE DE COMPONENTES (ejemplo)
@@ -427,14 +428,75 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 
 
 ########33PRUEBA PARA EL LOGIN
+
+-- Los dos empleados administradores. Los demás usuarios de más abajo se cuelgan
+-- de empleados que ya se dieron de alta arriba.
+
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell,rol,turno, activo)
 VALUES (
     2607029, 'Araceli', 'Marcos', 'Montes', 'ADMIN','MAT', TRUE);
 
-INSERT INTO usuario (usuario,contrasena,estado,empleado)
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell,rol,turno, activo)
 VALUES (
-    '0001AMM',
-    'pbkdf2_sha256$720000$0o4C7xZGXMGcbTNx1oMeYv$g/MLNK/HQ5E8rtPwUt5JlHHVhMibgYlsMIKse5XHnBs=',
-    1,
-    2607029
-);
+    2607030, 'Salvador', 'Garcia', 'Bojorquez', 'ADMIN','MAT', TRUE);
+
+
+-- ============================================================================
+-- 17. USUARIOS
+-- ============================================================================
+--
+-- IMPORTANTE: las contraseñas aquí van EN TEXTO PLANO, a propósito, para que se
+-- puedan leer y cambiar sin pelearse con un hash.
+--
+-- Así NO sirven para entrar: LoginAPIView compara con `check_password`, que
+-- espera un hash de Django. Después de correr este archivo hay que ejecutar:
+--
+--     python DB/encriptar_contrasenas.py
+--
+-- Ese script recorre la tabla y reemplaza cada contraseña en texto plano por su
+-- hash PBKDF2. Es idempotente: lo que ya está hasheado lo deja igual, así que
+-- puedes correrlo las veces que quieras.
+--
+-- Convención de usuario: 4 dígitos de secuencia + iniciales de nombre y apellidos
+-- (0001AMM = Araceli Marcos Montes).
+--
+-- Los usuarios de calidad y supervisor NO dan de alta empleados nuevos: se
+-- cuelgan de empleados que ya existen arriba con ese rol y que ya están
+-- asignados a una línea (ver empleado_linea). Eso importa para calidad, porque
+-- el formulario de inspecciones llena su select de inspectores por línea.
+--
+-- OJO: son credenciales de desarrollo y este archivo está en el repositorio, así
+-- que son públicas. No las lleves a un ambiente real.
+
+
+-- ---------------------------------------------------------------- ADMIN
+-- Ven todo y entran a /panel/admin/
+
+INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
+('0001AMM',  '12345',   1, 2607029),   -- Araceli Marcos Montes
+('rodavlas', '172509',  1, 2607030);   -- Salvador Garcia Bojorquez
+
+
+-- ------------------------------------------------- OPERADORES DE CALIDAD
+-- Rol OPCALI, entran a /panel/calidad/
+-- Contraseña = las 3 letras del usuario + 2026
+
+INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
+('0002LTV', 'LTV2026', 1, 2607004),   -- Lucía Torres Vargas    (LINEA A)
+('0004RFS', 'RFS2026', 1, 2607009),   -- Roberto Flores Silva   (LINEA B)
+('0006HPM', 'HPM2026', 1, 2607014),   -- Héctor Paz Mora        (LINEA C)
+('0008CSM', 'CSM2026', 1, 2607019),   -- Carmen Sosa Molina     (LINEA D)
+('0010RBC', 'RBC2026', 1, 2607024);   -- Ramón Blanco Cruz      (LINEA E)
+
+
+-- -------------------------------------------------------------- SUPERVISORES
+-- Rol SUPER, entran a /panel/supervisor/
+-- Contraseña = las 3 letras del usuario + 2026
+
+INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
+('0003CMM', 'CMM2026', 1, 2607005),   -- Chelly Montes Marcos   (LINEA A)
+('0005PNR', 'PNR2026', 1, 2607010),   -- Patricia Navarro Ríos  (LINEA B)
+('0007DRB', 'DRB2026', 1, 2607015),   -- Diana Ríos Blanco      (LINEA C)
+('0009GPS', 'GPS2026', 1, 2607020),   -- Gloria Peña Silva      (LINEA D)
+('0011JCP', 'JCP2026', 1, 2607025),   -- Julia Cabrera Pérez    (LINEA E)
+('0012AJC', 'AJC2026', 1, 2607028);   -- Arturo Jiménez Cruz    (LINEA F, embalaje)

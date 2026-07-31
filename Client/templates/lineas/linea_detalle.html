@@ -1,0 +1,61 @@
+{% extends 'panel_admin/base.html' %}
+
+{% block title %}Línea {{ linea.codigo }}{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'lineas-lista' %}" class="text-decoration-none">
+    <i class="bi bi-arrow-left"></i> Volver a líneas de ensamblaje
+</a>
+
+<div class="mt-2 mb-3">
+    <h2 class="mb-0">{{ linea.nombre|default:linea.codigo }}</h2>
+    <p class="text-muted mb-0">
+        Código: {{ linea.codigo }} · Estado: {{ linea.estado_nombre|default:"—" }} ·
+        {% if linea.activo %}
+            <span class="badge text-bg-success">Activa</span>
+        {% else %}
+            <span class="badge text-bg-secondary">Inactiva</span>
+        {% endif %}
+    </p>
+    <p class="mb-0">{{ linea.descripcion|default:"" }}</p>
+</div>
+
+<h5 class="mt-4">Estaciones de esta línea</h5>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle bg-white">
+        <thead class="table-light">
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Activo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in linea.estaciones %}
+            <tr>
+                <td>{{ e.codigo }}</td>
+                <td>{{ e.nombre|default:"—" }}</td>
+                <td>{{ e.descripcion|default:"—" }}</td>
+                <td>
+                    {% if e.activo %}
+                        <span class="badge text-bg-success">Activa</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">Inactiva</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">Esta línea todavía no tiene estaciones asignadas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<a href="{% url 'estaciones-lista' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Agregar estación
+</a>
+
+{% endblock %}

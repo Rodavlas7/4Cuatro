@@ -2,8 +2,10 @@ from rest_framework import generics
 
 from .models import *
 from .serializers import *
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from usuarios.permissions import TienePermisoModulo
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
@@ -123,3 +125,33 @@ class EstacionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         instance.activo = False
         instance.save(update_fields=['activo'])
+
+
+
+class ListaEstacionesAPIView(APIView):
+    permission_classes = [
+            AllowAny
+            #IsAuthenticated,
+            #TienePermisoModulo
+        ]
+    modulo = "empleados"
+    def get(self, request):
+        linea_id = request.query_params.get('linea')
+        estaciones = Estacion.objects.all()
+        if linea_id:
+            estaciones = estaciones.filter(linea_id=linea_id)
+        serializer = EstacionSerializer(estaciones, many=True)
+        return Response(serializer.data)
+    
+class LineasActivasAPIView(APIView):
+    permission_classes = [
+        AllowAny
+        #IsAuthenticated,
+        #TienePermisoModulo
+    ]
+    modulo = "empleados"
+
+    def get(self, request):
+        lineas = VistaLinea.objects.exclude(estado_codigo="INAC")
+        serializer = VistaLineaSerializer(lineas, many=True)
+        return Response(serializer.data)

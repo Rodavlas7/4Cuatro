@@ -197,6 +197,7 @@ CREATE TABLE orden_produccion (
   cant_planificada INT DEFAULT 0,
   cant_producida int DEFAULT 0,
   estado varchar(8) DEFAULT NULL,
+  lote varchar(8) DEFAULT NULL,
   PRIMARY KEY (folio)
 );
 
@@ -355,6 +356,7 @@ ALTER TABLE orden_material ADD CONSTRAINT FK_orden_material_linea FOREIGN KEY (l
 -- Llaves foráneas para la tabla orden_produccion
 ALTER TABLE orden_produccion ADD CONSTRAINT FK_orden_produccion_modelo_laptop FOREIGN KEY (modelo_laptop) REFERENCES modelo_laptop(codigo);
 ALTER TABLE orden_produccion ADD CONSTRAINT FK_orden_produccion_estado FOREIGN KEY (estado) REFERENCES edo_produccion(codigo);
+ALTER TABLE orden_produccion ADD CONSTRAINT FK_orden_produccion_lote FOREIGN KEY (lote) REFERENCES lote_laptop(codigo);
 
 -- Llaves foráneas para la tabla paro
 ALTER TABLE paro ADD CONSTRAINT FK_paro_linea FOREIGN KEY (linea) REFERENCES linea(codigo);

@@ -27,6 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Cliente y API corren en el mismo host (127.0.0.1) y las cookies no distinguen
+# puerto, así que con los nombres por defecto cada proyecto le pisaba la sesión
+# al otro. Con nombres propios cada uno conserva la suya.
+SESSION_COOKIE_NAME = 'servicios_sessionid'
+CSRF_COOKIE_NAME = 'servicios_csrftoken'
+
 
 # Application definition
 

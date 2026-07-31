@@ -1,0 +1,97 @@
+{% extends 'panel_admin/base.html' %}
+
+{% block titulo_pagina %}Dashboard{% endblock %}
+{% block topbar_titulo %}Panel de Administración{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h2 class="mb-1">Panel de Administración</h2>
+    <p class="text-muted mb-0">
+        Bienvenido{% if sesion_nombre %}, {{ sesion_nombre }}{% endif %}. Tienes acceso a todos los módulos del sistema.
+    </p>
+</div>
+
+<div class="row g-3">
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-gear-wide-connected me-2"></i>
+                    Producción
+                </h5>
+                <p class="card-text text-muted small">Órdenes de producción, laptops y ensamblaje.</p>
+                <a href="{% url 'ordenes-produccion-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-check2-circle me-2"></i>
+                    Calidad
+                </h5>
+                <p class="card-text text-muted small">Inspecciones de calidad registradas.</p>
+                <a href="{% url 'lista_inspeccion_calidad' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Incidencias
+                </h5>
+                <p class="card-text text-muted small">Paros de línea abiertos y cerrados.</p>
+                <a href="{% url 'lista_paros' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-boxes me-2"></i>
+                    Materiales
+                </h5>
+                <p class="card-text text-muted small">Componentes, modelos, lotes y órdenes de material.</p>
+                <a href="{% url 'componentes-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-diagram-3 me-2"></i>
+                    Planta
+                </h5>
+                <p class="card-text text-muted small">Líneas de ensamblaje y estaciones de trabajo.</p>
+                <a href="{% url 'lineas-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-people me-2"></i>
+                    Personal
+                </h5>
+                <p class="card-text text-muted small">Usuarios del sistema y empleados de planta.</p>
+                <a href="{% url 'lista_usuarios' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

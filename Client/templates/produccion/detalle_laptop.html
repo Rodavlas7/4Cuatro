@@ -1,0 +1,464 @@
+{% extends 'panel_admin/base.html' %}
+
+{% block topbar_titulo %}Producción{% endblock %}
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'ordenes-produccion-lista' %}">Producción</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'laptops-lista' %}">Registro de Laptops</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Detalles de Orden</li>
+{% endblock %}
+
+
+{% block title %}Laptop #{{ laptop.numero }}{% endblock %}
+
+{% block content %}
+
+<div class="wrap pb-5">
+    
+<!-- ==========================================
+         ENCABEZADO Y NAVEGACIÓN
+         ========================================== -->
+    
+    <!-- Botón Volver -->
+    <div class="mb-3">
+        <a href="{% url 'laptops-lista' %}" class="text-decoration-none text-muted small fw-medium hover-primary transition">
+            <i class="bi bi-arrow-left me-1"></i> Volver al registro de laptops
+        </a>
+    </div>
+
+    <!-- ORDEN Y PROGRESO (Homologado a emp-card) -->
+    <div class="emp-card mb-4">
+        <div class="emp-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom-0 pb-3">
+            
+            <!-- Info principal -->
+            <div>
+                <span class="emp-eyebrow"><span class="dot"></span> Producción</span>
+                <h2 class="fw-bold text-dark mb-2">Laptop #{{ laptop.numero }}</h2>
+                
+                <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
+                    <span class="d-flex align-items-center gap-1">
+                        <i class="bi bi-upc-scan text-secondary"></i>
+                        {{ laptop.num_serie|default:"Sin serie" }}
+                    </span>
+                    <span class="d-flex align-items-center gap-1">
+                        <i class="bi bi-laptop text-secondary"></i>
+                        {{ laptop.modelo_nombre|default:"Sin modelo" }}
+                    </span>
+                    {% if laptop.orden_folio %}
+                        <a href="{% url 'orden-produccion-detalle' laptop.orden_folio %}" class="text-decoration-none text-muted hover-primary d-flex align-items-center gap-1">
+                            <i class="bi bi-card-list text-secondary"></i> Orden #{{ laptop.orden_folio }}
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estado Global -->
+            <div class="text-md-end">
+                <span class="badge fs-6 rounded-pill px-3 py-2
+                    {% if laptop.estado_codigo == 'EMBALA' %}bg-success-subtle text-success border border-success-subtle
+                    {% elif laptop.estado_codigo == 'APROV' %}bg-primary-subtle text-primary border border-primary-subtle
+                    {% elif laptop.estado_codigo == 'RECHA' %}bg-danger-subtle text-danger border border-danger-subtle
+                    {% elif laptop.estado_codigo == 'PENSAM' %}bg-warning-subtle text-warning-emphasis border border-warning-subtle
+                    {% else %}bg-light text-secondary border border-secondary-subtle{% endif %}">
+                    {{ laptop.estado_nombre|default:"—" }}
+                </span>
+            </div>
+            
+        </div>
+    </div>
+
+    {% if ultima_inspeccion.resultado == 0 and ultima_inspeccion.observaciones %}
+    <div class="alert bg-danger-subtle text-danger-emphasis border border-danger-subtle d-flex gap-2 shadow-sm mb-4">
+        <i class="bi bi-x-octagon-fill mt-1 fs-5"></i>
+        <div>
+            <strong class="d-block">Rechazada en calidad</strong>
+            {{ ultima_inspeccion.observaciones }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ==========================================
+         TARJETAS KPI (RESUMEN)
+         ========================================== -->
+    <div class="row g-3 mb-4">
+        <!-- KPI 1 -->
+        <div class="col-md-6 col-xl-3">
+            <div class="emp-card h-100 p-3 d-flex flex-column justify-content-center">
+                <span class="text-muted small fw-bold text-uppercase mb-1"><i class="bi bi-tools me-1"></i> Armado</span>
+                {% if avance %}
+                    <div class="d-flex align-items-baseline gap-2">
+                        <h3 class="fw-bold mb-0 text-dark">{{ avance.porcentaje }}%</h3>
+                        <span class="text-success small fw-medium"><i class="bi bi-check-circle"></i> {{ avance.tipos_completos }}/{{ avance.tipos_totales }} tipos</span>
+                    </div>
+                {% else %}
+                    <span class="text-muted fs-6 mt-1">Sin lista de materiales</span>
+                {% endif %}
+            </div>
+        </div>
+        <!-- KPI 2 -->
+        <div class="col-md-6 col-xl-3">
+            <div class="emp-card h-100 p-3 d-flex flex-column justify-content-center">
+                <span class="text-muted small fw-bold text-uppercase mb-1"><i class="bi bi-stopwatch me-1"></i> Tiempo de armado</span>
+                <h3 class="fw-bold mb-0 text-dark">{{ tiempos.armado_efectivo|default:"—" }}</h3>
+                <span class="text-secondary small mt-1" style="font-size: 11px;">
+                    {% if tiempos.abiertos %}
+                        <span class="text-warning fw-bold"><i class="bi bi-circle-fill" style="font-size: 6px;"></i> {{ tiempos.abiertos }} ensamblaje{{ tiempos.abiertos|pluralize:"s" }} activo{{ tiempos.abiertos|pluralize:"s" }}</span>
+                    {% else %}
+                        Suma de ensamblajes cerrados
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <!-- KPI 3 -->
+        <div class="col-md-6 col-xl-3">
+            <div class="emp-card h-100 p-3 d-flex flex-column justify-content-center">
+                <span class="text-muted small fw-bold text-uppercase mb-1"><i class="bi bi-box-seam me-1"></i> Ciclo hasta embalaje</span>
+                <h3 class="fw-bold mb-0 text-dark">{{ tiempos.ciclo|default:"—" }}</h3>
+                <span class="text-secondary small mt-1" style="font-size: 11px;">Desde el primer ensamblaje</span>
+            </div>
+        </div>
+        <!-- KPI 4 -->
+        <div class="col-md-6 col-xl-3">
+            <div class="emp-card h-100 p-3 d-flex flex-column justify-content-center">
+                <span class="text-muted small fw-bold text-uppercase mb-1"><i class="bi bi-shield-check me-1"></i> Última inspección</span>
+                {% if ultima_inspeccion %}
+                    <h5 class="fw-bold mb-0 mt-1
+                        {% if ultima_inspeccion.resultado == 1 %}text-success
+                        {% elif ultima_inspeccion.resultado == 0 %}text-danger
+                        {% else %}text-warning{% endif %}">
+                        {{ ultima_inspeccion.resultado_nombre|default:"—" }}
+                    </h5>
+                    <span class="text-secondary small mt-1 text-truncate" style="font-size: 11px;">
+                        {{ ultima_inspeccion.fecha }} · {{ ultima_inspeccion.empleado_nombre|default:"—" }}
+                    </span>
+                {% else %}
+                    <span class="text-muted fs-6 mt-1">Sin inspección</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <!-- COLUMNA PRINCIPAL (IZQUIERDA) -->
+        <div class="col-lg-8">
+            
+            <!-- ...................................................................
+                 D A T O S   D E   L A   L A P T O P
+            ...................................................................... -->
+            <div class="emp-card mb-4">
+                <div class="emp-header border-bottom px-4 py-3 bg-light bg-opacity-50">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-info-circle text-primary me-2"></i>Datos de la Laptop</h5>
+                </div>
+                <form method="POST" action="{% url 'laptop-editar' laptop.numero %}">
+                    {% csrf_token %}
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-medium">Núm. de serie</label>
+                                <input type="text" class="form-control font-monospace bg-light" value="{{ laptop.num_serie|default:'' }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-medium">Descripción</label>
+                                <input type="text" name="descripcion" class="form-control" value="{{ laptop.descripcion|default:'' }}" maxlength="256">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label small fw-medium">Orden de producción</label>
+                                <select name="orden" class="form-select">
+                                    <option value="">— Sin orden —</option>
+                                    {% for o in ordenes %}
+                                    <option value="{{ o.folio }}" {% if laptop.orden_folio == o.folio %}selected{% endif %}>
+                                        #{{ o.folio }} — {{ o.modelo_nombre|default:"?" }} ({{ o.estado_nombre }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text" style="font-size: 11px;">Si la cambias, el modelo y el lote se recalculan con los de la nueva orden.</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-medium text-muted">Modelo</label>
+                                <input type="text" class="form-control bg-light" value="{{ laptop.modelo_nombre|default:'—' }}" disabled>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-medium text-muted">Lote</label>
+                                <input type="text" class="form-control bg-light" value="{{ laptop.lote_codigo|default:'—' }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-medium">Línea de Ensamblaje</label>
+                                <select name="linea" class="form-select">
+                                    <option value="">— Sin línea —</option>
+                                    {% for l in lineas %}
+                                    <option value="{{ l.codigo }}" {% if laptop.linea_codigo == l.codigo %}selected{% endif %}>
+                                        {{ l.codigo }} — {{ l.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-medium">Estado Administrativo</label>
+                                <select name="estado" class="form-select">
+                                    {% for e in estados %}
+                                    <option value="{{ e.codigo }}" {% if laptop.estado_codigo == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer border-top bg-white px-4 py-3 d-flex justify-content-end gap-2">
+                        <a href="{% url 'laptops-lista' %}" class="btn btn-white border shadow-sm">Cancelar</a>
+                        <button type="submit" class="btn btn-accent shadow-sm"><i class="bi bi-floppy me-1"></i> Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ...................................................................
+                 A V A N C E   L I S T A   D E   M A T E R I A L E S
+            ...................................................................... -->
+            {% if avance %}
+            <div class="emp-card mb-4">
+                <div class="emp-header border-bottom px-4 py-3 d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                    <div>
+                        <h5 class="fw-bold mb-0"><i class="bi bi-ui-checks text-primary me-2"></i>Avance de Materiales</h5>
+                        <span class="text-muted small">Modelo: {{ laptop.modelo_nombre }}</span>
+                    </div>
+                    {% if avance.completa %}
+                        <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i> Completa</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Faltan {{ avance.faltantes|length }} piezas</span>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    <div class="progress mb-4 rounded-pill" style="height: 10px;" role="progressbar" aria-valuenow="{{ avance.porcentaje }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar {% if avance.completa %}bg-success{% else %}bg-primary{% endif %}" style="width: {{ avance.porcentaje }}%;"></div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        {% for d in avance.detalle %}
+                        <div class="col-sm-6 col-md-4 col-xl-3">
+                            <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2
+                                {% if d.completo %}bg-light border-secondary-subtle{% else %}border-warning bg-warning-subtle text-warning-emphasis{% endif %}">
+                                <span class="small fw-medium text-truncate" title="{{ d.tipo }}">{{ d.tipo }}</span>
+                                <span class="badge rounded-pill {% if d.completo %}bg-success-subtle text-success border border-success-subtle{% else %}bg-white text-dark border shadow-sm{% endif %}">
+                                    {{ d.montado }} / {{ d.capacidad }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if avance.faltantes %}
+                <div class="card-footer bg-warning-subtle border-top border-warning-subtle px-4 py-3">
+                    <span class="text-warning-emphasis small d-block">
+                        <i class="bi bi-info-circle-fill me-1"></i> <strong>Pendiente por montar:</strong> 
+                        {% for d in avance.faltantes %}{{ d.tipo }} ({{ d.faltan }}){% if not forloop.last %}, {% endif %}{% endfor %}.
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- ...................................................................
+                 C O M P O N E N T E S   M O N T A D O S
+            ...................................................................... -->
+            {% if finalizada %}
+            <div class="alert bg-light border text-muted small d-flex gap-2 align-items-start mb-3">
+                <i class="bi bi-lock-fill mt-1 fs-5"></i>
+                <div>
+                    La laptop está <strong>{{ laptop.estado_nombre }}</strong>. Sus componentes se muestran en modo de sólo lectura. 
+                    Desarmar un equipo finalizado rompería la trazabilidad en el sistema.
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="emp-card mb-4 overflow-hidden">
+                <div class="emp-header border-bottom px-4 py-3 d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-cpu text-primary me-2"></i>Componentes Montados</h5>
+                    <span class="badge bg-secondary rounded-pill">{{ componentes|length }} pieza{{ componentes|length|pluralize:"s" }}</span>
+                </div>
+
+                {% if componentes %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4 text-muted small text-uppercase">#</th>
+                                <th class="text-muted small text-uppercase">Componente</th>
+                                <th class="text-muted small text-uppercase">Num. Serie</th>
+                                <th class="text-muted small text-uppercase text-center">Estado</th>
+                                <th class="text-muted small text-uppercase">Ensamblaje</th>
+                                {% if not finalizada %}<th class="pe-4 text-end text-muted small text-uppercase">Acción</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in componentes %}
+                            <tr>
+                                <td class="ps-4 text-muted">{{ c.numero }}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ c.modelo_nombre|default:c.modelo_codigo }}</div>
+                                    <div class="text-secondary small" style="font-size: 11px;">
+                                        {{ c.modelo_codigo }}{% if c.modelo_fabricante %} · {{ c.modelo_fabricante }}{% endif %}
+                                    </div>
+                                </td>
+                                <td><span class="font-monospace small bg-light px-2 py-1 rounded border">{{ c.num_serie|default:"—" }}</span></td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill
+                                        {% if c.estado_codigo == 'EDC001' %}bg-success-subtle text-success border border-success-subtle
+                                        {% elif c.estado_codigo == 'EDC002' %}bg-primary-subtle text-primary border border-primary-subtle
+                                        {% elif c.estado_codigo == 'EDC003' %}bg-warning-subtle text-warning border border-warning-subtle
+                                        {% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %}">
+                                        {{ c.estado_nombre|default:"—" }}
+                                    </span>
+                                </td>
+                                <td><span class="text-muted small"><i class="bi bi-wrench-adjustable me-1"></i>#{{ c.registro_ensamblaje }}</span></td>
+
+                                {% if not finalizada %}
+                                <td class="pe-4 text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger shadow-sm px-3"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalLiberar"
+                                        data-laptop="{{ laptop.numero }}"
+                                        data-componente="{{ c.numero }}"
+                                        data-nombre="{{ c.modelo_nombre|default:c.modelo_codigo }}"
+                                        title="Liberar Componente">
+                                        <i class="bi bi-box-arrow-up me-1"></i> Liberar
+                                    </button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="card-body p-5 text-center">
+                    <i class="bi bi-motherboard text-light d-block mb-3" style="font-size: 3rem;"></i>
+                    <p class="text-muted mb-0">Esta laptop no tiene componentes montados.</p>
+                    {% if not registros %}
+                        <p class="text-muted small mt-2">
+                            Todavía no se le ha registrado ningún ensamblaje. <br>
+                            <a href="{% url 'ensamblaje-registrar' %}" class="text-primary fw-medium text-decoration-none">Registrar ensamblaje ahora <i class="bi bi-arrow-right"></i></a>
+                        </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Aquí irían las tablas de Inspecciones y Embalaje con la misma estructura .emp-card... -->
+            
+        </div> <!-- Fin Columna Izquierda -->
+
+        <!-- COLUMNA LATERAL (DERECHA) -->
+        <div class="col-lg-4">
+            
+            <!-- ...................................................................
+                 B I T Á C O R A   /   S E G U I M I E N T O
+            ...................................................................... -->
+            <div class="emp-card sticky-top" style="top: 85px; z-index: 1;">
+                <div class="emp-header border-bottom px-4 py-3 bg-light bg-opacity-50">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i>Seguimiento</h5>
+                    <p class="text-muted small mb-0 mt-1">Historial de eventos de la laptop.</p>
+                </div>
+                <div class="card-body p-4">
+                    {% if bitacora %}
+                    <div class="position-relative ms-2">
+                        <!-- Riel vertical -->
+                        <div class="position-absolute top-0 bottom-0 border-start border-2 border-light" style="left: 0.65rem; z-index: 1;"></div>
+
+                        {% for ev in bitacora %}
+                        <div class="position-relative mb-4 pb-1">
+                            <!-- Ícono (Z-index superior para tapar la línea) -->
+                            <span class="position-absolute translate-middle-x bg-white d-flex align-items-center justify-content-center text-{{ ev.clase }}" 
+                                  style="left: 0.75rem; top: 0; width: 32px; height: 32px; z-index: 2; border-radius: 50%; box-shadow: 0 0 0 4px #fff;">
+                                <i class="bi {{ ev.icono }} fs-5 bg-{{ ev.clase }}-subtle rounded-circle p-2"></i>
+                            </span>
+                            
+                            <!-- Contenido -->
+                            <div class="ms-5 ps-1">
+                                <div class="d-flex flex-column mb-1">
+                                    <strong class="text-dark">{{ ev.titulo }}</strong>
+                                    <span class="text-muted" style="font-size: 11px;">
+                                        <i class="bi bi-calendar3 me-1"></i> {% if ev.fecha %}{{ ev.fecha }} {{ ev.hora|default:"" }}{% else %}Sin fecha{% endif %}
+                                    </span>
+                                </div>
+                                {% if ev.detalle %}
+                                    <p class="text-secondary small mb-1 lh-sm">{{ ev.detalle }}</p>
+                                {% endif %}
+                                {% if ev.observaciones %}
+                                    <div class="bg-light border-start border-3 border-secondary p-2 mt-2">
+                                        <span class="small fst-italic text-muted">«{{ ev.observaciones }}»</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-light d-block mb-2" style="font-size: 2rem;"></i>
+                        <span class="text-muted small">Todavía no hay eventos registrados.</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div> <!-- Fin Columna Derecha -->
+
+    </div> <!-- Fin Row principal -->
+</div>
+
+<!-- OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO -->
+
+<!-- MODAL: LIBERAR COMPONENTE -->
+{% if not finalizada %}
+<div class="modal fade" id="modalLiberar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" id="formLiberar" action="">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Liberar Pieza</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 pt-2">
+                    <p class="text-muted small mb-3">
+                        ¿Desmontar <strong id="liberar_nombre" class="text-dark"></strong> de esta laptop? 
+                        Selecciona el estado en el que regresará la pieza:
+                    </p>
+                    
+                    <label class="form-label small fw-medium">Estado final del componente</label>
+                    <select name="estado" class="form-select mb-4">
+                        {% for e in estados_componente %}
+                        <option value="{{ e.codigo }}" {% if e.codigo == estado_disponible %}selected{% endif %}>
+                            {{ e.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger shadow-sm w-50">Liberar pieza</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Lógica dinámica para el Modal de Liberar Pieza
+const modalLiberar = document.getElementById('modalLiberar');
+if (modalLiberar) {
+    modalLiberar.addEventListener('show.bs.modal', function (event) {
+        const btn = event.relatedTarget;
+        const laptopId = btn.dataset.laptop;
+        const compId = btn.dataset.componente;
+        const nombre = btn.dataset.nombre;
+        
+        // Armar URL: /produccion/laptops/num_laptop/liberar/num_comp/
+        // (Ajusta la ruta si tu patrón de URLs de Django es diferente)
+        document.getElementById('formLiberar').action = "/produccion/laptops/" + laptopId + "/liberar/" + compId + "/";
+        document.getElementById('liberar_nombre').textContent = nombre;
+    });
+}
+</script>
+{% endif %}
+
+{% endblock %}

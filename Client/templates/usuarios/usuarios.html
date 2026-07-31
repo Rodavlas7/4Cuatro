@@ -1,0 +1,411 @@
+{% extends 'panel_admin/base.html' %}
+
+{% block topbar_titulo %}Personal{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'lista_empleados' %}">Personal</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Usuarios</li>
+{% endblock %}
+
+{% block title %}Usuarios{% endblock %}
+
+{% block content %}
+
+<div class="wrap">
+
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
+        
+        <!-- 1. ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Usuarios</h4>
+                <p class="text-muted small mb-0">Administra las credenciales y niveles de acceso al sistema.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                    <i class="bi bi-person-plus"></i> Nuevo usuario
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. FILTROS -->
+        <div class="emp-toolbar px-4 py-3">
+            <form method="GET">
+                <div class="row g-3 align-items-end">
+
+                    <!-- Buscar (4 cols) -->
+                    <div class="col-12 col-md-12 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="buscar" class="form-control border-start-0 ps-1 py-2" placeholder="Número, usuario o empleado..." value="{{ buscar|default:'' }}">
+                        </div>
+                    </div>
+
+                    <!-- Rol (3 cols) -->
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Rol</label>
+                        <select name="rol" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">Todos los roles</option>
+                            {% for codigo, nombre in roles %}
+                            <option value="{{ nombre }}" {% if rol == nombre %}selected{% endif %}>
+                                {{ nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Estado (3 cols) -->
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Estado</label>
+                        <select name="estado" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">Todos los estados</option>
+                            <option value="Activo" {% if estado == "Activo" %}selected{% endif %}>Activo</option>
+                            <option value="Inactivo" {% if estado == "Inactivo" %}selected{% endif %}>Inactivo</option>
+                        </select>
+                    </div>
+
+                    <!-- Botones de Acción (2 cols) -->
+                    <div class="col-12 col-md-4 col-lg-2 d-flex gap-2">
+                        <button class="btn btn-dark btn-sm py-2 w-100 fw-medium d-flex align-items-center justify-content-center gap-2" type="submit" title="Filtrar">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                        {% if buscar or rol or estado %}
+                            <a href="{% url 'lista_usuarios' %}" class="btn btn-outline-danger btn-sm py-2 px-3 d-flex align-items-center justify-content-center" title="Limpiar filtros">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">ID</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Usuario / Empleado</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Rol</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios %}
+                    <tr>
+                        <td class="ps-4"><span class="badge-id">{{ u.numero }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 35px; height: 35px; font-size: 14px;">
+                                    {{ u.usuario|first|upper|default:"U" }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-dark">{{ u.usuario|default:"—" }}</div>
+                                    <div class="text-secondary small" style="font-size: 11px;"><i class="bi bi-person me-1"></i>{{ u.empleado_nombre|default:"Sin empleado asignado" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">{{ u.rol_nombre|default:"—" }}</div>
+                        </td>
+                        <td class="text-center">
+                            {% if u.estado_usuario == "Activo" %}
+                                <span class="status-pill active"><span class="status-dot"></span> Activo</span>
+                            {% else %}
+                                <span class="status-pill inactive"><span class="status-dot"></span> Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1">
+                                <!-- DETALLE -->
+                                <button type="button" class="btn text-info"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalDetalle"
+                                    data-numero="{{ u.numero }}"
+                                    data-usuario="{{ u.usuario|default:'' }}"
+                                    data-empleado="{{ u.empleado_nombre|default:'' }}"
+                                    data-rol="{{ u.rol_nombre|default:'' }}"
+                                    data-estado="{{ u.estado_usuario|default:'' }}"
+                                    title="Ver detalle">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+
+                                <!-- EDITAR -->
+                                <button type="button" class="btn text-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditar"
+                                    data-numero="{{ u.numero }}"
+                                    data-usuario="{{ u.usuario|default:'' }}"
+                                    title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- ELIMINAR / REACTIVAR -->
+                                {% if u.estado_usuario == "Activo" %}
+                                <button type="button" class="btn text-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalDesactivar"
+                                    data-numero="{{ u.numero }}"
+                                    data-usuario="{{ u.usuario|default:'' }}"
+                                    title="Desactivar">
+                                    <i class="bi bi-person-x"></i>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn text-success"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalReactivar"
+                                    data-numero="{{ u.numero }}"
+                                    data-usuario="{{ u.usuario|default:'' }}"
+                                    title="Reactivar">
+                                    <i class="bi bi-person-check"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 text-light"></i>
+                            No hay usuarios registrados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO -->
+
+<!-- MODAL: CREAR -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'usuario-crear' %}" class="needs-validation w-100" novalidate>
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nuevo usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Nombre de usuario</label>
+                        <input type="text" name="usuario" class="form-control" required>
+                        <div class="invalid-feedback">Este campo es obligatorio.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Contraseña</label>
+                        <input type="password" name="contrasena" class="form-control" minlength="8" required>
+                        <div class="invalid-feedback">La contraseña debe tener mínimo 8 caracteres.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Asignar a Empleado</label>
+                        <select name="empleado" class="form-select" required>
+                            <option value="">Seleccione un empleado</option>
+                            {% for e in empleados %}
+                            <option value="{{ e.numero }}">{{ e.numero }} - {{ e.nombre_completo }} ({{ e.rol_nombre }})</option>
+                            {% empty %}
+                            <option disabled>No hay empleados disponibles</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">Selecciona un empleado.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar usuario</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: DETALLE -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold">Ficha de Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <div>
+                        <div id="det_usuario" class="fw-bold fs-5 text-dark"></div>
+                        <span id="det_numero" class="badge-id mt-1 d-inline-block"></span>
+                    </div>
+                </div>
+                
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                        <span class="text-muted small fw-medium">Empleado Asignado</span>
+                        <span id="det_empleado" class="fw-semibold text-dark"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                        <span class="text-muted small fw-medium">Rol del Sistema</span>
+                        <span id="det_rol" class="fw-semibold text-dark"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom-0">
+                        <span class="text-muted small fw-medium">Estado</span>
+                        <span id="det_estado" class="fw-semibold text-dark"></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate>
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Editar usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted">ID de Registro</label>
+                        <input type="text" id="edit_numero" class="form-control form-control-sm bg-light w-50" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Usuario</label>
+                        <input type="text" name="usuario" id="edit_usuario" class="form-control" required>
+                        <div class="invalid-feedback">El usuario es obligatorio.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Nueva contraseña</label>
+                        <input type="password" name="contrasena" id="edit_contrasena" class="form-control" minlength="8">
+                        <small class="text-muted" style="font-size: 11px;">Dejar vacío para conservar la contraseña actual.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: DESACTIVAR -->
+<div class="modal fade" id="modalDesactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" id="formDesactivar" action="">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-shield-x" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold">¿Desactivar acceso?</h5>
+                    <p class="text-muted small mb-4">El usuario <strong id="des_usuario" class="text-dark"></strong> no podrá iniciar sesión en el sistema.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger shadow-sm w-50">Desactivar</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: REACTIVAR -->
+<div class="modal fade" id="modalReactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" id="formReactivar" action="">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="text-success mb-3">
+                        <i class="bi bi-shield-check" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold">¿Reactivar acceso?</h5>
+                    <p class="text-muted small mb-4">El usuario <strong id="rea_usuario" class="text-dark"></strong> recuperará su acceso al sistema de inmediato.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success shadow-sm w-50">Reactivar</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Validación Bootstrap por campo
+(function () {
+  'use strict'
+  var forms = document.querySelectorAll('.needs-validation')
+  Array.prototype.slice.call(forms).forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+
+// MODAL: Detalle
+document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('det_numero').textContent = btn.dataset.numero;
+    document.getElementById('det_usuario').textContent = btn.dataset.usuario;
+    document.getElementById('det_empleado').textContent = btn.dataset.empleado || "Sin asignación";
+    document.getElementById('det_rol').textContent = btn.dataset.rol || "—";
+    
+    const estadoSpan = document.getElementById('det_estado');
+    if (btn.dataset.estado === "Activo") {
+        estadoSpan.innerHTML = '<span class="status-pill active"><span class="status-dot"></span> Activo</span>';
+    } else {
+        estadoSpan.innerHTML = '<span class="status-pill inactive"><span class="status-dot"></span> Inactivo</span>';
+    }
+});
+
+// MODAL: Editar
+document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formEditar').action = "/usuarios/usuarios/Actualizar/" + btn.dataset.numero + "/";
+    document.getElementById('edit_numero').value = btn.dataset.numero;
+    document.getElementById('edit_usuario').value = btn.dataset.usuario;
+    document.getElementById('edit_contrasena').value = "";
+});
+
+// MODAL: Desactivar
+document.getElementById('modalDesactivar').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formDesactivar').action = "/usuarios/usuarios/desactivar/" + btn.dataset.numero + "/";
+    document.getElementById('des_usuario').textContent = btn.dataset.usuario;
+});
+
+// MODAL: Reactivar
+document.getElementById('modalReactivar').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('formReactivar').action = "/usuarios/usuarios/reactivar/" + btn.dataset.numero + "/";
+    document.getElementById('rea_usuario').textContent = btn.dataset.usuario;
+});
+</script>
+
+{% endblock %}

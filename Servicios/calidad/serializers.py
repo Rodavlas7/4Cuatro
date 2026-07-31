@@ -70,6 +70,7 @@ class ListVistaInspeccionSerializer(serializers.ModelSerializer):
             "numero", 
             "resultado_nombre", 
             "fecha", 
+            "hora",
             "laptop_numero",
             "empleado_nombre", 
             "linea_nombre"

@@ -5,6 +5,10 @@ from .models import *
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 from usuarios.permissions import TienePermisoModulo
+from django.db.models import Q
+from lineas.models import Linea
+from rest_framework.response import Response
+from rest_framework import status
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
@@ -137,9 +141,11 @@ class OrdenProduccionModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
         instance.save(update_fields=['estado'])
 
 
+
+
 class ParoListCreateAPIView(generics.ListCreateAPIView):
     """GET: consulta general (lee de la vista SQL vista_paros).
-    POST: crea un nuevo paro."""
+    POST: crea un nuevo paro, valida que la línea esté Activa y la marca como En Paro."""
     permission_classes = [
                 IsAuthenticated,
                 TienePermisoModulo
@@ -156,6 +162,31 @@ class ParoListCreateAPIView(generics.ListCreateAPIView):
             return ParoSerializer
         return VistaParoSerializer
 
+    def create(self, request, *args, **kwargs):
+        linea_id = request.data.get("linea")
+
+        try:
+            linea = Linea.objects.get(pk=linea_id)
+        except Linea.DoesNotExist:
+            return Response(
+                {"mensaje": "La línea seleccionada no existe"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not linea.estado or linea.estado.codigo != "ACTI":
+            return Response(
+                {"mensaje": "Solo se puede registrar un paro en una línea que esté Activa"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        response = super().create(request, *args, **kwargs)
+
+        if response.status_code == status.HTTP_201_CREATED:
+            linea.estado_id = "PARO"
+            linea.save(update_fields=["estado"])
+
+        return response
+
 
 class ParoDetailAPIView(generics.RetrieveAPIView):
     """GET: vista detallada de un paro (lee de la vista SQL vista_paros)."""
@@ -171,7 +202,7 @@ class ParoDetailAPIView(generics.RetrieveAPIView):
 
 class ParoModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el paro; DELETE lo cierra (fecha_fin/hora_fin = ahora)
-    en lugar de borrar el registro."""
+    y regresa la línea a estado Activa."""
     permission_classes = [
                 IsAuthenticated,
                 TienePermisoModulo
@@ -187,6 +218,12 @@ class ParoModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
         instance.hora_fin = ahora.time()
         instance.save(update_fields=['fecha_fin', 'hora_fin'])
 
+        if instance.linea:
+            instance.linea.estado_id = "ACTI"
+            instance.linea.save(update_fields=["estado"])
+            
+            
+            
 
 class LaptopListAPIView(generics.ListCreateAPIView):
     """GET: consulta general (lee de la vista SQL vista_laptops).
@@ -277,3 +314,32 @@ class RegistroEnsamblajeModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
         instance.fecha_fin = ahora.date()
         instance.hora_fin = ahora.time()
         instance.save(update_fields=['fecha_fin', 'hora_fin'])
+
+class BuscarParoAPIView(generics.ListAPIView):
+    permission_classes = [
+        IsAuthenticated,
+        TienePermisoModulo
+    ]
+    modulo = "paro"
+    serializer_class = VistaParoSerializer
+
+    def get_queryset(self):
+        queryset = VistaParo.objects.all()
+        buscar = self.request.GET.get("buscar")
+        fecha_desde = self.request.GET.get("fecha_desde")
+        fecha_hasta = self.request.GET.get("fecha_hasta")
+
+        if buscar:
+            queryset = queryset.filter(
+                Q(numero__icontains=buscar) |
+                Q(razon__icontains=buscar) |
+                Q(linea_nombre__icontains=buscar)
+            )
+
+        if fecha_desde:
+            queryset = queryset.filter(fecha_inicio__gte=fecha_desde)
+
+        if fecha_hasta:
+            queryset = queryset.filter(fecha_inicio__lte=fecha_hasta)
+
+        return queryset.order_by("-fecha_inicio", "-hora_inicio")

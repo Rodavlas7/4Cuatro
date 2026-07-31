@@ -1,11 +1,24 @@
 """
 Índice / landing de la API de Servicios.
 
-Vista pública (no DRF, sin autenticación) que se sirve en la raíz del backend
-para que quien consuma la API pueda ver, desde el mismo host, todos los
-endpoints ya establecidos con una descripción corta de cada uno.
+Flujo web:
+  - url /            -> formulario de login (copiado del cliente).
+  - al iniciar sesión guarda el token en una cookie y redirige al índice.
+  - url /index/      -> índice de endpoints (requiere haber iniciado sesión).
+El token vive en una cookie de host (TOKEN_COOKIE) en vez de en la sesión de
+Django: como las cookies no distinguen puerto, la que pone el cliente en :8001
+llega hasta la API en :8000, así que iniciar sesión en el cliente basta para
+navegar la API sin pegar el Bearer a mano (ver usuarios/authentication.py).
 """
-from django.shortcuts import render
+import requests
+from django.shortcuts import render, redirect
+from django.utils import timezone
+
+from usuarios.authentication import TOKEN_COOKIE
+from usuarios.models import Sesion
+
+# El token dura 10 horas (ver LoginAPIView); la cookie vence a la par.
+TOKEN_COOKIE_MAX_AGE = 10 * 60 * 60
 
 
 # Inventario de endpoints agrupados por módulo (base = prefijo del include en urls.py).
@@ -28,6 +41,10 @@ API_MODULES = [
             {"metodos": ["PUT"], "ruta": "Usuario/Actualizar/<numero>/", "desc": "Actualiza una cuenta de usuario."},
             {"metodos": ["PATCH"], "ruta": "Usuario/Desactivar/<numero>/", "desc": "Desactiva una cuenta de usuario."},
             {"metodos": ["PATCH"], "ruta": "Usuario/Reactivar/<numero>/", "desc": "Reactiva una cuenta de usuario dada de baja."},
+            {"metodos": ["GET"], "ruta": "Empleado/Buscar/", "desc": "Busca empleados con ?buscar=<texto>."},
+            {"metodos": ["GET"], "ruta": "Usuario/Buscar/", "desc": "Busca cuentas de usuario con ?buscar=<texto>."},
+            {"metodos": ["GET"], "ruta": "Empleado/Linea/Buscar/", "desc": "Busca empleados por línea asignada."},
+            {"metodos": ["GET"], "ruta": "Empleado/Estacion/Buscar/", "desc": "Busca empleados por estación asignada."},
         ],
     },
     {
@@ -94,12 +111,104 @@ API_MODULES = [
             {"metodos": ["PUT", "DELETE"], "ruta": "detalles/mod/<orden>/<modelo>/", "desc": "Modifica la cantidad o elimina un renglón de material."},
         ],
     },
+    {
+        "nombre": "Calidad",
+        "base": "/api/calidad/",
+        "descripcion": "Inspecciones de calidad de las laptops.",
+        "endpoints": [
+            {"metodos": ["POST"], "ruta": "Inspeccion/Registrar/", "desc": "Registra una nueva inspección de calidad."},
+            {"metodos": ["GET"], "ruta": "Inspeccion/Listar/", "desc": "Lista todas las inspecciones (vista SQL)."},
+            {"metodos": ["GET"], "ruta": "Inspeccion/Detalle/<numero>/", "desc": "Detalle de una inspección."},
+            {"metodos": ["PUT", "PATCH"], "ruta": "Inspeccion/Actualizar/<numero>/", "desc": "Actualiza una inspección."},
+            {"metodos": ["DELETE"], "ruta": "Inspeccion/Eliminar/<numero>/", "desc": "Elimina una inspección."},
+            {"metodos": ["GET"], "ruta": "Inspeccion/Buscar/", "desc": "Busca inspecciones con ?buscar=<texto>."},
+        ],
+    },
+    {
+        "nombre": "Embalaje",
+        "base": "/api/embalaje/",
+        "descripcion": "Registros de embalaje de las laptops terminadas.",
+        "endpoints": [
+            {"metodos": ["POST"], "ruta": "Embalaje/Registrar/", "desc": "Registra un nuevo embalaje."},
+            {"metodos": ["GET"], "ruta": "Embalaje/Listar/", "desc": "Lista todos los registros de embalaje (vista SQL)."},
+            {"metodos": ["GET"], "ruta": "Embalaje/Detalle/<numero>/", "desc": "Detalle de un registro de embalaje."},
+            {"metodos": ["PUT", "PATCH"], "ruta": "Embalaje/Actualizar/<numero>/", "desc": "Actualiza un registro de embalaje."},
+            {"metodos": ["DELETE"], "ruta": "Embalaje/Eliminar/<numero>/", "desc": "Elimina un registro de embalaje."},
+            {"metodos": ["GET"], "ruta": "Embalaje/Buscar/", "desc": "Busca registros de embalaje con ?buscar=<texto>."},
+        ],
+    },
 ]
 
 
-def _render_index(request, *, status=200, not_found=False):
-    """Renderiza el índice de endpoints. Reutilizado por la raíz y por el 404."""
+def _sesion_activa(request):
+    """Sesión (fila de la tabla sesion) que corresponde al token de la cookie,
+    o None si no hay cookie, el token no existe o ya venció. Sirve tanto para
+    el login hecho aquí como para el hecho en el cliente."""
+    token = request.COOKIES.get(TOKEN_COOKIE)
+    if not token:
+        return None
+
+    sesion = Sesion.objects.filter(token=token).first()
+    if sesion is None or sesion.fecha_expiracion < timezone.now():
+        return None
+
+    return sesion
+
+
+def login_view(request):
+    """Formulario de login en la raíz (/). Copiado del cliente: envía las
+    credenciales al endpoint de login de la API, guarda el token en la cookie
+    compartida y redirige al índice."""
+    # Si ya hay sesión iniciada (aquí o en el cliente), directo al índice.
+    if _sesion_activa(request):
+        return redirect("api-index")
+
+    if request.method == "POST":
+        usuario = request.POST.get("usuario")
+        contrasena = request.POST.get("contrasena")
+        try:
+            respuesta = requests.post(
+                request.build_absolute_uri("/api/usuarios/login/"),
+                json={"usuario": usuario, "contrasena": contrasena},
+                timeout=5,
+            )
+            datos = respuesta.json()
+        except requests.RequestException:
+            return render(request, "login.html",
+                          {"error": "No se pudo conectar con la API."})
+
+        if respuesta.status_code == 200:
+            respuesta_http = redirect("api-index")
+            respuesta_http.set_cookie(
+                TOKEN_COOKIE,
+                datos.get("token"),
+                max_age=TOKEN_COOKIE_MAX_AGE,
+                httponly=True,
+                samesite="Lax",
+            )
+            return respuesta_http
+
+        return render(request, "login.html",
+                      {"error": datos.get("mensaje", "Credenciales inválidas.")})
+
+    return render(request, "login.html")
+
+
+def logout_view(request):
+    """Cierra la sesión web (aquí y en el cliente, porque la cookie es la
+    misma) y vuelve al login."""
+    respuesta_http = redirect("/")
+    respuesta_http.delete_cookie(TOKEN_COOKIE)
+    return respuesta_http
+
+
+def _render_index(request, sesion, *, status=200, not_found=False):
+    """Renderiza el índice de endpoints. Reutilizado por el índice y por el 404.
+    Los datos del usuario salen de la sesión de la BD, no de la sesión de
+    Django, para que funcione igual si el login se hizo en el cliente."""
     total_endpoints = sum(len(m["endpoints"]) for m in API_MODULES)
+    empleado = getattr(sesion.usuario, "empleado", None)
+    rol = empleado.rol.codigo if empleado and empleado.rol else None
     return render(
         request,
         'api_index.html',
@@ -110,16 +219,26 @@ def _render_index(request, *, status=200, not_found=False):
             "total_endpoints": total_endpoints,
             "not_found": not_found,
             "attempted_path": request.path,
+            "usuario": sesion.usuario.usuario,
+            "rol": rol,
+            "token": sesion.token,
         },
         status=status,
     )
 
 
 def api_index(request):
-    """Índice de endpoints de la API, servido en la raíz del backend."""
-    return _render_index(request)
+    """Índice de endpoints. Requiere haber iniciado sesión, aquí o en el cliente."""
+    sesion = _sesion_activa(request)
+    if sesion is None:
+        return redirect("/")
+    return _render_index(request, sesion)
 
 
 def not_found(request, unknown=None):
-    """Cualquier URL inexistente muestra el índice con un aviso (estado 404)."""
-    return _render_index(request, status=404, not_found=True)
+    """Cualquier URL inexistente lleva al índice con un aviso (estado 404).
+    Si no hay sesión, primero manda al login."""
+    sesion = _sesion_activa(request)
+    if sesion is None:
+        return redirect("/")
+    return _render_index(request, sesion, status=404, not_found=True)
