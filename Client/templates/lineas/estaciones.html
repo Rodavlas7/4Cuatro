@@ -1,5 +1,13 @@
 {% extends 'panel_admin/base.html' %}
 
+{% block topbar_titulo %}Planta{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'lineas-lista' %}">Líneas de Planta</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Estaciones de Trabajo</li>
+{% endblock %}
+
+
 {% block title %}Estaciones de Trabajo{% endblock %}
 
 {% block content %}

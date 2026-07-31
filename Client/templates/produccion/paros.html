@@ -1,11 +1,17 @@
 {% extends 'panel_admin/base.html' %}
 
+{% block topbar_titulo %}Incidencias{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Incidencias</li>
+{% endblock %}
+
 {% block title %}Incidencias{% endblock %}
 
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Incidencias (Paros)</h2>
+    <h2 class="mb-0">Incidencias</h2>
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
         <i class="bi bi-plus-lg me-1"></i> Nuevo paro
     </button>

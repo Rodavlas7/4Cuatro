@@ -1,11 +1,17 @@
 {% extends 'panel_admin/base.html' %}
 
+{% block topbar_titulo %}Planta{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Líneas de planta</li>
+{% endblock %}
+
 {% block title %}Líneas de Ensamblaje{% endblock %}
 
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Líneas de Ensamblaje</h2>
+    <h2 class="mb-0">Líneas de Planta</h2>
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
         <i class="bi bi-plus-lg me-1"></i> Nueva línea
     </button>

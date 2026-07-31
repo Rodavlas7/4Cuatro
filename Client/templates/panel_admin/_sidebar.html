@@ -95,22 +95,13 @@
         </li>
  
         <!-- Materiales -->
+
         <li class="nav-item mb-2">
-            <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
-               href="#materiales" role="button" aria-expanded="false">
-                <span>
-                    <i class="bi bi-boxes me-2"></i><span class="nav-label">Materiales</span>
-                </span>
-                <i class="bi bi-chevron-down chevron"></i>
+            <a href="{% url 'componentes-lista' %}" class="nav-link">
+                <i class="bi bi-boxes me-2"></i><span class="nav-label">Materiales</span>
             </a>
- 
-            <div class="collapse submenu" id="materiales">
-                <a href="{% url 'componentes-lista' %}" class="nav-link small"><span class="nav-label">Componentes</span></a>
-                <a href="{% url 'modelos-lista' %}" class="nav-link small"><span class="nav-label">Modelos</span></a>
-                <a href="{% url 'lotes-lista' %}" class="nav-link small"><span class="nav-label">Lotes</span></a>
-                <a href="{% url 'ordenes-lista' %}" class="nav-link small"><span class="nav-label">Órdenes de Material</span></a>
-            </div>
         </li>
+
  
         <!-- Personal -->
         <li class="nav-item mb-2">
@@ -123,8 +114,8 @@
             </a>
  
             <div class="collapse submenu" id="personal">
-                <a href="{% url 'lista_usuarios' %}" class="nav-link small"><span class="nav-label">Usuarios</span></a>
                 <a href="{% url 'lista_empleados' %}" class="nav-link small"><span class="nav-label">Empleados</span></a>
+                <a href="{% url 'lista_usuarios' %}" class="nav-link small"><span class="nav-label">Usuarios</span></a>
             </div>
         </li>
  

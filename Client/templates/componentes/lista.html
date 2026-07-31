@@ -1,5 +1,12 @@
 {% extends 'panel_admin/base.html' %}
 
+{% block topbar_titulo %}Materiales{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Componentes</li>
+{% endblock %}
+
+
 {% block title %}Componentes{% endblock %}
 
 {% block content %}
@@ -14,9 +21,9 @@
 <!-- Sub-navegación del módulo -->
 <ul class="nav nav-pills mb-3">
     <li class="nav-item"><a class="nav-link active" href="{% url 'componentes-lista' %}">Componentes</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'modelos-lista' %}">Modelos</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'lotes-lista' %}">Lotes</a></li>
     <li class="nav-item"><a class="nav-link" href="{% url 'ordenes-lista' %}">Órdenes de Material</a></li>
+    <li class="nav-item"><a class="nav-link" href="{% url 'lotes-lista' %}">Lotes</a></li>
+    <li class="nav-item"><a class="nav-link" href="{% url 'modelos-lista' %}">Modelos</a></li>
 </ul>
 
 <div class="table-responsive">

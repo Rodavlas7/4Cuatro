@@ -1,5 +1,12 @@
 {% extends 'panel_admin/base.html' %}
 
+{% block topbar_titulo %}Personal{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'lista_empleados' %}">Personal</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Usuarios</li>
+{% endblock %}
+
 {% block title %}Usuarios{% endblock %}
 
 {% block content %}

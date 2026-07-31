@@ -1,11 +1,17 @@
 /* =====================================
-   TOPBAR — TraceX
+   TOPBAR — TraceX (Estilo Enterprise)
 ===================================== */
 
-.topbar{
+.topbar {
     height: var(--topbar-height);
-    background: var(--bs-light);
+    
+    /* EFECTO TRASLÚCIDO (Glassmorphism) */
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
     border-bottom: 1px solid var(--bs-border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 
     display: flex;
     align-items: center;
@@ -16,19 +22,19 @@
     /* --- REGLAS PARA DEJARLO ESTÁTICO --- */
     position: sticky;
     top: 0;
-    z-index: 1020; /* Asegura que flotante quede sobre el contenido al hacer scroll */
+    z-index: 1020;
 }
 
-.topbar-left{
+.topbar-left {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    min-width: 0; /* Permite que el texto se recoja si la pantalla es estrecha */
+    min-width: 0;
 }
 
 /* ---------- Botón hamburguesa ---------- */
 
-.sidebar-toggle-btn{
+.sidebar-toggle-btn {
     background: none;
     border: none;
     color: var(--bs-primary);
@@ -37,56 +43,96 @@
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--bs-border-radius-sm);
     transition: var(--transition);
-    flex-shrink: 0; /* Evita que el botón se aplaste */
+    flex-shrink: 0;
 }
 
-.sidebar-toggle-btn:hover{
-    background: #F3F4F6;
+.sidebar-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
 
-.module-title{
+.module-title {
     margin: 0;
     font-size: var(--text-2xl);
     font-weight: 700;
     color: var(--bs-primary);
 }
 
-.module-subtitle{
+.module-subtitle {
     margin-top: 2px;
     font-size: var(--text-sm);
     color: var(--color-text-light);
 }
 
-.topbar-right{
+.topbar-right {
     display: flex;
     align-items: center;
-    flex-shrink: 0; /* Garantiza que el área del usuario mantenga su espacio */
+    flex-shrink: 0;
 }
 
-/* =====================
-   Usuario
-===================== */
+/* =====================================
+   MIGAS DE PAN (BREADCRUMBS)
+===================================== */
 
-.user-menu-btn{
+.topbar-breadcrumb {
+    margin-top: -2px;
+}
+
+.topbar-breadcrumb .breadcrumb-item {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+}
+
+.topbar-breadcrumb .breadcrumb-item a {
+    color: var(--color-text-light);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.topbar-breadcrumb .breadcrumb-item a:hover {
+    color: var(--bs-primary);
+}
+
+.topbar-breadcrumb .breadcrumb-item.active {
+    color: var(--bs-primary);
+    font-weight: 500;
+}
+
+/* Separador sutil */
+.topbar-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--bs-border-color);
+}
+
+/* =====================================
+   USUARIO Y AVATAR
+===================================== */
+
+.user-menu-btn {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
 
     background: none;
     border: none;
     cursor: pointer;
 
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-xs) var(--space-sm);
     border-radius: var(--bs-border-radius);
 
     transition: var(--transition);
 }
 
-.user-menu-btn:hover{
-    background: #F3F4F6;
+.user-menu-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
 }
 
-.user-avatar{
+/* Envoltorio del Avatar e Indicador */
+.user-avatar-wrapper {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.user-avatar {
     width: var(--avatar-size);
     height: var(--avatar-size);
 
@@ -99,45 +145,63 @@
     align-items: center;
 
     font-size: var(--text-xl);
-    flex-shrink: 0;
 }
 
-.user-data{
+/* Punto indicador "En línea" */
+.status-indicator {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+}
+
+.user-data {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
 }
 
-.user-data span{
+.user-data span {
     display: block;
 }
 
-.employee-name{
+.employee-name {
     font-size: var(--text-sm);
     font-weight: 600;
 }
 
-.username{
+.username {
     font-size: var(--text-xs);
     color: var(--color-text-light);
 }
 
+/* Menú desplegable */
+.topbar .dropdown-menu {
+    min-width: 180px;
+    border-radius: var(--bs-border-radius);
+}
+
+.topbar .dropdown-item:active {
+    background-color: var(--bs-primary);
+}
+
 /* =====================================
-   RESPONSIVIDAD
+   RESPONSIVIDAD (Agrupada)
 ===================================== */
 
 /* ---------- Tablet (<768px) ---------- */
-@media (max-width: 767.98px){
+@media (max-width: 767.98px) {
     .topbar {
         padding: 0 var(--space-lg);
     }
 
-    /* Ocultamos el subtítulo "TraceX" para darle aire al título principal */
     .module-subtitle {
         display: none;
     }
 
-    /* Evitamos que títulos largos rompan el ancho empujando el texto con "..." */
     .module-title {
         font-size: var(--text-xl);
         white-space: nowrap;
@@ -148,8 +212,8 @@
 }
 
 /* ---------- Móvil (<575.98px) ---------- */
-@media (max-width: 575.98px){
-    .topbar{
+@media (max-width: 575.98px) {
+    .topbar {
         padding: 0 var(--space-md);
     }
 
@@ -157,20 +221,21 @@
         gap: var(--space-xs);
     }
 
-    /* Reducimos el ancho máximo en celulares muy estrechos */
-    .module-title{
+    .module-title {
         font-size: var(--text-lg);
         max-width: 140px;
     }
 
-    /* Reducimos el espacio interno del botón de usuario */
     .user-menu-btn {
         gap: 6px;
         padding: var(--space-xs);
     }
 
-    /* Oculta nombre y rol, dejando únicamente el avatar y la flechita */
-    .user-data{
+    .user-data {
+        display: none !important;
+    }
+
+    .topbar-breadcrumb {
         display: none !important;
     }
 }
