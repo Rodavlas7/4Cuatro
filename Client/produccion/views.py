@@ -13,9 +13,15 @@ from .forms import get_choices_lineas_paro
 # URL base de la API (Servicios). Igual que en home/views.py y componentes/views.py.
 API = "http://127.0.0.1:8000/api"
 
-# Estados de laptop que YA no admiten registrar ensamblaje:
-# EMBALA = Embalada, APROV = Aprobada (ya pasó calidad, va camino a embalaje).
-ESTADOS_LAPTOP_EXCLUIDOS = {"EMBALA", "APROV"}
+# Estados en los que la laptop ya cerró su ciclo productivo: ni admite un
+# ensamblaje nuevo ni se le pueden quitar piezas.
+#   APROV  = Aprobada  (ya pasó calidad, va camino a embalaje)
+#   RECHA  = Rechazada (salió de la línea)
+#   EMBALA = Embalada  (terminada)
+# Es la misma lista que bloquea el trigger
+# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql): si aquí se
+# ofreciera una de esas laptops, el registro tronaría hasta la base de datos.
+ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
 
 # Estados de componente.
 EDO_COMP_DISPONIBLE = "EDC001"
@@ -69,12 +75,13 @@ def _mensaje_api(response):
 
 
 def _laptops_disponibles(headers):
-    """Laptops que todavía pueden recibir ensamblaje (no embaladas ni ya aprobadas)."""
+    """Laptops que todavía pueden recibir ensamblaje: quedan fuera las que ya
+    cerraron su proceso (aprobadas, rechazadas y embaladas)."""
     laptops = _json(f"{API}/produccion/laptops/", headers)
     if not isinstance(laptops, list):
         return []
     return [l for l in laptops
-            if l.get("estado_codigo") not in ESTADOS_LAPTOP_EXCLUIDOS]
+            if l.get("estado_codigo") not in ESTADOS_LAPTOP_FINALIZADOS]
 
 
 def _bom(headers, modelo_laptop):
@@ -622,10 +629,9 @@ def ordenProduccionDetalleView(request, folio):
 #   LAPTOPS
 # 
 
-# Estados en los que la laptop ya cerró su ciclo productivo y no se le deben
-# quitar piezas. Es el mismo criterio del trigger
-# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql).
-ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
+# ESTADOS_LAPTOP_FINALIZADOS está declarado arriba del archivo: lo comparten el
+# selector de ensamblaje (no ofrece esas laptops) y el detalle (no deja quitarles
+# componentes). Es una sola lista para que no se desincronicen.
 
 # Estado con el que nace una laptop.
 EDO_LAPTOP_REGISTRADA = "REGIS"
