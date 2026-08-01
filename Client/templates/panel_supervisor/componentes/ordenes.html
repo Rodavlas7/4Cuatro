@@ -4,144 +4,273 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Órdenes de Material</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg me-1"></i> Nueva orden
-    </button>
-</div>
+<div class="wrap">
 
-<ul class="nav nav-pills mb-3">
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:componentes-lista' %}">Componentes</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:modelos-lista' %}">Modelos</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:lotes-lista' %}">Lotes</a></li>
-    <li class="nav-item"><a class="nav-link active" href="{% url 'panel_supervisor:ordenes-lista' %}">Órdenes de Material</a></li>
-</ul>
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO, NAVEGACIÓN Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>#</th>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Línea</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for o in ordenes %}
-            <tr>
-                <td>
-                    <a href="{% url 'panel_supervisor:orden-detalle' o.numero %}">{{ o.numero }}</a>
-                </td>
-                <td>{{ o.fecha|default:"—" }}</td>
-                <td>{{ o.hora|default:"—" }}</td>
-                <td>{{ o.linea|default:"—" }}</td>
-                <td class="text-end">
-                    <a href="{% url 'panel_supervisor:orden-detalle' o.numero %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-list-ul"></i> Renglones
-                    </a>
+        <!-- ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Órdenes de Material</h4>
+                <p class="text-muted small mb-0">
+                    {% if mi_linea %}
+                        Material solicitado para <strong class="text-dark">{{ mi_linea_nombre }}</strong>.
+                    {% else %}
+                        No tienes una línea asignada.
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear" {% if not mi_linea %}disabled{% endif %}>
+                    <i class="bi bi-plus-lg"></i> Nueva orden
+                </button>
+            </div>
+        </div>
 
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEditar"
-                        data-numero="{{ o.numero }}"
-                        data-fecha="{{ o.fecha|default:'' }}"
-                        data-hora="{{ o.hora|default:'' }}"
-                        data-linea="{{ o.linea|default:'' }}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+        <!-- SUB-NAVEGACIÓN DEL MÓDULO -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <ul class="nav nav-pills gap-1">
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:componentes-lista' %}">Componentes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'panel_supervisor:ordenes-lista' %}">Órdenes de Material</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:lotes-lista' %}">Lotes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:modelos-lista' %}">Modelos</a>
+                </li>
+            </ul>
+        </div>
 
-                    <form method="POST" action="{% url 'panel_supervisor:orden-eliminar' o.numero %}" class="d-inline" onsubmit="return confirm('¿Eliminar esta orden de material?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-trash"></i>
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <form method="GET">
+                <div class="row g-3">
+
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" value="{{ filtros.q }}" placeholder="Número de orden...">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Desde</label>
+                        <input type="date" name="desde" class="form-control form-control-sm py-2 text-secondary" value="{{ filtros.desde }}">
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Hasta</label>
+                        <input type="date" name="hasta" class="form-control form-control-sm py-2 text-secondary" value="{{ filtros.hasta }}">
+                    </div>
+
+                </div>
+
+                <!-- Resumen y botones -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 pt-3 border-top gap-3">
+                    <span class="text-muted small">
+                        {% if hay_filtros %}
+                            <i class="bi bi-funnel-fill text-primary me-1"></i> Mostrando <strong class="text-dark">{{ mostrados }}</strong> de {{ total }} órdenes de tu línea.
+                        {% else %}
+                            <i class="bi bi-clipboard-check text-secondary me-1"></i>
+                            {% if total == 1 %}1 orden de material en tu línea.{% else %}{{ total }} órdenes de material en tu línea.{% endif %}
+                        {% endif %}
+                    </span>
+                    <div class="d-flex gap-2">
+                        {% if hay_filtros %}
+                        <a href="{% url 'panel_supervisor:ordenes-lista' %}" class="btn btn-white border btn-sm py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-x-lg text-danger"></i> Limpiar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-filter"></i> Filtrar resultados
                         </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-4">No hay órdenes de material registradas.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">#</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Fecha y hora</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Renglones</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in ordenes %}
+                    <tr>
+                        <td class="ps-4">
+                            <a href="{% url 'panel_supervisor:orden-detalle' o.numero %}" class="text-decoration-none">
+                                <span class="badge-id text-primary">#{{ o.numero }}</span>
+                            </a>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-calendar3 text-secondary fs-5"></i>
+                                <div>
+                                    <div class="fw-semibold text-dark">{{ o.fecha|default:"—" }}</div>
+                                    <div class="text-secondary small" style="font-size: 11px;">{{ o.hora|default:"Sin hora" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            {% if o.renglones %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 fw-semibold">
+                                    {% if o.renglones == 1 %}1 renglón{% else %}{{ o.renglones }} renglones{% endif %}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1 fw-semibold">
+                                    Sin renglones
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <!-- RENGLONES -->
+                                <a href="{% url 'panel_supervisor:orden-detalle' o.numero %}" class="btn text-primary" title="Ver renglones">
+                                    <i class="bi bi-list-ul"></i>
+                                </a>
+
+                                <!-- EDITAR -->
+                                <button
+                                    type="button"
+                                    class="btn text-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditar"
+                                    data-url="{% url 'panel_supervisor:orden-editar' o.numero %}"
+                                    data-fecha="{{ o.fecha|default:'' }}"
+                                    data-hora="{{ o.hora|default:'' }}"
+                                    title="Editar orden">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- ELIMINAR -->
+                                <form method="POST" action="{% url 'panel_supervisor:orden-eliminar' o.numero %}" class="d-inline" onsubmit="return confirm('¿Eliminar esta orden de material?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn text-danger" title="Eliminar orden">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-clipboard-check text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            {% if not mi_linea %}
+                                No tienes una línea asignada.
+                            {% elif hay_filtros %}
+                                Ninguna orden de tu línea coincide con los filtros de búsqueda.
+                            {% else %}
+                                Tu línea no tiene órdenes de material registradas.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
-
-<!-- MODAL: CREAR -->
+<!-- ==========================================
+     MODAL: CREAR
+     ========================================== -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{% url 'panel_supervisor:ordenes-lista' %}">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'panel_supervisor:ordenes-lista' %}" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nueva orden de material</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nueva orden de material</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Fecha</label>
-                        <input type="date" name="fecha" class="form-control">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Fecha</label>
+                            <input type="date" name="fecha" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Hora</label>
+                            <input type="time" name="hora" class="form-control">
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hora</label>
-                        <input type="time" name="hora" class="form-control">
+                        <label class="form-label small fw-medium text-muted">Línea</label>
+                        <input type="text" class="form-control bg-light" value="{{ mi_linea_nombre|default:'—' }}" disabled>
+                        <div class="form-text" style="font-size: 11px;">Es tu línea: se asigna sola.</div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Línea</label>
-                        <select name="linea" class="form-select">
-                            <option value="">— Selecciona —</option>
-                            {% for ln in lineas %}
-                            <option value="{{ ln.codigo }}">{{ ln.nombre }}</option>
-                            {% endfor %}
-                        </select>
+
+                    <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start mt-4">
+                        <i class="bi bi-info-circle-fill text-primary mt-1"></i>
+                        <div>
+                            La orden se crea vacía. Los renglones (qué modelo y cuánta cantidad) se agregan
+                            después, desde el detalle de la orden.
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar orden</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-
-<!-- MODAL: EDITAR -->
+<!-- ==========================================
+     MODAL: EDITAR
+     ========================================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" id="formEditar" action="">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="formEditar" action="" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar orden</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Editar orden</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Fecha</label>
-                        <input type="date" name="fecha" id="edit_fecha" class="form-control">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Fecha</label>
+                            <input type="date" name="fecha" id="edit_fecha" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Hora</label>
+                            <input type="time" name="hora" id="edit_hora" class="form-control" step="1">
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hora</label>
-                        <input type="time" name="hora" id="edit_hora" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Línea</label>
-                        <select name="linea" id="edit_linea" class="form-select">
-                            <option value="">— Selecciona —</option>
-                            {% for ln in lineas %}
-                            <option value="{{ ln.codigo }}">{{ ln.nombre }}</option>
-                            {% endfor %}
-                        </select>
+                        <label class="form-label small fw-medium text-muted">Línea</label>
+                        <input type="text" class="form-control bg-light" value="{{ mi_linea_nombre|default:'—' }}" disabled>
+                        <div class="form-text" style="font-size: 11px;">Es tu línea: no se puede cambiar.</div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
                 </div>
             </div>
         </form>
@@ -149,12 +278,13 @@
 </div>
 
 <script>
+// Carga de datos al Modal Editar. La URL viene armada por Django en data-url,
+// para no repetir aquí la ruta del panel y que se desincronice de urls.py.
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
-    document.getElementById('formEditar').action = "/panel/supervisor/componentes/ordenes/editar/" + btn.dataset.numero + "/";
+    document.getElementById('formEditar').action = btn.dataset.url;
     document.getElementById('edit_fecha').value = btn.dataset.fecha;
     document.getElementById('edit_hora').value = btn.dataset.hora;
-    document.getElementById('edit_linea').value = btn.dataset.linea;
 });
 </script>
 

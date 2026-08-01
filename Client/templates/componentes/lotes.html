@@ -11,115 +11,224 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Lotes de Componente</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg me-1"></i> Nuevo lote
-    </button>
-</div>
+<div class="wrap">
 
-<ul class="nav nav-pills mb-3">
-    <li class="nav-item"><a class="nav-link" href="{% url 'componentes-lista' %}">Componentes</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'ordenes-lista' %}">Órdenes de Material</a></li>
-    <li class="nav-item"><a class="nav-link active" href="{% url 'lotes-lista' %}">Lotes</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'modelos-lista' %}">Modelos</a></li>
-</ul>
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO, NAVEGACIÓN Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
 
+        <!-- ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Lotes de Componente</h4>
+                <p class="text-muted small mb-0">Agrupaciones con las que entra el material a la planta.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                    <i class="bi bi-plus-lg"></i> Nuevo lote
+                </button>
+            </div>
+        </div>
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>Código</th>
-                <th>Descripción</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for l in lotes %}
-            <tr>
-                <td>{{ l.codigo }}</td>
-                <td>{{ l.descripcion|default:"—" }}</td>
-                <td class="text-end">
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEditar"
-                        data-codigo="{{ l.codigo }}"
-                        data-descripcion="{{ l.descripcion|default:'' }}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+        <!-- SUB-NAVEGACIÓN DEL MÓDULO -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <ul class="nav nav-pills gap-1">
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'componentes-lista' %}">Componentes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'ordenes-lista' %}">Órdenes de Material</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'lotes-lista' %}">Lotes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'modelos-lista' %}">Modelos</a>
+                </li>
+            </ul>
+        </div>
 
-                    <form method="POST" action="{% url 'lote-eliminar' l.codigo %}" class="d-inline" onsubmit="return confirm('¿Eliminar este lote?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-trash"></i>
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <form method="GET">
+                <div class="row g-3">
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" value="{{ filtros.q }}" placeholder="Código o descripción...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen y botones -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 pt-3 border-top gap-3">
+                    <span class="text-muted small">
+                        {% if hay_filtros %}
+                            <i class="bi bi-funnel-fill text-primary me-1"></i> Mostrando <strong class="text-dark">{{ mostrados }}</strong> de {{ total }} lotes.
+                        {% else %}
+                            <i class="bi bi-box text-secondary me-1"></i> {{ total }} lote{{ total|pluralize:"s" }} registrado{{ total|pluralize:"s" }}.
+                        {% endif %}
+                    </span>
+                    <div class="d-flex gap-2">
+                        {% if hay_filtros %}
+                        <a href="{% url 'lotes-lista' %}" class="btn btn-white border btn-sm py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-x-lg text-danger"></i> Limpiar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-filter"></i> Filtrar resultados
                         </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="3" class="text-center text-muted py-4">No hay lotes registrados.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Código</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Descripción</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">En uso</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lotes %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-box-seam text-secondary fs-5"></i>
+                                <span class="font-monospace fw-bold text-dark">{{ l.codigo }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">{{ l.descripcion|default:"Sin descripción" }}</div>
+                        </td>
+                        <td class="text-center">
+                            {% if l.componentes %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 fw-semibold">
+                                    {{ l.componentes }} componente{{ l.componentes|pluralize:"s" }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">Sin uso</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <!-- EDITAR -->
+                                <button
+                                    type="button"
+                                    class="btn text-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditar"
+                                    data-codigo="{{ l.codigo }}"
+                                    data-descripcion="{{ l.descripcion|default:'' }}"
+                                    title="Editar lote">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- ELIMINAR -->
+                                {% if l.componentes %}
+                                    <button type="button" class="btn text-muted" disabled title="No se puede eliminar: {{ l.componentes }} componente{{ l.componentes|pluralize:'s' }} lo usa{{ l.componentes|pluralize:'n' }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                {% else %}
+                                    <form method="POST" action="{% url 'lote-eliminar' l.codigo %}" class="d-inline" onsubmit="return confirm('¿Eliminar este lote?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn text-danger" title="Eliminar lote">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-box text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            {% if hay_filtros %}
+                                Ningún lote coincide con los filtros de búsqueda.
+                            {% else %}
+                                No hay lotes registrados.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
-
-<!-- MODAL: CREAR -->
+<!-- ==========================================
+     MODAL: CREAR
+     ========================================== -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{% url 'lotes-lista' %}">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'lotes-lista' %}" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nuevo lote</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nuevo lote</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Código</label>
-                        <input type="text" name="codigo" class="form-control" maxlength="12" required>
+                        <label class="form-label small fw-medium">Código <span class="text-danger">*</span></label>
+                        <input type="text" name="codigo" class="form-control font-monospace" maxlength="12" placeholder="Ej. LCOMP-003" required>
+                        <div class="form-text" style="font-size: 11px;">Es la llave del lote: después de guardarlo ya no se puede cambiar.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Descripción</label>
-                        <input type="text" name="descripcion" class="form-control" maxlength="64">
+                        <label class="form-label small fw-medium">Descripción</label>
+                        <input type="text" name="descripcion" class="form-control" maxlength="64" placeholder="Opcional">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar lote</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-
-<!-- MODAL: EDITAR -->
+<!-- ==========================================
+     MODAL: EDITAR
+     ========================================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" id="formEditar" action="">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="formEditar" action="" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar lote</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Editar lote</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Código</label>
-                        <input type="text" id="edit_codigo" class="form-control" readonly>
+                        <label class="form-label small fw-medium text-muted">Código</label>
+                        <input type="text" id="edit_codigo" class="form-control bg-light font-monospace" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Descripción</label>
+                        <label class="form-label small fw-medium">Descripción</label>
                         <input type="text" name="descripcion" id="edit_descripcion" class="form-control" maxlength="64">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
                 </div>
             </div>
         </form>
@@ -127,6 +236,7 @@
 </div>
 
 <script>
+// Carga de datos al Modal Editar
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
     document.getElementById('formEditar').action = "/componentes/lotes/editar/" + btn.dataset.codigo + "/";

@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
+from api.errores import ErroresDeBaseMixin
 from .models import *
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
@@ -19,8 +20,12 @@ from usuarios.permissions import TienePermisoModulo
 # Código de estado usado para el "soft delete" de un componente.
 # EDC004 = Mermado (ver DB/datos.sql, tabla edo_componente).
 ESTADO_MERMADO = 'EDC004'
- 
- 
+
+
+# El manejo de los errores de la base (ErroresDeBaseMixin) vive en
+# api/errores.py: lo comparten todos los módulos de la API.
+
+
 # Vistas de catálogos (solo lectura)
  
 class TipoCompListAPIView(generics.ListAPIView):
@@ -47,7 +52,7 @@ class EdoComponenteListAPIView(generics.ListAPIView):
  
 # Vistas de LOTE_COMP
  
-class LoteCompListCreateAPIView(generics.ListCreateAPIView):
+class LoteCompListCreateAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):
     permission_classes = [
             IsAuthenticated,
             TienePermisoModulo
@@ -55,8 +60,8 @@ class LoteCompListCreateAPIView(generics.ListCreateAPIView):
     modulo = "componentes"
     queryset = LoteComp.objects.all()
     serializer_class = LoteCompSerializer
- 
- 
+
+
 class LoteCompDetailAPIView(generics.RetrieveAPIView):
     permission_classes = [
             IsAuthenticated,
@@ -68,20 +73,21 @@ class LoteCompDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'codigo'
  
  
-class LoteCompModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class LoteCompModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [
             IsAuthenticated,
             TienePermisoModulo
         ]
     modulo = "componentes"
     queryset = LoteComp.objects.all()
-    serializer_class = LoteCompSerializer
+    # Al editar, el codigo lo manda la URL y no se toca (ver serializers.py).
+    serializer_class = LoteCompUpdateSerializer
     lookup_field = 'codigo'
- 
- 
+
+
 # Vistas de MODELO_COMPONENTE
- 
-class ModeloComponenteListCreateAPIView(generics.ListCreateAPIView):
+
+class ModeloComponenteListCreateAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):
     permission_classes = [
             IsAuthenticated,
             TienePermisoModulo
@@ -102,21 +108,22 @@ class ModeloComponenteDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'codigo'
  
  
-class ModeloComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class ModeloComponenteModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [
             IsAuthenticated,
             TienePermisoModulo
         ]
     modulo = "componentes"
-    
+
     queryset = ModeloComponente.objects.all()
-    serializer_class = ModeloComponenteSerializer
+    # Al editar, el codigo lo manda la URL y no se toca (ver serializers.py).
+    serializer_class = ModeloComponenteUpdateSerializer
     lookup_field = 'codigo'
 
 
 # Vistas de MODELO_LAPTOP_COMPONENTE (tabla puente / lista de materiales)
 
-class ModeloLaptopComponenteListCreateAPIView(generics.ListCreateAPIView):
+class ModeloLaptopComponenteListCreateAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):
     """GET: todos los renglones. Filtra por modelo de laptop con
     ?modelo_laptop=<codigo>.  POST: agrega un componente (con su capacidad)
     a un modelo de laptop."""
@@ -136,7 +143,7 @@ class ModeloLaptopComponenteListCreateAPIView(generics.ListCreateAPIView):
         return queryset
 
 
-class ModeloLaptopComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class ModeloLaptopComponenteModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDestroyAPIView):
     """Modifica/borra un renglón del BOM. Se direcciona por la llave
     compuesta (modelo_laptop, modelo_componente)."""
     permission_classes = [
@@ -160,7 +167,7 @@ class ModeloLaptopComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView)
 # Vistas de ORDEN_MATERIAL / DETALLE_MATERIAL
 
  
-class OrdenMaterialListCreateAPIView(generics.ListCreateAPIView):
+class OrdenMaterialListCreateAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):
     permission_classes = [
             IsAuthenticated,
             TienePermisoModulo
@@ -182,7 +189,7 @@ class OrdenMaterialDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
  
  
-class OrdenMaterialModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class OrdenMaterialModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [
                 IsAuthenticated,
                 TienePermisoModulo
@@ -193,7 +200,7 @@ class OrdenMaterialModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'numero'
  
  
-class DetalleMaterialListCreateAPIView(generics.ListCreateAPIView):
+class DetalleMaterialListCreateAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):
     """GET: todos los renglones. Filtra por orden con ?orden=<numero>.
     POST: agrega un renglón (modelo + cantidad) a una orden de material."""
     permission_classes = [
@@ -211,7 +218,7 @@ class DetalleMaterialListCreateAPIView(generics.ListCreateAPIView):
         return queryset
  
  
-class DetalleMaterialModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class DetalleMaterialModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican la cantidad; DELETE borra el renglón.
     Se direcciona por la llave compuesta (orden, modelo), ya que la tabla
     detalle_material no tiene un id simple."""
@@ -234,7 +241,7 @@ class DetalleMaterialModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
  
 # Vistas de COMPONENTE
  
-class ComponenteListAPIView(generics.ListCreateAPIView):
+class ComponenteListAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):
     """GET: consulta general del módulo (lee de la vista SQL vista_componentes).
     POST: registra un nuevo componente."""
     permission_classes = [
@@ -266,7 +273,7 @@ class ComponenteDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
  
  
-class ComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class ComponenteModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el componente; DELETE lo marca como Mermado (EDC004)
     en lugar de borrar el registro físicamente."""
     permission_classes = [
@@ -279,5 +286,11 @@ class ComponenteModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'numero'
  
     def perform_destroy(self, instance):
-        instance.estado_id = ESTADO_MERMADO
-        instance.save(update_fields=['estado'])
+        # Reemplaza al perform_destroy del mixin (la baja no borra, marca), así
+        # que el guardado se pasa por _intentar para no perder la traducción del
+        # error de la base.
+        def marcar_como_mermado(componente):
+            componente.estado_id = ESTADO_MERMADO
+            componente.save(update_fields=['estado'])
+
+        self._intentar(marcar_como_mermado, instance)

@@ -28,6 +28,11 @@ ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
 EDO_COMP_DISPONIBLE = "EDC001"
 EDO_COMP_EN_USO = "EDC002"
 
+# Mermado. Un componente así ya no vuelve al inventario, y sp_Liberar_Componentes_Laptop
+# lo deja tal cual —con su vínculo al ensamblaje— para no perder el rastro de en
+# qué laptop se perdió.
+EDO_COMP_MERMADO = "EDC004"
+
 # Estado con el que nace una orden de producción (edo_produccion).
 EDO_ORDEN_PENDIENTE = "PEND"
 
@@ -555,7 +560,13 @@ def ordenProduccionEditarView(request, folio):
 
 
 def ordenProduccionCancelarView(request, folio):
-    """El DELETE de la API no borra la orden: la deja en estado Cancelada (CANC)."""
+    """Cancela la orden y deja la planta consistente.
+
+    Antes esto era un DELETE que sólo movía el estado a Cancelada y dejaba el
+    material apartado en laptops que ya nadie iba a terminar. Ahora lo resuelve
+    sp_Cancelar_Orden_Produccion, que además libera los componentes de las
+    laptops a medias y las rechaza, todo en una transacción. Las Aprobadas y
+    Embaladas se respetan: ya pasaron calidad."""
 
     if 'token' not in request.session:
         return redirect('login')
@@ -563,14 +574,55 @@ def ordenProduccionCancelarView(request, folio):
     if request.method == "POST":
 
         headers = _headers(request)
-        respuesta = requests.delete(f"{API}/produccion/mod/{folio}/", headers=headers)
+        respuesta = requests.post(f"{API}/produccion/{folio}/cancelar/", json={}, headers=headers)
 
-        if respuesta.status_code == 204:
-            messages.success(request, f"Orden #{folio} cancelada.")
+        if respuesta.status_code == 200:
+            resumen = respuesta.json()
+            messages.success(
+                request,
+                f"Orden #{folio} cancelada. "
+                f"{resumen.get('laptops_rechazadas', 0)} laptop(s) rechazada(s), "
+                f"{resumen.get('componentes_liberados', 0)} componente(s) devuelto(s) al inventario"
+                + (f", {resumen['laptops_respetadas']} laptop(s) terminada(s) sin tocar."
+                   if resumen.get('laptops_respetadas') else ".")
+            )
         else:
             messages.error(request, _mensaje_api(respuesta))
 
     return redirect('ordenes-produccion-lista')
+
+
+def ordenProduccionIniciarEnsamblajeView(request, folio):
+    """Da de alta de un jalón las laptops que le faltan a la orden.
+
+    Lo resuelve sp_Iniciar_Ensamblaje_Orden. La línea va como parámetro porque
+    orden_produccion no la tiene: la línea es de la laptop, no de la orden."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        linea = request.POST.get("linea")
+
+        if not linea:
+            messages.error(request, "Selecciona la línea donde se van a ensamblar.")
+            return redirect('orden-produccion-detalle', folio=folio)
+
+        headers = _headers(request)
+        respuesta = requests.post(
+            f"{API}/produccion/{folio}/iniciar-ensamblaje/",
+            json={"linea": linea},
+            headers=headers,
+        )
+
+        if respuesta.status_code == 200:
+            creadas = respuesta.json().get('laptops_creadas', 0)
+            messages.success(request, f"Se registraron {creadas} laptop(s) para la orden #{folio}.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('orden-produccion-detalle', folio=folio)
 
 
 def ordenProduccionDetalleView(request, folio):
@@ -623,6 +675,11 @@ def ordenProduccionDetalleView(request, folio):
             "embaladas": embaladas,
             # Se topa en 100 para que la barra no se desborde si se registraron too many
             "porcentaje": min(100, round(registradas * 100 / planificadas)) if planificadas else 0,
+            # Para las dos acciones del encabezado: sólo tienen sentido mientras
+            # la orden siga abierta, y la de ensamblaje además necesita línea.
+            "abierta": orden.get("estado_codigo") in EDOS_ORDEN_ABIERTA,
+            "faltantes": max(0, planificadas - registradas),
+            "lineas": _json(f"{API}/lineas/", headers) or [],
         }
     )
 
@@ -1179,6 +1236,10 @@ def laptopDetalleView(request, numero):
         "laptop": laptop,
         "registros": registros,
         "componentes": componentes,
+        # Hay algo que soltar sólo si queda un componente que no esté mermado:
+        # los mermados se quedan pegados al ensamblaje a propósito, y sin esto el
+        # botón de desarmar seguiría ahí sin nada que hacer.
+        "desarmable": any(c.get("estado_codigo") != EDO_COMP_MERMADO for c in componentes),
         "inspecciones": inspecciones,
         "embalajes": embalajes,
         "tiempos": tiempos,
@@ -1288,6 +1349,50 @@ def laptopComponenteLiberarView(request, numero, componente):
         if respuesta.status_code in (200, 202):
             messages.success(
                 request, f"Componente #{componente} liberado de la laptop #{numero}.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('laptop-detalle', numero=numero)
+
+
+def laptopDesarmarView(request, numero):
+    """Desarma la laptop completa: suelta TODOS sus componentes de un golpe.
+
+    Es el hermano mayor de laptopComponenteLiberarView, que quita uno solo. Lo
+    resuelve sp_Liberar_Componentes_Laptop, que además cierra el registro de
+    ensamblaje.
+
+    OJO: al cerrarlo, tg_Control_Componentes_Duplicados ya no deja abrirle otro,
+    o sea que la laptop no se vuelve a armar. Por eso la plantilla lo pregunta
+    con todas sus letras antes de mandar el POST."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+
+        nuevo_estado = request.POST.get("estado") or EDO_COMP_DISPONIBLE
+        if nuevo_estado == EDO_COMP_EN_USO:
+            messages.error(request, "Un componente liberado no puede quedar En Uso.")
+            return redirect('laptop-detalle', numero=numero)
+
+        respuesta = requests.post(
+            f"{API}/produccion/laptops/{numero}/liberar-componentes/",
+            json={"estado": nuevo_estado},
+            headers=headers,
+        )
+
+        if respuesta.status_code == 200:
+            resumen = respuesta.json()
+            mermados = resumen.get('mermados_conservados', 0)
+            messages.success(
+                request,
+                f"Laptop #{numero} desarmada: "
+                f"{resumen.get('componentes_liberados', 0)} componente(s) liberado(s)"
+                + (f" ({mermados} mermado(s) se quedaron como estaban)." if mermados else ".")
+            )
         else:
             messages.error(request, _mensaje_api(respuesta))
 

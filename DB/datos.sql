@@ -258,7 +258,9 @@ INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
 -- Línea F: Embalaje
 INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
 ('EST-F1', 'F1 — Limpieza y Escaneo',   'Revisión estética final, limpieza de pantalla, chasis y escaneo del número de serie',     'LIN006', TRUE),
-('EST-F2', 'F2 — Empaque y Sellado',    'Colocación en caja con material de protección, inclusión de manuales y sellado final',    'LIN006', TRUE);
+('EST-F2', 'F2 — Empaque y Sellado',    'Colocación en caja con material de protección, inclusión de manuales y sellado final',    'LIN006', TRUE),
+('EST-F3', 'F3 — Inspección de Calidad','Verificación del embalaje, sellado y etiquetado por el inspector, y registro del resultado','LIN006', TRUE);
+
 -- 13. LOTE DE LAPTOPS
 
 INSERT INTO lote_laptop (codigo, fecha) VALUES
@@ -341,6 +343,13 @@ INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno,
 (2607034, 'Rebeca',    'Zamora',   'Iglesias', 'OPENSA', 'MAT', TRUE);   -- LINEA D, EST-D4
 
 
+-- INSPECTOR DE CALIDAD DE LA LINEA F (EMBALAJE)
+-- La línea de embalaje no tenía ningún empleado con rol OPCALI al cual mover,
+-- así que su estación de calidad (EST-F3) estrena inspector.
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607035, 'Fabiola',   'Cordero',  'Nieto',    'OPCALI', 'MAT', TRUE);   -- LINEA F, EST-F3
+
+
 
 -- 15.1 ASIGNACION DE UN EMPLEADO A SU LINEA
 
@@ -396,12 +405,13 @@ INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
 (2607028, 'LIN006', '2026-07-15', NULL);
 
 
--- OPERARIOS NUEVOS DE LA CUARTA ESTACIÓN
+-- EMPLEADOS NUEVOS (cuartas estaciones e inspector de embalaje)
 INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
 (2607031, 'LIN001', '2026-07-15', NULL),
 (2607032, 'LIN002', '2026-07-15', NULL),
 (2607033, 'LIN003', '2026-07-15', NULL),
-(2607034, 'LIN004', '2026-07-15', NULL);
+(2607034, 'LIN004', '2026-07-15', NULL),
+(2607035, 'LIN006', '2026-07-15', NULL);
 
 
 
@@ -452,7 +462,8 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 -- LINEA F (EMBALAJE)
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607026, 'EST-F1', '2026-07-15', NULL),
-(2607027, 'EST-F2', '2026-07-15', NULL);
+(2607027, 'EST-F2', '2026-07-15', NULL),
+(2607035, 'EST-F3', '2026-07-15', NULL);   -- Fabiola Cordero Nieto (OPCALI)
 
 
 
@@ -516,7 +527,8 @@ INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
 ('0004RFS', 'RFS2026', 1, 2607009),   -- Roberto Flores Silva   (LINEA B)
 ('0006HPM', 'HPM2026', 1, 2607014),   -- Héctor Paz Mora        (LINEA C)
 ('0008CSM', 'CSM2026', 1, 2607019),   -- Carmen Sosa Molina     (LINEA D)
-('0010RBC', 'RBC2026', 1, 2607024);   -- Ramón Blanco Cruz      (LINEA E)
+('0010RBC', 'RBC2026', 1, 2607024),   -- Ramón Blanco Cruz      (LINEA E)
+('0013FCN', 'FCN2026', 1, 2607035);   -- Fabiola Cordero Nieto  (LINEA F, embalaje)
 
 
 -- -------------------------------------------------------------- SUPERVISORES

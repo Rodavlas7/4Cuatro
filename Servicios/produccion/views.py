@@ -1,6 +1,9 @@
+from django.db import DatabaseError
 from django.utils import timezone
 from rest_framework import generics
-
+from rest_framework.views import APIView
+from api import procedimientos
+from api.errores import mensaje_de_base
 from .models import *
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
@@ -343,3 +346,75 @@ class BuscarParoAPIView(generics.ListAPIView):
             queryset = queryset.filter(fecha_inicio__lte=fecha_hasta)
 
         return queryset.order_by("-fecha_inicio", "-hora_inicio")
+
+# ==================================================
+# A C C I O N E S   ( P R O C E D I M I E N T O S )
+# ==================================================
+#
+# Estas tres no son CRUD sobre una tabla: son operaciones que tocan varias y
+# tienen que pasar o no pasar completas, así que las resuelve la base con un
+# procedimiento (DB/procedimientos.sql) y aquí sólo se dispara la llamada.
+#
+# Por eso son APIView y no generics: no hay queryset ni serializer que valga.
+# El manejo de errores tampoco puede ser ErroresDeBaseMixin —ese envuelve los
+# perform_* de las vistas genéricas—, así que se atrapa el DatabaseError a mano
+# y se traduce con el mismo api.errores.
+
+
+class AccionDeProcedimientoAPIView(APIView):
+    """Base de las tres: llama al procedimiento y devuelve su resumen.
+
+    Las subclases ponen el nombre del procedimiento, el módulo del permiso y
+    de dónde salen los argumentos."""
+
+    permission_classes = [IsAuthenticated, TienePermisoModulo]
+
+    procedimiento = None
+
+    def argumentos(self, request, **kwargs):
+        raise NotImplementedError
+
+    def post(self, request, **kwargs):
+        try:
+            resumen = procedimientos.llamar(self.procedimiento, *self.argumentos(request, **kwargs))
+        except DatabaseError as error:
+            return Response({'mensaje': mensaje_de_base(error)},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(resumen, status=status.HTTP_200_OK)
+
+
+class CancelarOrdenProduccionAPIView(AccionDeProcedimientoAPIView):
+    """Cancela la orden, libera el material de sus laptops a medias y las
+    rechaza. Las Aprobadas y Embaladas se respetan."""
+
+    modulo = "orden_produccion"
+    procedimiento = "sp_Cancelar_Orden_Produccion"
+
+    def argumentos(self, request, folio=None):
+        return (folio,)
+
+
+class IniciarEnsamblajeOrdenAPIView(AccionDeProcedimientoAPIView):
+    """Da de alta las laptops que le faltan a la orden para llegar a su
+    cantidad planificada. La línea va en el cuerpo porque orden_produccion no
+    la tiene: la línea es de la laptop."""
+
+    modulo = "orden_produccion"
+    procedimiento = "sp_Iniciar_Ensamblaje_Orden"
+
+    def argumentos(self, request, folio=None):
+        return (folio, request.data.get('linea'))
+
+
+class LiberarComponentesLaptopAPIView(AccionDeProcedimientoAPIView):
+    """Desarma la laptop: suelta sus componentes y cierra su ensamblaje.
+
+    'estado' dice a dónde regresan los componentes: EDC001 (Disponible) si
+    sirven, EDC003 (Dañado) si no. Si no viene, se toma Disponible."""
+
+    modulo = "ensamblaje"
+    procedimiento = "sp_Liberar_Componentes_Laptop"
+
+    def argumentos(self, request, numero=None):
+        return (numero, request.data.get('estado'))

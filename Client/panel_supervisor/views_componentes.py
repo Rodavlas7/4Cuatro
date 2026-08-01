@@ -3,6 +3,21 @@
 Componentes, modelos, lotes y órdenes de material. El panel de administrador
 tiene su propia copia en la app `componentes/`; ésta se puede cambiar sin
 afectarla.
+
+DIFERENCIA CON EL PANEL DE ADMIN
+--------------------------------
+El supervisor trabaja una sola línea: la suya. Aquí eso significa dos cosas.
+
+1. Sólo ve el material de su línea. Los componentes y las órdenes de otras
+   líneas ni siquiera llegan a la plantilla.
+2. Nunca elige la línea. En los formularios no aparece el campo: la vista le
+   pone la suya al guardar. Así no puede dar de alta material en una línea que
+   no le toca, ni por error ni a propósito.
+
+OJO: esto es del lado del cliente, o sea que es lo que la pantalla enseña y
+manda. La API sigue devolviéndole todo a cualquier usuario con permiso del
+módulo, así que esto NO sustituye un control de acceso de verdad; ese tendría
+que vivir en Servicios, filtrando por la línea del token.
 """
 
 import requests
@@ -10,7 +25,9 @@ import requests
 from django.contrib import messages
 from django.shortcuts import render, redirect
 
+from core import lineas as lineas_del_empleado
 from core.api import fallo, get, lista, mensaje_error, objeto
+from core.filtros import contexto as contexto_de_filtros, filtrar, pedidos, por_codigo
 from core.guards import requiere_rol
 from core.roles import ROL_SUPERVISOR
 
@@ -31,6 +48,66 @@ def _avisar_si_falla(request, respuesta, que):
         messages.error(request, f"No se pudieron cargar {que}. {mensaje_error(respuesta)}")
 
 
+# ==================================================
+# L A   L I N E A   D E L   S U P E R V I S O R
+# ==================================================
+
+
+def _mi_linea(request):
+    """El código de línea del supervisor, avisándole si no tiene ninguna.
+
+    Sin línea no hay nada que pueda ver ni dar de alta, así que más vale decirlo
+    con todas sus letras que dejarlo frente a una pantalla vacía sin explicación."""
+
+    linea = lineas_del_empleado.de_la_sesion(request)
+
+    if not linea:
+        messages.error(
+            request,
+            "No tienes una línea asignada, así que no se puede mostrar material. "
+            "Pídele a un administrador que te asigne una."
+        )
+        return None
+
+    return linea['codigo']
+
+
+def _solo_de(registros, clave, linea):
+    """Deja únicamente los registros de esa línea.
+
+    Si el supervisor no tiene línea no se devuelve nada: mejor una lista vacía
+    con su aviso que enseñarle de más."""
+    if not linea:
+        return []
+    return [r for r in registros if r.get(clave) == linea]
+
+
+def _contexto_de_linea(request):
+    """Los datos de la línea del supervisor que las plantillas muestran fijos,
+    en lugar del selector que tiene el panel de admin."""
+    linea = lineas_del_empleado.de_la_sesion(request) or {}
+    return {
+        "mi_linea": linea.get("codigo"),
+        "mi_linea_nombre": linea.get("nombre"),
+    }
+
+
+def _cuantos_usan(request, clave, linea):
+    """Cuántos componentes DE SU LÍNEA usan cada valor de esa columna.
+
+    Es el mismo conteo que en el panel de admin, pero acotado: al supervisor no
+    le sirve —ni le toca— saber cuánto se usa un lote en las demás líneas."""
+    conteo = {}
+    componentes = lista(get(f"{API}/componentes/", _headers(request)))
+
+    for componente in _solo_de(componentes, "linea_codigo", linea):
+        valor = componente.get(clave)
+        if valor:
+            conteo[valor] = conteo.get(valor, 0) + 1
+
+    return conteo
+
+
 #COMPONENTES
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -40,13 +117,18 @@ def componentesListView(request):
         return redirect('login')
 
     headers = _headers(request)
+    linea = _mi_linea(request)
 
     if request.method == "POST":
+
+        if not linea:
+            return redirect('panel_supervisor:componentes-lista')
 
         payload = {
             "num_serie": request.POST.get("num_serie") or None,
             "descripcion": request.POST.get("descripcion") or None,
-            "linea": request.POST.get("linea") or None,
+            # La línea no se captura: es la del supervisor.
+            "linea": linea,
             "modelo": request.POST.get("modelo") or None,
             "lote": request.POST.get("lote") or None,
             "estado": request.POST.get("estado") or None,
@@ -67,17 +149,34 @@ def componentesListView(request):
 
     _avisar_si_falla(request, respuesta_componentes, "los componentes")
 
-    return render(
-        request,
-        "panel_supervisor/componentes/lista.html",
-        {
-            "componentes": lista(respuesta_componentes),
-            "lineas": lista(get(f"{API}/lineas/", headers)),
-            "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
-            "lotes": lista(get(f"{API}/componentes/lotes/", headers)),
-            "estados": lista(get(f"{API}/componentes/estados/", headers)),
-        }
+    componentes = _solo_de(lista(respuesta_componentes), "linea_codigo", linea)
+
+    # Sin filtro de línea: la línea ya está fija y no hay otras que ver.
+    filtros = pedidos(request, "q", "modelo", "lote", "estado")
+
+    filtrados = filtrar(
+        componentes,
+        filtros,
+        exactos=(("modelo", "modelo_codigo"),
+                 ("lote", "lote_codigo"),
+                 ("estado", "estado_codigo")),
+        busqueda=("num_serie", "descripcion", "numero"),
     )
+
+    # Sólo las órdenes de su línea se le pueden asignar a un componente suyo.
+    ordenes = _solo_de(lista(get(f"{API}/componentes/ordenes/", headers)), "linea", linea)
+
+    contexto = {
+        "componentes": filtrados,
+        "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
+        "lotes": lista(get(f"{API}/componentes/lotes/", headers)),
+        "estados": lista(get(f"{API}/componentes/estados/", headers)),
+        "ordenes": ordenes,
+    }
+    contexto.update(contexto_de_filtros(filtros, componentes, filtrados))
+    contexto.update(_contexto_de_linea(request))
+
+    return render(request, "panel_supervisor/componentes/lista.html", contexto)
 
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -89,11 +188,16 @@ def componenteEditarView(request, numero):
     if request.method == "POST":
 
         headers = _headers(request)
+        linea = _mi_linea(request)
+
+        if not linea:
+            return redirect('panel_supervisor:componentes-lista')
 
         payload = {
             "num_serie": request.POST.get("num_serie") or None,
             "descripcion": request.POST.get("descripcion") or None,
-            "linea": request.POST.get("linea") or None,
+            # Se reafirma su línea: un componente suyo no se puede mandar a otra.
+            "linea": linea,
             "modelo": request.POST.get("modelo") or None,
             "lote": request.POST.get("lote") or None,
             "estado": request.POST.get("estado") or None,
@@ -133,6 +237,10 @@ def componenteBajaView(request, numero):
 
 
 # MODELOS DE COMPONENTE
+#
+# Los modelos y los lotes son catálogos de toda la planta, no de una línea, así
+# que el supervisor los ve completos. Lo único acotado es el conteo de "en uso",
+# que cuenta nada más los componentes de su línea.
 
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -165,14 +273,40 @@ def modelosListView(request):
 
     _avisar_si_falla(request, respuesta_modelos, "los modelos")
 
-    return render(
-        request,
-        "panel_supervisor/componentes/modelos.html",
-        {
-            "modelos": lista(respuesta_modelos),
-            "tipos": lista(get(f"{API}/componentes/tipos/", headers)),
-        }
+    linea = _mi_linea(request)
+    tipos = lista(get(f"{API}/componentes/tipos/", headers))
+    tipos_por_codigo = por_codigo(tipos)
+    en_uso = _cuantos_usan(request, "modelo_codigo", linea)
+
+    # La API devuelve el tipo como código (TC001). En pantalla se quiere el
+    # nombre, así que se resuelve aquí contra el catálogo que ya se pidió.
+    modelos = lista(respuesta_modelos)
+    for modelo in modelos:
+        tipo = tipos_por_codigo.get(modelo.get("tipo_componente")) or {}
+        modelo["tipo_nombre"] = tipo.get("nombre")
+        modelo["componentes"] = en_uso.get(modelo.get("codigo"), 0)
+
+    filtros = pedidos(request, "q", "tipo", "fabricante")
+
+    filtrados = filtrar(
+        modelos,
+        filtros,
+        exactos=(("tipo", "tipo_componente"),
+                 ("fabricante", "fabricante")),
+        busqueda=("codigo", "nombre", "fabricante", "tipo_nombre"),
     )
+
+    contexto = {
+        "modelos": filtrados,
+        "tipos": tipos,
+        # El fabricante es texto libre, no un catálogo: las opciones del filtro
+        # salen de lo que de verdad hay capturado.
+        "fabricantes": sorted({m["fabricante"] for m in modelos if m.get("fabricante")}),
+    }
+    contexto.update(contexto_de_filtros(filtros, modelos, filtrados))
+    contexto.update(_contexto_de_linea(request))
+
+    return render(request, "panel_supervisor/componentes/modelos.html", contexto)
 
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -250,7 +384,21 @@ def lotesListView(request):
 
     _avisar_si_falla(request, respuesta_lotes, "los lotes")
 
-    return render(request, "panel_supervisor/componentes/lotes.html", {"lotes": lista(respuesta_lotes)})
+    linea = _mi_linea(request)
+    en_uso = _cuantos_usan(request, "lote_codigo", linea)
+
+    lotes = lista(respuesta_lotes)
+    for lote in lotes:
+        lote["componentes"] = en_uso.get(lote.get("codigo"), 0)
+
+    filtros = pedidos(request, "q")
+    filtrados = filtrar(lotes, filtros, busqueda=("codigo", "descripcion"))
+
+    contexto = {"lotes": filtrados}
+    contexto.update(contexto_de_filtros(filtros, lotes, filtrados))
+    contexto.update(_contexto_de_linea(request))
+
+    return render(request, "panel_supervisor/componentes/lotes.html", contexto)
 
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -302,13 +450,18 @@ def ordenesListView(request):
         return redirect('login')
 
     headers = _headers(request)
+    linea = _mi_linea(request)
 
     if request.method == "POST":
+
+        if not linea:
+            return redirect('panel_supervisor:ordenes-lista')
 
         payload = {
             "fecha": request.POST.get("fecha") or None,
             "hora": request.POST.get("hora") or None,
-            "linea": request.POST.get("linea") or None,
+            # La línea no se captura: la orden es para surtir la suya.
+            "linea": linea,
         }
 
         respuesta = requests.post(f"{API}/componentes/ordenes/", json=payload, headers=headers)
@@ -324,14 +477,35 @@ def ordenesListView(request):
 
     _avisar_si_falla(request, respuesta_ordenes, "las órdenes de material")
 
-    return render(
-        request,
-        "panel_supervisor/componentes/ordenes.html",
-        {
-            "ordenes": lista(respuesta_ordenes),
-            "lineas": lista(get(f"{API}/lineas/", headers)),
-        }
-    )
+    ordenes = _solo_de(lista(respuesta_ordenes), "linea", linea)
+
+    # Cuántos renglones trae cada orden. La API los devuelve todos juntos, así
+    # que se cuentan de una sola pasada en lugar de pedir orden por orden.
+    renglones = {}
+    for detalle in lista(get(f"{API}/componentes/detalles/", headers)):
+        clave = str(detalle.get("orden"))
+        renglones[clave] = renglones.get(clave, 0) + 1
+
+    for orden in ordenes:
+        orden["renglones"] = renglones.get(str(orden.get("numero")), 0)
+
+    # Sin filtro de línea: todas las que ve son de la suya.
+    filtros = pedidos(request, "q", "desde", "hasta")
+
+    filtradas = filtrar(ordenes, filtros, busqueda=("numero",))
+
+    # El rango de fechas no es una coincidencia exacta, va aparte. Las fechas
+    # llegan como AAAA-MM-DD, que se ordena bien comparándolas como texto.
+    if filtros["desde"]:
+        filtradas = [o for o in filtradas if (o.get("fecha") or "") >= filtros["desde"]]
+    if filtros["hasta"]:
+        filtradas = [o for o in filtradas if (o.get("fecha") or "") <= filtros["hasta"]]
+
+    contexto = {"ordenes": filtradas}
+    contexto.update(contexto_de_filtros(filtros, ordenes, filtradas))
+    contexto.update(_contexto_de_linea(request))
+
+    return render(request, "panel_supervisor/componentes/ordenes.html", contexto)
 
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -343,11 +517,16 @@ def ordenEditarView(request, numero):
     if request.method == "POST":
 
         headers = _headers(request)
+        linea = _mi_linea(request)
+
+        if not linea:
+            return redirect('panel_supervisor:ordenes-lista')
 
         payload = {
             "fecha": request.POST.get("fecha") or None,
             "hora": request.POST.get("hora") or None,
-            "linea": request.POST.get("linea") or None,
+            # Se reafirma su línea: la orden no se puede pasar a otra.
+            "linea": linea,
         }
 
         respuesta = requests.put(f"{API}/componentes/ordenes/mod/{numero}/", json=payload, headers=headers)
@@ -413,14 +592,28 @@ def ordenDetalleView(request, numero):
         messages.error(request, f"No se pudo cargar la orden {numero}. {mensaje_error(respuesta_orden)}")
         return redirect('panel_supervisor:ordenes-lista')
 
-    return render(
-        request,
-        "panel_supervisor/componentes/orden_detalle.html",
-        {
-            "orden": objeto(respuesta_orden),
-            "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
-        }
-    )
+    orden = objeto(respuesta_orden)
+    linea = _mi_linea(request)
+
+    # La lista filtra por línea, pero a esta pantalla se llega por URL: sin esto
+    # un supervisor podría leer los renglones de la orden de otra línea a mano.
+    if orden.get("linea") != linea:
+        messages.error(request, "Esa orden de material no es de tu línea.")
+        return redirect('panel_supervisor:ordenes-lista')
+
+    modelos = lista(get(f"{API}/componentes/modelos/", headers))
+    modelos_por_codigo = por_codigo(modelos)
+
+    # Los renglones vienen con el código del modelo; en pantalla se acompaña del
+    # nombre para no obligar a nadie a memorizarse el catálogo.
+    for renglon in orden.get("detalles") or []:
+        modelo = modelos_por_codigo.get(renglon.get("modelo")) or {}
+        renglon["modelo_nombre"] = modelo.get("nombre")
+
+    contexto = {"orden": orden, "modelos": modelos}
+    contexto.update(_contexto_de_linea(request))
+
+    return render(request, "panel_supervisor/componentes/orden_detalle.html", contexto)
 
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -440,6 +633,3 @@ def renglonEliminarView(request, numero, modelo):
             messages.error(request, mensaje_error(respuesta))
 
     return redirect('panel_supervisor:orden-detalle', numero=numero)
-
-
-

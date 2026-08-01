@@ -4,146 +4,279 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Modelos de Componente</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg me-1"></i> Nuevo modelo
-    </button>
-</div>
+<div class="wrap">
 
-<ul class="nav nav-pills mb-3">
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:componentes-lista' %}">Componentes</a></li>
-    <li class="nav-item"><a class="nav-link active" href="{% url 'panel_supervisor:modelos-lista' %}">Modelos</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:lotes-lista' %}">Lotes</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:ordenes-lista' %}">Órdenes de Material</a></li>
-</ul>
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO, NAVEGACIÓN Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>Código</th>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Fabricante</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for m in modelos %}
-            <tr>
-                <td>{{ m.codigo }}</td>
-                <td>{{ m.nombre|default:"—" }}</td>
-                <td>{{ m.tipo_componente|default:"—" }}</td>
-                <td>{{ m.fabricante|default:"—" }}</td>
-                <td class="text-end">
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEditar"
-                        data-codigo="{{ m.codigo }}"
-                        data-nombre="{{ m.nombre|default:'' }}"
-                        data-tipo="{{ m.tipo_componente|default:'' }}"
-                        data-fabricante="{{ m.fabricante|default:'' }}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+        <!-- ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Modelos de Componente</h4>
+                <p class="text-muted small mb-0">Catálogo de toda la planta. El conteo de uso es sólo de tu línea.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                    <i class="bi bi-plus-lg"></i> Nuevo modelo
+                </button>
+            </div>
+        </div>
 
-                    <form method="POST" action="{% url 'panel_supervisor:modelo-eliminar' m.codigo %}" class="d-inline" onsubmit="return confirm('¿Eliminar este modelo?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-4">No hay modelos registrados.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+        <!-- SUB-NAVEGACIÓN DEL MÓDULO -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <ul class="nav nav-pills gap-1">
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:componentes-lista' %}">Componentes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:ordenes-lista' %}">Órdenes de Material</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:lotes-lista' %}">Lotes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'panel_supervisor:modelos-lista' %}">Modelos</a>
+                </li>
+            </ul>
+        </div>
 
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <form method="GET">
+                <div class="row g-3">
 
-<!-- MODAL: CREAR -->
-<div class="modal fade" id="modalCrear" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{% url 'panel_supervisor:modelos-lista' %}">
-            {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nuevo modelo de componente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Código</label>
-                        <input type="text" name="codigo" class="form-control" maxlength="8" required>
+                    <div class="col-md-6 col-lg-5">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" value="{{ filtros.q }}" placeholder="Código, nombre o fabricante...">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nombre</label>
-                        <input type="text" name="nombre" class="form-control" maxlength="256">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tipo de componente</label>
-                        <select name="tipo_componente" class="form-select">
-                            <option value="">— Selecciona —</option>
+
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Tipo de componente</label>
+                        <select name="tipo" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
                             {% for t in tipos %}
-                            <option value="{{ t.codigo }}">{{ t.nombre }}</option>
+                            <option value="{{ t.codigo }}" {% if filtros.tipo == t.codigo %}selected{% endif %}>{{ t.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Fabricante</label>
-                        <input type="text" name="fabricante" class="form-control" maxlength="64">
+
+                    {% if fabricantes %}
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Fabricante</label>
+                        <select name="fabricante" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for f in fabricantes %}
+                            <option value="{{ f }}" {% if filtros.fabricante == f %}selected{% endif %}>{{ f }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                </div>
+
+                <!-- Resumen y botones -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 pt-3 border-top gap-3">
+                    <span class="text-muted small">
+                        {% if hay_filtros %}
+                            <i class="bi bi-funnel-fill text-primary me-1"></i> Mostrando <strong class="text-dark">{{ mostrados }}</strong> de {{ total }} modelos.
+                        {% else %}
+                            <i class="bi bi-cpu text-secondary me-1"></i> {{ total }} modelo{{ total|pluralize:"s" }} en el catálogo.
+                        {% endif %}
+                    </span>
+                    <div class="d-flex gap-2">
+                        {% if hay_filtros %}
+                        <a href="{% url 'panel_supervisor:modelos-lista' %}" class="btn btn-white border btn-sm py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-x-lg text-danger"></i> Limpiar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-filter"></i> Filtrar resultados
+                        </button>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Código</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Tipo</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">En tu línea</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in modelos %}
+                    <tr>
+                        <td class="ps-4"><span class="badge-id text-primary">{{ m.codigo }}</span></td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ m.nombre|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">{{ m.fabricante|default:"Sin fabricante" }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ m.tipo_nombre|default:m.tipo_componente|default:"—" }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% if m.componentes %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 fw-semibold">
+                                    {{ m.componentes }} componente{{ m.componentes|pluralize:"s" }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">Sin uso</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <!-- EDITAR -->
+                                <button
+                                    type="button"
+                                    class="btn text-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditar"
+                                    data-url="{% url 'panel_supervisor:modelo-editar' m.codigo %}"
+                                    data-codigo="{{ m.codigo }}"
+                                    data-nombre="{{ m.nombre|default:'' }}"
+                                    data-tipo="{{ m.tipo_componente|default:'' }}"
+                                    data-fabricante="{{ m.fabricante|default:'' }}"
+                                    title="Editar modelo">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- ELIMINAR -->
+                                <form method="POST" action="{% url 'panel_supervisor:modelo-eliminar' m.codigo %}" class="d-inline" onsubmit="return confirm('¿Eliminar este modelo?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn text-danger" title="Eliminar modelo">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-cpu text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            {% if hay_filtros %}
+                                Ningún modelo coincide con los filtros de búsqueda.
+                            {% else %}
+                                No hay modelos registrados.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ==========================================
+     MODAL: CREAR
+     ========================================== -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'panel_supervisor:modelos-lista' %}" class="w-100">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nuevo modelo de componente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-medium">Código <span class="text-danger">*</span></label>
+                            <input type="text" name="codigo" class="form-control font-monospace" maxlength="8" placeholder="Ej. MC032" required>
+                            <div class="form-text" style="font-size: 11px;">Es la llave: después no se puede cambiar.</div>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label small fw-medium">Nombre</label>
+                            <input type="text" name="nombre" class="form-control" maxlength="256" placeholder="Ej. Samsung 16GB DDR5-5600 SO-DIMM">
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-medium">Tipo de componente</label>
+                            <select name="tipo_componente" class="form-select">
+                                <option value="">— Selecciona —</option>
+                                {% for t in tipos %}
+                                <option value="{{ t.codigo }}">{{ t.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-medium">Fabricante</label>
+                            <input type="text" name="fabricante" class="form-control" maxlength="64" placeholder="Opcional">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar modelo</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-
-<!-- MODAL: EDITAR -->
+<!-- ==========================================
+     MODAL: EDITAR
+     ========================================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" id="formEditar" action="">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="formEditar" action="" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar modelo</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Editar modelo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Código</label>
-                        <input type="text" id="edit_codigo" class="form-control" readonly>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-medium text-muted">Código</label>
+                            <input type="text" id="edit_codigo" class="form-control bg-light font-monospace" readonly>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label small fw-medium">Nombre</label>
+                            <input type="text" name="nombre" id="edit_nombre" class="form-control" maxlength="256">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nombre</label>
-                        <input type="text" name="nombre" id="edit_nombre" class="form-control" maxlength="256">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tipo de componente</label>
-                        <select name="tipo_componente" id="edit_tipo" class="form-select">
-                            <option value="">— Selecciona —</option>
-                            {% for t in tipos %}
-                            <option value="{{ t.codigo }}">{{ t.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Fabricante</label>
-                        <input type="text" name="fabricante" id="edit_fabricante" class="form-control" maxlength="64">
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-medium">Tipo de componente</label>
+                            <select name="tipo_componente" id="edit_tipo" class="form-select">
+                                <option value="">— Selecciona —</option>
+                                {% for t in tipos %}
+                                <option value="{{ t.codigo }}">{{ t.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-medium">Fabricante</label>
+                            <input type="text" name="fabricante" id="edit_fabricante" class="form-control" maxlength="64">
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
                 </div>
             </div>
         </form>
@@ -151,9 +284,11 @@
 </div>
 
 <script>
+// Carga de datos al Modal Editar. La URL viene armada por Django en data-url,
+// para no repetir aquí la ruta del panel y que se desincronice de urls.py.
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
-    document.getElementById('formEditar').action = "/panel/supervisor/componentes/modelos/editar/" + btn.dataset.codigo + "/";
+    document.getElementById('formEditar').action = btn.dataset.url;
     document.getElementById('edit_codigo').value = btn.dataset.codigo;
     document.getElementById('edit_nombre').value = btn.dataset.nombre;
     document.getElementById('edit_tipo').value = btn.dataset.tipo;
