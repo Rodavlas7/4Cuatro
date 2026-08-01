@@ -18,13 +18,30 @@
             · Hora: {{ orden.hora|default:"—" }}
         </p>
     </div>
-    <span class="badge fs-6
-        {% if orden.estado_codigo == 'COMP' %}text-bg-success
-        {% elif orden.estado_codigo == 'PROC' %}text-bg-primary
-        {% elif orden.estado_codigo == 'CANC' %}text-bg-secondary
-        {% else %}text-bg-warning{% endif %}">
-        {{ orden.estado_nombre|default:"—" }}
-    </span>
+    <div class="text-end">
+        <span class="badge fs-6
+            {% if orden.estado_codigo == 'COMP' %}text-bg-success
+            {% elif orden.estado_codigo == 'PROC' %}text-bg-primary
+            {% elif orden.estado_codigo == 'CANC' %}text-bg-secondary
+            {% else %}text-bg-warning{% endif %}">
+            {{ orden.estado_nombre|default:"—" }}
+        </span>
+
+        {% if abierta %}
+        <div class="d-flex gap-2 justify-content-end mt-3">
+            {% if faltantes %}
+            <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-2"
+                    data-bs-toggle="modal" data-bs-target="#modalIniciarEnsamblaje">
+                <i class="bi bi-play-fill"></i> Registrar {{ faltantes }} laptop{{ faltantes|pluralize:"s" }}
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
+                    data-bs-toggle="modal" data-bs-target="#modalCancelarOrden">
+                <i class="bi bi-x-octagon"></i> Cancelar orden
+            </button>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 <!-- ...................................................................
@@ -132,6 +149,80 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- MODAL: INICIAR ENSAMBLAJE -->
+<div class="modal fade" id="modalIniciarEnsamblaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'panel_supervisor:orden-produccion-iniciar-ensamblaje' orden.folio %}" class="w-100">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar las laptops que faltan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Se van a dar de alta <strong class="text-dark">{{ faltantes }}</strong> laptop{{ faltantes|pluralize:"s" }}
+                        para completar las {{ planificadas }} que planificó la orden. Heredan el modelo y el lote
+                        de la orden, y nacen en estado <strong>Registrada</strong>.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium text-muted">Línea de ensamblaje</label>
+                        <input type="text" class="form-control bg-light" value="{{ mi_linea_nombre|default:'—' }}" disabled>
+                        <div class="form-text" style="font-size: 11px;">Es tu línea: se asigna sola.</div>
+                    </div>
+
+                    <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start">
+                        <i class="bi bi-info-circle-fill text-primary mt-1"></i>
+                        <div>
+                            El número de serie sale provisional (TMP-0001, TMP-0002…). El ensamblaje de cada
+                            laptop se abre después, cuando de verdad arranca.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar laptops</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: CANCELAR ORDEN -->
+<div class="modal fade" id="modalCancelarOrden" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'panel_supervisor:orden-produccion-cancelar' orden.folio %}" class="w-100">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-octagon" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold">¿Cancelar la orden #{{ orden.folio }}?</h5>
+
+                    <div class="text-start small text-muted my-4">
+                        <p class="mb-2">Esto hace tres cosas de un jalón:</p>
+                        <ul class="mb-0 ps-3">
+                            <li>Las laptops <strong>Registradas</strong> y <strong>En Ensamblaje</strong> pasan a Rechazadas.</li>
+                            <li>Sus componentes vuelven al inventario como <strong>Disponibles</strong>.</li>
+                            <li>La orden queda <strong>Cancelada</strong>.</li>
+                        </ul>
+                        <p class="mt-3 mb-0">
+                            Las laptops <strong>Aprobadas</strong> y <strong>Embaladas</strong> no se tocan: ya pasaron calidad.
+                        </p>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger w-50">Sí, cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

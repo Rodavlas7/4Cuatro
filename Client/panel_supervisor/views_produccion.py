@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.views import generic
 
+from core import lineas as lineas_del_empleado
 from core.api import get, lista, objeto
 from core.guards import RolRequeridoMixin, requiere_rol
 from core.roles import ROL_SUPERVISOR
@@ -29,6 +30,11 @@ ESTADOS_LAPTOP_EXCLUIDOS = {"EMBALA", "APROV"}
 # Estados de componente.
 EDO_COMP_DISPONIBLE = "EDC001"
 EDO_COMP_EN_USO = "EDC002"
+
+# Mermado. Un componente así ya no vuelve al inventario, y sp_Liberar_Componentes_Laptop
+# lo deja tal cual —con su vínculo al ensamblaje— para no perder el rastro de en
+# qué laptop se perdió.
+EDO_COMP_MERMADO = "EDC004"
 
 # Estado con el que nace una orden de producción (edo_produccion).
 EDO_ORDEN_PENDIENTE = "PEND"
@@ -559,7 +565,13 @@ def ordenProduccionEditarView(request, folio):
 
 @requiere_rol(ROL_SUPERVISOR)
 def ordenProduccionCancelarView(request, folio):
-    """El DELETE de la API no borra la orden: la deja en estado Cancelada (CANC)."""
+    """Cancela la orden y deja la planta consistente.
+
+    Antes esto era un DELETE que sólo movía el estado a Cancelada y dejaba el
+    material apartado en laptops que ya nadie iba a terminar. Ahora lo resuelve
+    sp_Cancelar_Orden_Produccion, que además libera los componentes de las
+    laptops a medias y las rechaza, todo en una transacción. Las Aprobadas y
+    Embaladas se respetan: ya pasaron calidad."""
 
     if 'token' not in request.session:
         return redirect('login')
@@ -567,14 +579,64 @@ def ordenProduccionCancelarView(request, folio):
     if request.method == "POST":
 
         headers = _headers(request)
-        respuesta = requests.delete(f"{API}/produccion/mod/{folio}/", headers=headers)
+        respuesta = requests.post(f"{API}/produccion/{folio}/cancelar/", json={}, headers=headers)
 
-        if respuesta.status_code == 204:
-            messages.success(request, f"Orden #{folio} cancelada.")
+        if respuesta.status_code == 200:
+            resumen = respuesta.json()
+            messages.success(
+                request,
+                f"Orden #{folio} cancelada. "
+                f"{resumen.get('laptops_rechazadas', 0)} laptop(s) rechazada(s), "
+                f"{resumen.get('componentes_liberados', 0)} componente(s) devuelto(s) al inventario"
+                + (f", {resumen['laptops_respetadas']} laptop(s) terminada(s) sin tocar."
+                   if resumen.get('laptops_respetadas') else ".")
+            )
         else:
             messages.error(request, _mensaje_api(respuesta))
 
     return redirect('panel_supervisor:ordenes-produccion-lista')
+
+
+@requiere_rol(ROL_SUPERVISOR)
+def ordenProduccionIniciarEnsamblajeView(request, folio):
+    """Da de alta de un jalón las laptops que le faltan a la orden.
+
+    A diferencia del panel de admin, aquí la línea NO se elige: es la del
+    supervisor. Mismo criterio que en materiales — él trabaja una sola línea y
+    no le toca decidir en cuál se ensambla."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        linea = lineas_del_empleado.de_la_sesion(request)
+
+        if not linea:
+            messages.error(
+                request,
+                "No tienes una línea asignada, así que no se pueden registrar laptops. "
+                "Pídele a un administrador que te asigne una."
+            )
+            return redirect('panel_supervisor:orden-produccion-detalle', folio=folio)
+
+        headers = _headers(request)
+        respuesta = requests.post(
+            f"{API}/produccion/{folio}/iniciar-ensamblaje/",
+            json={"linea": linea['codigo']},
+            headers=headers,
+        )
+
+        if respuesta.status_code == 200:
+            creadas = respuesta.json().get('laptops_creadas', 0)
+            messages.success(
+                request,
+                f"Se registraron {creadas} laptop(s) para la orden #{folio} en {linea['nombre']}."
+            )
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('panel_supervisor:orden-produccion-detalle', folio=folio)
 
 
 @requiere_rol(ROL_SUPERVISOR)
@@ -615,6 +677,8 @@ def ordenProduccionDetalleView(request, folio):
     planificadas = orden.get("cant_planificada") or 0
     registradas = len(laptops)
 
+    mi_linea = lineas_del_empleado.de_la_sesion(request) or {}
+
     return render(
         request,
         "panel_supervisor/produccion/detalle_orden.html",
@@ -628,6 +692,11 @@ def ordenProduccionDetalleView(request, folio):
             "embaladas": embaladas,
             # Se topa en 100 para que la barra no se desborde si se registraron too many
             "porcentaje": min(100, round(registradas * 100 / planificadas)) if planificadas else 0,
+            # Para las dos acciones del encabezado. La línea va fija: es la del
+            # supervisor, no la elige (igual que en materiales).
+            "abierta": orden.get("estado_codigo") in EDOS_ORDEN_ABIERTA,
+            "faltantes": max(0, planificadas - registradas),
+            "mi_linea_nombre": mi_linea.get("nombre"),
         }
     )
 
@@ -1188,6 +1257,10 @@ def laptopDetalleView(request, numero):
         "laptop": laptop,
         "registros": registros,
         "componentes": componentes,
+        # Hay algo que soltar sólo si queda un componente que no esté mermado:
+        # los mermados se quedan pegados al ensamblaje a propósito, y sin esto el
+        # botón de desarmar seguiría ahí sin nada que hacer.
+        "desarmable": any(c.get("estado_codigo") != EDO_COMP_MERMADO for c in componentes),
         "inspecciones": inspecciones,
         "embalajes": embalajes,
         "tiempos": tiempos,
@@ -1300,6 +1373,51 @@ def laptopComponenteLiberarView(request, numero, componente):
         if respuesta.status_code in (200, 202):
             messages.success(
                 request, f"Componente #{componente} liberado de la laptop #{numero}.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('panel_supervisor:laptop-detalle', numero=numero)
+
+
+@requiere_rol(ROL_SUPERVISOR)
+def laptopDesarmarView(request, numero):
+    """Desarma la laptop completa: suelta TODOS sus componentes de un golpe.
+
+    Es el hermano mayor de laptopComponenteLiberarView, que quita uno solo. Lo
+    resuelve sp_Liberar_Componentes_Laptop, que además cierra el registro de
+    ensamblaje.
+
+    OJO: al cerrarlo, tg_Control_Componentes_Duplicados ya no deja abrirle otro,
+    o sea que la laptop no se vuelve a armar. Por eso la plantilla lo pregunta
+    con todas sus letras antes de mandar el POST."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+
+        nuevo_estado = request.POST.get("estado") or EDO_COMP_DISPONIBLE
+        if nuevo_estado == EDO_COMP_EN_USO:
+            messages.error(request, "Un componente liberado no puede quedar En Uso.")
+            return redirect('panel_supervisor:laptop-detalle', numero=numero)
+
+        respuesta = requests.post(
+            f"{API}/produccion/laptops/{numero}/liberar-componentes/",
+            json={"estado": nuevo_estado},
+            headers=headers,
+        )
+
+        if respuesta.status_code == 200:
+            resumen = respuesta.json()
+            mermados = resumen.get('mermados_conservados', 0)
+            messages.success(
+                request,
+                f"Laptop #{numero} desarmada: "
+                f"{resumen.get('componentes_liberados', 0)} componente(s) liberado(s)"
+                + (f" ({mermados} mermado(s) se quedaron como estaban)." if mermados else ".")
+            )
         else:
             messages.error(request, _mensaje_api(respuesta))
 

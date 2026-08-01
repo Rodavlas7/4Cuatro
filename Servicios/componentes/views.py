@@ -1,7 +1,6 @@
-from django.db import DatabaseError
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
-from rest_framework.exceptions import ValidationError
+from api.errores import ErroresDeBaseMixin
 from .models import *
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
@@ -23,69 +22,8 @@ from usuarios.permissions import TienePermisoModulo
 ESTADO_MERMADO = 'EDC004'
 
 
-# ==================================================
-# E R R O R E S   D E   L A   B A S E
-# ==================================================
-#
-# Buena parte de las reglas de negocio no vive en Python: vive en los triggers
-# de DB/triggers.sql y en las llaves foráneas. Cuando una de esas reglas se
-# rompe, MySQL levanta la excepción y Django la deja subir como un 500 con su
-# página de depuración. El cliente no puede leer eso, así que sólo alcanza a
-# mostrar "La API respondió 500." y el usuario nunca se entera de qué hizo mal,
-# aunque el trigger le haya escrito el motivo en español.
-#
-# Aquí se atrapa y se devuelve un 400 con el motivo en la clave "mensaje", que
-# es la que ya lee core.api.mensaje_error del cliente.
-
-MYSQL_LLAVE_DUPLICADA = 1062
-MYSQL_FK_EN_USO = 1451        # borrar un padre que todavía tiene hijos
-MYSQL_FK_INEXISTENTE = 1452   # apuntar a un padre que no existe
-MYSQL_TRIGGER = 1644          # el SIGNAL SQLSTATE '45000' de DB/triggers.sql
-
-
-def mensaje_de_base(error):
-    """Traduce el error crudo de MySQL a algo que se pueda mostrar en pantalla."""
-
-    codigo = error.args[0] if error.args else None
-    texto = str(error.args[1]) if len(error.args) > 1 else str(error)
-
-    if codigo == MYSQL_TRIGGER:
-        # El trigger ya trae el motivo redactado en español; sólo se le quita el
-        # prefijo técnico "Error tg_Nombre_Del_Trigger:".
-        return texto.split(':', 1)[-1].strip()
-
-    if codigo == MYSQL_FK_EN_USO:
-        return 'No se puede eliminar: hay registros que todavía dependen de este.'
-
-    if codigo == MYSQL_FK_INEXISTENTE:
-        return 'Alguno de los datos relacionados no existe.'
-
-    if codigo == MYSQL_LLAVE_DUPLICADA:
-        return 'Ya existe un registro con esa llave.'
-
-    return 'La base de datos rechazó la operación.'
-
-
-class ErroresDeBaseMixin:
-    """Devuelve 400 con el motivo cuando la base rechaza un alta, cambio o baja.
-
-    Va SIEMPRE primero en la lista de bases, para que su perform_* se ejecute
-    antes que el de la vista genérica de DRF."""
-
-    def _intentar(self, accion, argumento):
-        try:
-            accion(argumento)
-        except DatabaseError as error:
-            raise ValidationError({'mensaje': mensaje_de_base(error)})
-
-    def perform_create(self, serializer):
-        self._intentar(super().perform_create, serializer)
-
-    def perform_update(self, serializer):
-        self._intentar(super().perform_update, serializer)
-
-    def perform_destroy(self, instance):
-        self._intentar(super().perform_destroy, instance)
+# El manejo de los errores de la base (ErroresDeBaseMixin) vive en
+# api/errores.py: lo comparten todos los módulos de la API.
 
 
 # Vistas de catálogos (solo lectura)

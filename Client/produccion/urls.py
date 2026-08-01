@@ -6,6 +6,7 @@ urlpatterns = [
     path('ordenes/', views.ordenesProduccionListView, name='ordenes-produccion-lista'),
     path('ordenes/editar/<int:folio>/', views.ordenProduccionEditarView, name='orden-produccion-editar'),
     path('ordenes/cancelar/<int:folio>/', views.ordenProduccionCancelarView, name='orden-produccion-cancelar'),
+    path('ordenes/iniciar-ensamblaje/<int:folio>/', views.ordenProduccionIniciarEnsamblajeView, name='orden-produccion-iniciar-ensamblaje'),
     path('ordenes/<int:folio>/', views.ordenProduccionDetalleView, name='orden-produccion-detalle'),
 
     # Laptops
@@ -14,6 +15,7 @@ urlpatterns = [
     path('laptops/rechazar/<int:numero>/', views.laptopRechazarView, name='laptop-rechazar'),
     path('laptops/<int:numero>/', views.laptopDetalleView, name='laptop-detalle'),
     path('laptops/<int:numero>/liberar/<int:componente>/', views.laptopComponenteLiberarView, name='laptop-componente-liberar'),
+    path('laptops/<int:numero>/desarmar/', views.laptopDesarmarView, name='laptop-desarmar'),
 
     # Ensamblaje
     path('ensamblaje/', views.ensamblajeSeguimientoView, name='ensamblaje-seguimiento'),
