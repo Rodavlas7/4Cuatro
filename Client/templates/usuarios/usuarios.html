@@ -205,8 +205,8 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Nombre de usuario</label>
-                        <input type="text" name="usuario" class="form-control" required>
-                        <div class="invalid-feedback">Este campo es obligatorio.</div>
+                        <input type="text" name="usuario" id="usuario_autogenerado" class="form-control" placeholder="Dejar vacío para generar automáticamente">
+                        <div class="form-text text-muted">Se autocompletará en formato 4 dígitos + 3 iniciales del empleado (nombre y apellidos).</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Contraseña</label>
@@ -215,7 +215,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Asignar a Empleado</label>
-                        <select name="empleado" class="form-select" required>
+                        <select name="empleado" id="select_empleado_usuario" class="form-select" required>
                             <option value="">Seleccione un empleado</option>
                             {% for e in empleados %}
                             <option value="{{ e.numero }}">{{ e.numero }} - {{ e.nombre_completo }} ({{ e.rol_nombre }})</option>
@@ -224,6 +224,7 @@
                             {% endfor %}
                         </select>
                         <div class="invalid-feedback">Selecciona un empleado.</div>
+                        <div id="empleado_confirmacion" class="form-text text-muted mt-1">Selecciona un empleado para confirmar su nombre.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 bg-light">
@@ -298,6 +299,11 @@
                         <input type="password" name="contrasena" id="edit_contrasena" class="form-control" minlength="8">
                         <small class="text-muted" style="font-size: 11px;">Dejar vacío para conservar la contraseña actual.</small>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Contraseña de administrador</label>
+                        <input type="password" name="admin_password" id="edit_admin_password" class="form-control">
+                        <small class="form-text text-muted">Requerida sólo si cambias la contraseña.</small>
+                    </div>
                 </div>
                 <div class="modal-footer border-top-0 bg-light">
                     <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -367,6 +373,56 @@
     }, false)
   })
 })()
+
+const empleadoSeleccionado = document.getElementById('select_empleado_usuario');
+const confirmacionEmpleado = document.getElementById('empleado_confirmacion');
+const usuarioAutogenerado = document.getElementById('usuario_autogenerado');
+
+if (empleadoSeleccionado) {
+    empleadoSeleccionado.addEventListener('change', function () {
+        const opcion = empleadoSeleccionado.options[empleadoSeleccionado.selectedIndex];
+        const texto = opcion.textContent || '';
+        const match = texto.match(/^(\d+)\s*-\s*(.+?)\s*\(/);
+
+        if (match) {
+            const numeroEmpleado = match[1];
+            const nombreEmpleado = match[2];
+            confirmacionEmpleado.textContent = `Empleado seleccionado: ${nombreEmpleado.trim()} (No. ${numeroEmpleado})`;
+            if (usuarioAutogenerado && !usuarioAutogenerado.dataset.touched) {
+                const palabras = nombreEmpleado.trim().split(/\s+/);
+                const nombre = palabras[0] || '';
+                const primerApellido = palabras[1] || '';
+                const segundoApellido = palabras[2] || '';
+
+                const inicialNombre = nombre.charAt(0) || 'X';
+                const inicialPrimerApellido = primerApellido.charAt(0) || 'X';
+                let inicialSegundoApellido = 'X';
+
+                if (segundoApellido) {
+                    inicialSegundoApellido = segundoApellido.charAt(0);
+                } else if (primerApellido.length > 1) {
+                    inicialSegundoApellido = primerApellido.charAt(1);
+                } else if (nombre.length > 1) {
+                    inicialSegundoApellido = nombre.charAt(1);
+                }
+
+                const iniciales = [inicialNombre, inicialPrimerApellido, inicialSegundoApellido]
+                    .map((c) => c.toUpperCase())
+                    .join('');
+
+                usuarioAutogenerado.value = `${numeroEmpleado.slice(-4).padStart(4, '0')}${iniciales}`;
+            }
+        } else {
+            confirmacionEmpleado.textContent = 'Selecciona un empleado para confirmar su nombre.';
+        }
+    });
+}
+
+if (usuarioAutogenerado) {
+    usuarioAutogenerado.addEventListener('input', function () {
+        usuarioAutogenerado.dataset.touched = 'true';
+    });
+}
 
 // MODAL: Detalle
 document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {

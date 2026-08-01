@@ -262,24 +262,25 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label small fw-medium">Nombre</label>
-                            <input type="text" name="nombrepila" class="form-control" required>
-                            <div class="invalid-feedback">Obligatorio.</div>
+                            <input type="text" name="nombrepila" id="id_nombrepila_crear" class="form-control" required pattern="[A-Za-zÀ-ÿ\s]+" title="Solo letras, sin números.">
+                            <div class="invalid-feedback">Solo se permiten letras.</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-medium">Primer apellido</label>
-                            <input type="text" name="primerapell" class="form-control" required>
-                            <div class="invalid-feedback">Obligatorio.</div>
+                            <input type="text" name="primerapell" id="id_primerapell_crear" class="form-control" required pattern="[A-Za-zÀ-ÿ\s]+" title="Solo letras, sin números.">
+                            <div class="invalid-feedback">Solo se permiten letras.</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-medium">Segundo apellido</label>
-                            <input type="text" name="segundoapell" class="form-control">
+                            <input type="text" name="segundoapell" id="id_segundoapell_crear" class="form-control" pattern="[A-Za-zÀ-ÿ\s]+" title="Solo letras, sin números.">
+                            <div class="invalid-feedback">Solo se permiten letras.</div>
                         </div>
                     </div>
                     
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-medium">Rol</label>
-                            <select name="rol" class="form-select" required>
+                            <select name="rol" id="id_rol_crear" class="form-select" required>
                                 <option value="">— Selecciona —</option>
                                 {% for codigo, nombre in roles %}
                                 <option value="{{ codigo }}">{{ nombre }}</option>
@@ -298,11 +299,10 @@
                             <div class="invalid-feedback">Selecciona un turno.</div>
                         </div>
                     </div>
-
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="bloque_linea_crear">
                             <label class="form-label small fw-medium">Línea</label>
-                            <select name="linea" id="id_linea_crear" class="form-select" required>
+                            <select name="linea" id="id_linea_crear" class="form-select">
                                 <option value="">— Selecciona —</option>
                                 {% for codigo, nombre in lineas %}
                                 <option value="{{ codigo }}">{{ nombre }}</option>
@@ -310,9 +310,9 @@
                             </select>
                             <div class="invalid-feedback">Selecciona una línea.</div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="bloque_estacion_crear">
                             <label class="form-label small fw-medium">Estación</label>
-                            <select name="estacion" id="id_estacion_crear" class="form-select" required>
+                            <select name="estacion" id="id_estacion_crear" class="form-select">
                                 <option value="">— Selecciona primero una línea —</option>
                             </select>
                             <div class="invalid-feedback">Selecciona una estación.</div>
@@ -392,17 +392,18 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label small fw-medium">Nombre</label>
-                            <input type="text" name="nombrepila" id="edit_nombrepila" class="form-control" required>
-                            <div class="invalid-feedback">Obligatorio.</div>
+                            <input type="text" name="nombrepila" id="edit_nombrepila" class="form-control" required pattern="[A-Za-zÀ-ÿ\s]+" title="Solo letras, sin números.">
+                        <div class="invalid-feedback">Solo se permiten letras.</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-medium">Primer apellido</label>
-                            <input type="text" name="primerapell" id="edit_primerapell" class="form-control" required>
-                            <div class="invalid-feedback">Obligatorio.</div>
+                            <input type="text" name="primerapell" id="edit_primerapell" class="form-control" required pattern="[A-Za-zÀ-ÿ\s]+" title="Solo letras, sin números.">
+                            <div class="invalid-feedback">Solo se permiten letras.</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-medium">Segundo apellido</label>
-                            <input type="text" name="segundoapell" id="edit_segundoapell" class="form-control">
+                            <input type="text" name="segundoapell" id="edit_segundoapell" class="form-control" pattern="[A-Za-zÀ-ÿ\s]+" title="Solo letras, sin números.">
+                            <div class="invalid-feedback">Solo se permiten letras.</div>
                         </div>
                     </div>
                     
@@ -426,9 +427,8 @@
                             </select>
                         </div>
                     </div>
-
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="bloque_linea_editar">
                             <label class="form-label small fw-medium">Línea actual</label>
                             <select name="linea" id="edit_linea" class="form-select">
                                 <option value="">Selecciona una línea</option>
@@ -437,7 +437,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="bloque_estacion_editar">
                             <label class="form-label small fw-medium">Estación actual</label>
                             <select name="estacion" id="edit_estacion" class="form-select">
                                 <option value="">Selecciona una estación</option>
@@ -514,32 +514,140 @@
   })
 })()
 
-// Filtro dinámico de estaciones según línea elegida
-function filtrarEstaciones(lineaSelectId, estacionSelectId) {
-    const lineaSelect = document.getElementById(lineaSelectId);
-    const estacionSelect = document.getElementById(estacionSelectId);
-
-    lineaSelect.addEventListener('change', function () {
-        const lineaId = lineaSelect.value;
-        estacionSelect.innerHTML = '<option value="">— Selecciona —</option>';
-
-        if (!lineaId) return;
-
-        fetch("/usuarios/estaciones-por-linea/" + lineaId + "/")
-            .then(response => response.json())
-            .then(data => {
-                data.forEach(est => {
-                    const option = document.createElement('option');
-                    option.value = est.codigo;
-                    option.textContent = est.nombre;
-                    estacionSelect.appendChild(option);
-                });
-            });
+function soloLetras(inputId) {
+    const input = document.getElementById(inputId);
+    input.addEventListener('keypress', function (e) {
+        const letras = /^[A-Za-zÀ-ÿ\s]+$/;
+        if (!letras.test(e.key)) {
+            e.preventDefault();
+        }
+    });
+    input.addEventListener('paste', function (e) {
+        // También bloquea pegar texto con números
+        const texto = (e.clipboardData || window.clipboardData).getData('text');
+        if (!/^[A-Za-zÀ-ÿ\s]+$/.test(texto)) {
+            e.preventDefault();
+        }
     });
 }
 
-filtrarEstaciones('id_linea_crear', 'id_estacion_crear');
-filtrarEstaciones('edit_linea', 'edit_estacion');
+soloLetras('id_nombrepila_crear');  // ajusta al id real de tu input
+soloLetras('id_primerapell_crear');
+soloLetras('id_segundoapell_crear');
+
+soloLetras('edit_nombrepila');
+soloLetras('edit_primerapell');
+soloLetras('edit_segundoapell');
+
+function manejarVisibilidadPorRol(rolSelectId, config) {
+    const rolSelect = document.getElementById(rolSelectId);
+
+    function actualizar() {
+        const rol = rolSelect.value;
+        const ocultarTodo = rol === "ADMIN";
+        const ocultarSoloEstacion = rol === "SUPER";
+
+        // Bloque completo (línea + estación)
+        config.bloqueCompleto.style.display = ocultarTodo ? "none" : "";
+
+        config.camposLinea.forEach(id => {
+            const campo = document.getElementById(id);
+            if (ocultarTodo) {
+                campo.removeAttribute("required");
+                campo.value = "";
+            } else {
+                campo.setAttribute("required", "required");
+            }
+        });
+
+        // Campo de estación por separado (se oculta con ADMIN o SUPER)
+        const ocultarEstacion = ocultarTodo || ocultarSoloEstacion;
+        config.bloqueEstacion.style.display = ocultarEstacion ? "none" : "";
+
+        config.camposEstacion.forEach(id => {
+            const campo = document.getElementById(id);
+            if (ocultarEstacion) {
+                campo.removeAttribute("required");
+                campo.value = "";
+            } else {
+                campo.setAttribute("required", "required");
+            }
+        });
+    }
+
+    rolSelect.addEventListener('change', actualizar);
+    actualizar();
+}
+
+manejarVisibilidadPorRol('id_rol_crear', {
+    bloqueCompleto: document.getElementById('bloque_linea_crear'),
+    camposLinea: ['id_linea_crear'],
+    bloqueEstacion: document.getElementById('bloque_estacion_crear'),
+    camposEstacion: ['id_estacion_crear'],
+});
+
+manejarVisibilidadPorRol('edit_rol', {
+    bloqueCompleto: document.getElementById('bloque_linea_editar'),
+    camposLinea: ['edit_linea'],
+    bloqueEstacion: document.getElementById('bloque_estacion_editar'),
+    camposEstacion: ['edit_estacion'],
+});
+
+// Filtro dinámico de estaciones según línea elegida
+// Filtro dinámico de estaciones según línea y rol
+function filtrarEstaciones(lineaSelectId, estacionSelectId, rolSelectId) {
+
+    const lineaSelect = document.getElementById(lineaSelectId);
+    const estacionSelect = document.getElementById(estacionSelectId);
+    const rolSelect = document.getElementById(rolSelectId);
+
+    lineaSelect.addEventListener('change', function () {
+
+        const lineaId = lineaSelect.value;
+        const rol = rolSelect.value;
+
+        estacionSelect.innerHTML = '<option value="">— Selecciona —</option>';
+
+        if (!lineaId || !rol) return;
+
+
+        fetch(
+            "/usuarios/estaciones-por-linea/" 
+            + lineaId 
+            + "/?rol=" 
+            + rol
+        )
+        .then(response => response.json())
+        .then(data => {
+
+            data.forEach(est => {
+
+                const option = document.createElement('option');
+
+                option.value = est.codigo;
+                option.textContent = est.nombre;
+
+                estacionSelect.appendChild(option);
+
+            });
+
+        });
+
+    });
+}
+
+filtrarEstaciones(
+    'id_linea_crear',
+    'id_estacion_crear',
+    'id_rol_crear'
+);
+
+
+filtrarEstaciones(
+    'edit_linea',
+    'edit_estacion',
+    'edit_rol'
+);
 
 // MODAL: Detalle
 document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {
