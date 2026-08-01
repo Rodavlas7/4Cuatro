@@ -4,108 +4,264 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Componentes</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg me-1"></i> Nuevo componente
-    </button>
-</div>
+<div class="wrap">
 
-<!-- Sub-navegación del módulo -->
-<ul class="nav nav-pills mb-3">
-    <li class="nav-item"><a class="nav-link active" href="{% url 'panel_supervisor:componentes-lista' %}">Componentes</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:modelos-lista' %}">Modelos</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:lotes-lista' %}">Lotes</a></li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'panel_supervisor:ordenes-lista' %}">Órdenes de Material</a></li>
-</ul>
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO, NAVEGACIÓN Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>#</th>
-                <th>Num. Serie</th>
-                <th>Descripción</th>
-                <th>Modelo</th>
-                <th>Lote</th>
-                <th>Línea</th>
-                <th>Estado</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for c in componentes %}
-            <tr>
-                <td>{{ c.numero }}</td>
-                <td>{{ c.num_serie|default:"—" }}</td>
-                <td>{{ c.descripcion|default:"—" }}</td>
-                <td>{{ c.modelo_nombre|default:"—" }}</td>
-                <td>{{ c.lote_codigo|default:"—" }}</td>
-                <td>{{ c.linea_nombre|default:"—" }}</td>
-                <td>
-                    <span class="badge {% if c.estado_codigo == 'EDC004' %}text-bg-secondary{% else %}text-bg-success{% endif %}">
-                        {{ c.estado_nombre|default:"—" }}
+        <!-- ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Componentes</h4>
+                <p class="text-muted small mb-0">
+                    {% if mi_linea %}
+                        Material de <strong class="text-dark">{{ mi_linea_nombre }}</strong>.
+                    {% else %}
+                        No tienes una línea asignada.
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear" {% if not mi_linea %}disabled{% endif %}>
+                    <i class="bi bi-plus-lg"></i> Nuevo componente
+                </button>
+            </div>
+        </div>
+
+        <!-- SUB-NAVEGACIÓN DEL MÓDULO -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <ul class="nav nav-pills gap-1">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'panel_supervisor:componentes-lista' %}">Componentes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:ordenes-lista' %}">Órdenes de Material</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:lotes-lista' %}">Lotes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-secondary" href="{% url 'panel_supervisor:modelos-lista' %}">Modelos</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <form method="GET">
+                <div class="row g-3">
+
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" value="{{ filtros.q }}" placeholder="Núm. de serie, descripción o #...">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Modelo</label>
+                        <select name="modelo" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for m in modelos %}
+                            <option value="{{ m.codigo }}" {% if filtros.modelo == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Lote</label>
+                        <select name="lote" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for l in lotes %}
+                            <option value="{{ l.codigo }}" {% if filtros.lote == l.codigo %}selected{% endif %}>{{ l.codigo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Estado</label>
+                        <select name="estado" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for e in estados %}
+                            <option value="{{ e.codigo }}" {% if filtros.estado == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- Resumen y botones -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 pt-3 border-top gap-3">
+                    <span class="text-muted small">
+                        {% if hay_filtros %}
+                            <i class="bi bi-funnel-fill text-primary me-1"></i> Mostrando <strong class="text-dark">{{ mostrados }}</strong> de {{ total }} componentes de tu línea.
+                        {% else %}
+                            <i class="bi bi-cpu text-secondary me-1"></i> {{ total }} componente{{ total|pluralize:"s" }} en tu línea.
+                        {% endif %}
                     </span>
-                </td>
-                <td class="text-end">
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEditar"
-                        data-numero="{{ c.numero }}"
-                        data-num-serie="{{ c.num_serie|default:'' }}"
-                        data-descripcion="{{ c.descripcion|default:'' }}"
-                        data-linea="{{ c.linea_codigo|default:'' }}"
-                        data-modelo="{{ c.modelo_codigo|default:'' }}"
-                        data-lote="{{ c.lote_codigo|default:'' }}"
-                        data-estado="{{ c.estado_codigo|default:'' }}"
-                        data-orden="{{ c.orden_material|default:'' }}"
-                        data-registro="{{ c.registro_ensamblaje|default:'' }}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-
-                    <form method="POST" action="{% url 'panel_supervisor:componente-baja' c.numero %}" class="d-inline" onsubmit="return confirm('¿Marcar este componente como Mermado?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-x-lg"></i>
+                    <div class="d-flex gap-2">
+                        {% if hay_filtros %}
+                        <a href="{% url 'panel_supervisor:componentes-lista' %}" class="btn btn-white border btn-sm py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-x-lg text-danger"></i> Limpiar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-filter"></i> Filtrar resultados
                         </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="8" class="text-center text-muted py-4">No hay componentes registrados.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">#</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Num. Serie</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Descripción</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Lote</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in componentes %}
+                    <tr>
+                        <td class="ps-4"><span class="badge-id text-primary">#{{ c.numero }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-upc-scan text-secondary fs-5"></i>
+                                <span class="font-monospace fw-bold text-dark">{{ c.num_serie|default:"—" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium text-truncate" style="max-width: 220px;" title="{{ c.descripcion|default:'' }}">
+                                {{ c.descripcion|default:"—" }}
+                            </div>
+                            <div class="text-secondary small" style="font-size: 11px;">
+                                {% if c.orden_material %}
+                                    <a href="{% url 'panel_supervisor:orden-detalle' c.orden_material %}" class="text-decoration-none text-muted">
+                                        <i class="bi bi-link-45deg"></i> Orden #{{ c.orden_material }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Sin orden de material</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ c.modelo_nombre|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">{{ c.modelo_fabricante|default:"Sin fabricante" }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border font-monospace">{{ c.lote_codigo|default:"—" }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold
+                                {% if c.estado_codigo == 'EDC001' %}bg-success-subtle text-success border border-success-subtle
+                                {% elif c.estado_codigo == 'EDC002' %}bg-primary-subtle text-primary border border-primary-subtle
+                                {% elif c.estado_codigo == 'EDC003' %}bg-danger-subtle text-danger border border-danger-subtle
+                                {% elif c.estado_codigo == 'EDC004' %}bg-secondary-subtle text-secondary border border-secondary-subtle
+                                {% else %}bg-light text-secondary border border-secondary-subtle{% endif %}">
+                                <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ c.estado_nombre|default:"—" }}
+                            </span>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <!-- EDITAR -->
+                                <button
+                                    type="button"
+                                    class="btn text-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditar"
+                                    data-url="{% url 'panel_supervisor:componente-editar' c.numero %}"
+                                    data-num-serie="{{ c.num_serie|default:'' }}"
+                                    data-descripcion="{{ c.descripcion|default:'' }}"
+                                    data-modelo="{{ c.modelo_codigo|default:'' }}"
+                                    data-lote="{{ c.lote_codigo|default:'' }}"
+                                    data-estado="{{ c.estado_codigo|default:'' }}"
+                                    data-orden="{{ c.orden_material|default:'' }}"
+                                    data-registro="{{ c.registro_ensamblaje|default:'' }}"
+                                    title="Editar componente">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- BAJA / MERMA -->
+                                {% if c.estado_codigo == 'EDC004' %}
+                                    <button type="button" class="btn text-muted" disabled title="Ya está mermado">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                {% else %}
+                                    <form method="POST" action="{% url 'panel_supervisor:componente-baja' c.numero %}" class="d-inline" onsubmit="return confirm('¿Marcar este componente como Mermado?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn text-danger" title="Dar de baja / Merma">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-box-seam text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            {% if not mi_linea %}
+                                No tienes una línea asignada.
+                            {% elif hay_filtros %}
+                                Ningún componente de tu línea coincide con los filtros de búsqueda.
+                            {% else %}
+                                Tu línea no tiene componentes registrados.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
-
-<!-- ===================== MODAL: CREAR ===================== -->
+<!-- ==========================================
+     MODAL: CREAR
+     ========================================== -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{% url 'panel_supervisor:componentes-lista' %}">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form method="POST" action="{% url 'panel_supervisor:componentes-lista' %}" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nuevo componente</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nuevo componente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
 
-                    <div class="mb-3">
-                        <label class="form-label">Número de serie</label>
-                        <input type="text" name="num_serie" class="form-control" maxlength="18">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Número de serie</label>
+                            <input type="text" name="num_serie" class="form-control" maxlength="18" placeholder="Ej. SN-998123">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Descripción</label>
+                            <input type="text" name="descripcion" class="form-control" maxlength="256" placeholder="Descripción breve...">
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Descripción</label>
-                        <input type="text" name="descripcion" class="form-control" maxlength="256">
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Modelo</label>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Modelo</label>
                             <select name="modelo" class="form-select">
                                 <option value="">— Selecciona —</option>
                                 {% for m in modelos %}
@@ -113,8 +269,8 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Lote</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Lote</label>
                             <select name="lote" class="form-select">
                                 <option value="">— Selecciona —</option>
                                 {% for l in lotes %}
@@ -124,18 +280,14 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Línea</label>
-                            <select name="linea" class="form-select">
-                                <option value="">— Selecciona —</option>
-                                {% for ln in lineas %}
-                                <option value="{{ ln.codigo }}">{{ ln.nombre }}</option>
-                                {% endfor %}
-                            </select>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium text-muted">Línea</label>
+                            <input type="text" class="form-control bg-light" value="{{ mi_linea_nombre|default:'—' }}" disabled>
+                            <div class="form-text" style="font-size: 11px;">Es tu línea: se asigna sola.</div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Estado</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Estado</label>
                             <select name="estado" class="form-select">
                                 <option value="">— Selecciona —</option>
                                 {% for e in estados %}
@@ -145,53 +297,61 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Orden de material (opcional)</label>
-                            <input type="number" name="orden_material" class="form-control">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Orden de material (opcional)</label>
+                            <select name="orden_material" class="form-select">
+                                <option value="">— Sin orden —</option>
+                                {% for o in ordenes %}
+                                <option value="{{ o.numero }}">#{{ o.numero }} — {{ o.fecha|default:"sin fecha" }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text" style="font-size: 11px;">Sólo las órdenes de tu línea.</div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Registro de ensamblaje (opcional)</label>
-                            <input type="number" name="registro_ensamblaje" class="form-control">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Registro de ensamblaje (opcional)</label>
+                            <input type="number" name="registro_ensamblaje" class="form-control" placeholder="0">
                         </div>
                     </div>
 
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar componente</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-
-<!-- ===================== MODAL: EDITAR (reutilizable) ===================== -->
+<!-- ==========================================
+     MODAL: EDITAR
+     ========================================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" id="formEditar" action="">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form method="POST" id="formEditar" action="" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar componente</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Editar componente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
 
-                    <div class="mb-3">
-                        <label class="form-label">Número de serie</label>
-                        <input type="text" name="num_serie" id="edit_num_serie" class="form-control" maxlength="18">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Número de serie</label>
+                            <input type="text" name="num_serie" id="edit_num_serie" class="form-control" maxlength="18">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Descripción</label>
+                            <input type="text" name="descripcion" id="edit_descripcion" class="form-control" maxlength="256">
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Descripción</label>
-                        <input type="text" name="descripcion" id="edit_descripcion" class="form-control" maxlength="256">
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Modelo</label>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Modelo</label>
                             <select name="modelo" id="edit_modelo" class="form-select">
                                 <option value="">— Selecciona —</option>
                                 {% for m in modelos %}
@@ -199,8 +359,8 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Lote</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Lote</label>
                             <select name="lote" id="edit_lote" class="form-select">
                                 <option value="">— Selecciona —</option>
                                 {% for l in lotes %}
@@ -210,18 +370,14 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Línea</label>
-                            <select name="linea" id="edit_linea" class="form-select">
-                                <option value="">— Selecciona —</option>
-                                {% for ln in lineas %}
-                                <option value="{{ ln.codigo }}">{{ ln.nombre }}</option>
-                                {% endfor %}
-                            </select>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium text-muted">Línea</label>
+                            <input type="text" class="form-control bg-light" value="{{ mi_linea_nombre|default:'—' }}" disabled>
+                            <div class="form-text" style="font-size: 11px;">Es tu línea: no se puede cambiar.</div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Estado</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Estado</label>
                             <select name="estado" id="edit_estado" class="form-select">
                                 <option value="">— Selecciona —</option>
                                 {% for e in estados %}
@@ -231,37 +387,41 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Orden de material (opcional)</label>
-                            <input type="number" name="orden_material" id="edit_orden" class="form-control">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Orden de material (opcional)</label>
+                            <select name="orden_material" id="edit_orden" class="form-select">
+                                <option value="">— Sin orden —</option>
+                                {% for o in ordenes %}
+                                <option value="{{ o.numero }}">#{{ o.numero }} — {{ o.fecha|default:"sin fecha" }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Registro de ensamblaje (opcional)</label>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Registro de ensamblaje (opcional)</label>
                             <input type="number" name="registro_ensamblaje" id="edit_registro" class="form-control">
                         </div>
                     </div>
 
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-
 <script>
-// Rellena el modal de edición con los datos del renglón que se haya clickeado
+// Carga de datos al Modal Editar. La URL viene armada por Django en data-url,
+// para no repetir aquí la ruta del panel y que se desincronice de urls.py.
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
 
-    document.getElementById('formEditar').action = "/panel/supervisor/componentes/editar/" + btn.dataset.numero + "/";
+    document.getElementById('formEditar').action = btn.dataset.url;
     document.getElementById('edit_num_serie').value = btn.dataset.numSerie;
     document.getElementById('edit_descripcion').value = btn.dataset.descripcion;
-    document.getElementById('edit_linea').value = btn.dataset.linea;
     document.getElementById('edit_modelo').value = btn.dataset.modelo;
     document.getElementById('edit_lote').value = btn.dataset.lote;
     document.getElementById('edit_estado').value = btn.dataset.estado;

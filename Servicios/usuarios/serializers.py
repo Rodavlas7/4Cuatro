@@ -238,9 +238,23 @@ class ListEmpleadoLineaSerializer(serializers.ModelSerializer):
         source="empleado.nombrepila",
         read_only=True
     )
-    
+
     linea = serializers.CharField(
         source="linea.nombre",
+        read_only=True
+    )
+
+    # Los dos de arriba son nombres, y con eso no se puede identificar a nadie:
+    # hay empleados que se llaman igual. Estas dos llaves se agregaron para que
+    # el cliente pueda saber en qué línea está el empleado que inició sesión
+    # (el panel de supervisor sólo le muestra el material de su línea).
+    empleado_numero = serializers.IntegerField(
+        source="empleado.numero",
+        read_only=True
+    )
+
+    linea_codigo = serializers.CharField(
+        source="linea.codigo",
         read_only=True
     )
 
@@ -249,7 +263,9 @@ class ListEmpleadoLineaSerializer(serializers.ModelSerializer):
 
         fields = (
             "empleado",
+            "empleado_numero",
             "linea",
+            "linea_codigo",
             "fecha_inicio",
             "fecha_fin",
         )

@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 
 from core.api import fallo, get, lista, mensaje_error, objeto
+from core.filtros import contexto as _contexto_de_filtros, filtrar as _filtrar, pedidos as _pedidos, por_codigo as _por_codigo
 
 # URL base de la API (Servicios). Igual que en home/views.py.
 API = "http://127.0.0.1:8000/api"
@@ -20,6 +21,24 @@ def _avisar_si_falla(request, respuesta, que):
     cuando en realidad la sesión venció o la API está caída."""
     if fallo(respuesta):
         messages.error(request, f"No se pudieron cargar {que}. {mensaje_error(respuesta)}")
+
+
+# Los helpers de filtrado viven en core/filtros.py: los comparten los tres
+# paneles. Aquí sólo queda lo que es propio de componentes.
+
+
+def _cuantos_usan(headers, clave):
+    """Cuántos componentes usan cada valor de esa columna de vista_componentes.
+
+    Se muestra en las pantallas de lotes y modelos porque explica por adelantado
+    lo que si no sólo se descubre al intentar borrar: un catálogo que alguien
+    está usando no se puede eliminar."""
+    conteo = {}
+    for componente in lista(get(f"{API}/componentes/", headers)):
+        valor = componente.get(clave)
+        if valor:
+            conteo[valor] = conteo.get(valor, 0) + 1
+    return conteo
 
 
 #COMPONENTES
@@ -57,17 +76,30 @@ def componentesListView(request):
 
     _avisar_si_falla(request, respuesta_componentes, "los componentes")
 
-    return render(
-        request,
-        "componentes/lista.html",
-        {
-            "componentes": lista(respuesta_componentes),
-            "lineas": lista(get(f"{API}/lineas/", headers)),
-            "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
-            "lotes": lista(get(f"{API}/componentes/lotes/", headers)),
-            "estados": lista(get(f"{API}/componentes/estados/", headers)),
-        }
+    componentes = lista(respuesta_componentes)
+
+    filtros = _pedidos(request, "q", "modelo", "lote", "linea", "estado")
+
+    filtrados = _filtrar(
+        componentes,
+        filtros,
+        exactos=(("modelo", "modelo_codigo"),
+                 ("lote", "lote_codigo"),
+                 ("linea", "linea_codigo"),
+                 ("estado", "estado_codigo")),
+        busqueda=("num_serie", "descripcion", "numero"),
     )
+
+    contexto = {
+        "componentes": filtrados,
+        "lineas": lista(get(f"{API}/lineas/", headers)),
+        "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
+        "lotes": lista(get(f"{API}/componentes/lotes/", headers)),
+        "estados": lista(get(f"{API}/componentes/estados/", headers)),
+    }
+    contexto.update(_contexto_de_filtros(filtros, componentes, filtrados))
+
+    return render(request, "componentes/lista.html", contexto)
 
 
 def componenteEditarView(request, numero):
@@ -152,14 +184,39 @@ def modelosListView(request):
 
     _avisar_si_falla(request, respuesta_modelos, "los modelos")
 
-    return render(
-        request,
-        "componentes/modelos.html",
-        {
-            "modelos": lista(respuesta_modelos),
-            "tipos": lista(get(f"{API}/componentes/tipos/", headers)),
-        }
+    tipos = lista(get(f"{API}/componentes/tipos/", headers))
+    tipos_por_codigo = _por_codigo(tipos)
+
+    en_uso = _cuantos_usan(headers, "modelo_codigo")
+
+    # La API devuelve el tipo como código (TC001). En pantalla se quiere el
+    # nombre, así que se resuelve aquí contra el catálogo que ya se pidió.
+    modelos = lista(respuesta_modelos)
+    for modelo in modelos:
+        tipo = tipos_por_codigo.get(modelo.get("tipo_componente")) or {}
+        modelo["tipo_nombre"] = tipo.get("nombre")
+        modelo["componentes"] = en_uso.get(modelo.get("codigo"), 0)
+
+    filtros = _pedidos(request, "q", "tipo", "fabricante")
+
+    filtrados = _filtrar(
+        modelos,
+        filtros,
+        exactos=(("tipo", "tipo_componente"),
+                 ("fabricante", "fabricante")),
+        busqueda=("codigo", "nombre", "fabricante", "tipo_nombre"),
     )
+
+    contexto = {
+        "modelos": filtrados,
+        "tipos": tipos,
+        # El fabricante es texto libre, no un catálogo: las opciones del filtro
+        # salen de lo que de verdad hay capturado.
+        "fabricantes": sorted({m["fabricante"] for m in modelos if m.get("fabricante")}),
+    }
+    contexto.update(_contexto_de_filtros(filtros, modelos, filtrados))
+
+    return render(request, "componentes/modelos.html", contexto)
 
 
 def modeloEditarView(request, codigo):
@@ -234,7 +291,19 @@ def lotesListView(request):
 
     _avisar_si_falla(request, respuesta_lotes, "los lotes")
 
-    return render(request, "componentes/lotes.html", {"lotes": lista(respuesta_lotes)})
+    en_uso = _cuantos_usan(headers, "lote_codigo")
+
+    lotes = lista(respuesta_lotes)
+    for lote in lotes:
+        lote["componentes"] = en_uso.get(lote.get("codigo"), 0)
+
+    filtros = _pedidos(request, "q")
+    filtrados = _filtrar(lotes, filtros, busqueda=("codigo", "descripcion"))
+
+    contexto = {"lotes": filtrados}
+    contexto.update(_contexto_de_filtros(filtros, lotes, filtrados))
+
+    return render(request, "componentes/lotes.html", contexto)
 
 
 def loteEditarView(request, codigo):
@@ -305,14 +374,42 @@ def ordenesListView(request):
 
     _avisar_si_falla(request, respuesta_ordenes, "las órdenes de material")
 
-    return render(
-        request,
-        "componentes/ordenes.html",
-        {
-            "ordenes": lista(respuesta_ordenes),
-            "lineas": lista(get(f"{API}/lineas/", headers)),
-        }
+    lineas = lista(get(f"{API}/lineas/", headers))
+    lineas_por_codigo = _por_codigo(lineas)
+
+    # Cuántos renglones trae cada orden. La API los devuelve todos juntos, así
+    # que se cuentan de una sola pasada en lugar de pedir orden por orden.
+    renglones = {}
+    for detalle in lista(get(f"{API}/componentes/detalles/", headers)):
+        clave = str(detalle.get("orden"))
+        renglones[clave] = renglones.get(clave, 0) + 1
+
+    ordenes = lista(respuesta_ordenes)
+    for orden in ordenes:
+        linea = lineas_por_codigo.get(orden.get("linea")) or {}
+        orden["linea_nombre"] = linea.get("nombre")
+        orden["renglones"] = renglones.get(str(orden.get("numero")), 0)
+
+    filtros = _pedidos(request, "q", "linea", "desde", "hasta")
+
+    filtradas = _filtrar(
+        ordenes,
+        filtros,
+        exactos=(("linea", "linea"),),
+        busqueda=("numero", "linea_nombre"),
     )
+
+    # El rango de fechas no es una coincidencia exacta, va aparte. Las fechas
+    # llegan como AAAA-MM-DD, que se ordena bien comparándolas como texto.
+    if filtros["desde"]:
+        filtradas = [o for o in filtradas if (o.get("fecha") or "") >= filtros["desde"]]
+    if filtros["hasta"]:
+        filtradas = [o for o in filtradas if (o.get("fecha") or "") <= filtros["hasta"]]
+
+    contexto = {"ordenes": filtradas, "lineas": lineas}
+    contexto.update(_contexto_de_filtros(filtros, ordenes, filtradas))
+
+    return render(request, "componentes/ordenes.html", contexto)
 
 
 def ordenEditarView(request, numero):
@@ -391,12 +488,25 @@ def ordenDetalleView(request, numero):
         messages.error(request, f"No se pudo cargar la orden {numero}. {mensaje_error(respuesta_orden)}")
         return redirect('ordenes-lista')
 
+    orden = objeto(respuesta_orden)
+    modelos = lista(get(f"{API}/componentes/modelos/", headers))
+    modelos_por_codigo = _por_codigo(modelos)
+
+    # Los renglones vienen con el código del modelo; en pantalla se acompaña del
+    # nombre para no obligar a nadie a memorizarse el catálogo.
+    for renglon in orden.get("detalles") or []:
+        modelo = modelos_por_codigo.get(renglon.get("modelo")) or {}
+        renglon["modelo_nombre"] = modelo.get("nombre")
+
+    linea = _por_codigo(lista(get(f"{API}/lineas/", headers))).get(orden.get("linea")) or {}
+    orden["linea_nombre"] = linea.get("nombre")
+
     return render(
         request,
         "componentes/orden_detalle.html",
         {
-            "orden": objeto(respuesta_orden),
-            "modelos": lista(get(f"{API}/componentes/modelos/", headers)),
+            "orden": orden,
+            "modelos": modelos,
         }
     )
 
