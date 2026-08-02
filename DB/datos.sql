@@ -281,54 +281,54 @@ INSERT INTO lote_comp (codigo, descripcion) VALUES
 
 -- LINEA A para el equipo matutino
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607001, 'Carlos',    'García',   'López',    'OPENSA', 'MAT', TRUE),
-(2607002, 'María',     'Fernández','Sánchez',  'OPENSA', 'MAT', TRUE),
-(2607003, 'Luis',      'Martínez', 'Gómez',    'OPENSA', 'MAT', TRUE),
-(2607004, 'Lucía',     'Torres',   'Vargas',   'OPCALI', 'MAT', TRUE),
-(2607005, 'Chelly',    'Montes',   'Marcos',   'SUPER',  'MAT', TRUE);
+(2607001, 'Ana Maria',       'Antonio',     'Cova',     'OPENSA', 'MAT', TRUE),
+(2607002, 'Samanta Denisse', 'Contreras',   'Rangel',   'OPENSA', 'MAT', TRUE),
+(2607003, 'Luis Alberto',    'Cruz',        'Ortiz',    'OPENSA', 'MAT', TRUE),
+(2607004, 'Ricardo Daniel',  'De La Torre', 'Garcia',   'OPCALI', 'MAT', TRUE),
+(2607005, 'Maria Hilda',     'De Leon',     'Martinez', 'SUPER',  'MAT', TRUE);
 
 
 -- LINEA B
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607006, 'Jorge',     'Ramírez',  'Díaz',     'OPENSA', 'MAT', TRUE),
-(2607007, 'Elena',     'Castro',   'Ruiz',     'OPENSA', 'MAT', TRUE),
-(2607008, 'Miguel',    'Ortiz',    'Méndez',   'OPENSA', 'MAT', TRUE),
-(2607009, 'Roberto',   'Flores',   'Silva',    'OPCALI', 'MAT', TRUE),
-(2607010, 'Patricia',  'Navarro',  'Ríos',     'SUPER',  'MAT', TRUE);
+(2607006, 'Anwar Fernando',  'Estrada',     'Santos',     'OPENSA', 'MAT', TRUE),
+(2607007, 'Jesus Gildardo',  'Fonseca',     'De La Cruz', 'OPENSA', 'MAT', TRUE),
+(2607008, 'Luis David',      'Gallardo',    'Ramirez',    'OPENSA', 'MAT', TRUE),
+(2607009, 'Jose Jonathan',   'Gonzalez',    'De La Mora', 'OPCALI', 'MAT', TRUE),
+(2607010, 'Marlene Yesenia', 'Gutierrez',   'Soto',       'SUPER',  'MAT', TRUE);
 
 
 -- LINEA C
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607011, 'Pedro',     'Mendoza',  'Vega',     'OPENSA', 'MAT', TRUE),
-(2607012, 'Laura',     'Salinas',  'Ponce',    'OPENSA', 'MAT', TRUE),
-(2607013, 'Valeria',   'Guzmán',   'Rojas',    'OPENSA', 'MAT', TRUE),
-(2607014, 'Héctor',    'Paz',      'Mora',     'OPCALI', 'MAT', TRUE),
-(2607015, 'Diana',     'Ríos',     'Blanco',   'SUPER',  'MAT', TRUE);
+(2607011, 'Josue Isaac',     'Huape',       'Gil',      'OPENSA', 'MAT', TRUE),
+(2607012, 'Axel Santiago',   'Islas',       'Ruelas',   'OPENSA', 'MAT', TRUE),
+(2607013, 'Rosalba Abigail', 'Lopez',       'Garcia',   'OPENSA', 'MAT', TRUE),
+(2607014, 'Saul',            'Marquez',     'Gomez',    'OPCALI', 'MAT', TRUE),
+(2607015, 'Jorge Jonathan',  'Martinez',    'Zambrano', 'SUPER',  'MAT', TRUE);
 
 
 -- LINEA D
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607016, 'Mario',     'Cruz',     'Vidal',    'OPENSA', 'MAT', TRUE),
-(2607017, 'Teresa',    'Luna',     'Ortiz',    'OPENSA', 'MAT', TRUE),
-(2607018, 'Raúl',      'Navarro',  'Pinto',    'OPENSA', 'MAT', TRUE),
-(2607019, 'Carmen',    'Sosa',     'Molina',   'OPCALI', 'MAT', TRUE),
-(2607020, 'Gloria',    'Peña',     'Silva',    'SUPER',  'MAT', TRUE);
+(2607016, 'Irving De Jesus', 'Morales',     'Aparicio', 'OPENSA', 'MAT', TRUE),
+(2607017, 'Hemilton Raul',   'Orduno',      'Santiago', 'OPENSA', 'MAT', TRUE),
+(2607018, 'Diego',           'Sanchez',     'Hernandez','OPENSA', 'MAT', TRUE),
+(2607019, 'Misael',          'Urquidez',    'Arredondo','OPCALI', 'MAT', TRUE),
+(2607020, 'Fernando Alonso', 'Zuniga',      'Arevalo',  'SUPER',  'MAT', TRUE);
 
 
 -- LINEA E
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607021, 'Hugo',      'Díaz',     'Ramos',    'OPENSA', 'MAT', TRUE),
-(2607022, 'Silvia',    'Vargas',   'Luna',     'OPENSA', 'MAT', TRUE),
-(2607023, 'Beatriz',   'Méndez',   'Solis',    'OPENSA', 'MAT', TRUE),
-(2607024, 'Ramón',     'Blanco',   'Cruz',     'OPCALI', 'MAT', TRUE),
-(2607025, 'Julia',     'Cabrera',  'Pérez',    'SUPER',  'MAT', TRUE);
+(2607021, 'Ana Maria',       'Antonio',     'Cova',     'OPENSA', 'MAT', TRUE),
+(2607022, 'Samanta Denisse', 'Contreras',   'Rangel',   'OPENSA', 'MAT', TRUE),
+(2607023, 'Luis Alberto',    'Cruz',        'Ortiz',    'OPENSA', 'MAT', TRUE),
+(2607024, 'Ricardo Daniel',  'De La Torre', 'Garcia',   'OPCALI', 'MAT', TRUE),
+(2607025, 'Maria Hilda',     'De Leon',     'Martinez', 'SUPER',  'MAT', TRUE);
 
 
 -- LINEA F (EMBALAJE)
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607026, 'Ricardo',   'Gutiérrez','Pérez',    'OPEMBA', 'MAT', TRUE),
-(2607027, 'Isabel',    'Domínguez','Salas',    'OPEMBA', 'MAT', TRUE),
-(2607028, 'Arturo',    'Jiménez',  'Cruz',     'SUPER',  'MAT', TRUE);
+(2607026, 'Anwar Fernando',  'Estrada',     'Santos',     'OPEMBA', 'MAT', TRUE),
+(2607027, 'Jesus Gildardo',  'Fonseca',     'De La Cruz', 'OPEMBA', 'MAT', TRUE),
+(2607028, 'Luis David',      'Gallardo',    'Ramirez',    'SUPER',  'MAT', TRUE);
 
 
 -- OPERARIOS DE ENSAMBLAJE QUE CUBREN LA CUARTA ESTACIÓN
@@ -337,17 +337,17 @@ INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno,
 -- la cubren. Van con número nuevo al final de la secuencia para no renumerar a
 -- los de arriba (datos_pruebas.sql y la tabla usuario los referencian por número).
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607031, 'Andrés',    'Salazar',  'Ibarra',   'OPENSA', 'MAT', TRUE),   -- LINEA A, EST-A4
-(2607032, 'Nadia',     'Quiroga',  'Estrada',  'OPENSA', 'MAT', TRUE),   -- LINEA B, EST-B4
-(2607033, 'Emilio',    'Bustos',   'Arellano', 'OPENSA', 'MAT', TRUE),   -- LINEA C, EST-C4
-(2607034, 'Rebeca',    'Zamora',   'Iglesias', 'OPENSA', 'MAT', TRUE);   -- LINEA D, EST-D4
+(2607031, 'Jose Jonathan',   'Gonzalez',    'De La Mora', 'OPENSA', 'MAT', TRUE),   -- LINEA A, EST-A4
+(2607032, 'Marlene Yesenia', 'Gutierrez',   'Soto',       'OPENSA', 'MAT', TRUE),   -- LINEA B, EST-B4
+(2607033, 'Josue Isaac',     'Huape',       'Gil',        'OPENSA', 'MAT', TRUE),   -- LINEA C, EST-C4
+(2607034, 'Axel Santiago',   'Islas',       'Ruelas',     'OPENSA', 'MAT', TRUE);   -- LINEA D, EST-D4
 
 
 -- INSPECTOR DE CALIDAD DE LA LINEA F (EMBALAJE)
 -- La línea de embalaje no tenía ningún empleado con rol OPCALI al cual mover,
 -- así que su estación de calidad (EST-F3) estrena inspector.
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607035, 'Fabiola',   'Cordero',  'Nieto',    'OPCALI', 'MAT', TRUE);   -- LINEA F, EST-F3
+(2607035, 'Rosalba Abigail', 'Lopez',       'Garcia',     'OPCALI', 'MAT', TRUE);   -- LINEA F, EST-F3
 
 
 
@@ -426,7 +426,7 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 (2607002, 'EST-A2', '2026-07-15', NULL),
 (2607003, 'EST-A3', '2026-07-15', NULL),
 (2607031, 'EST-A4', '2026-07-15', NULL),
-(2607004, 'EST-A5', '2026-07-15', NULL);   -- Lucía Torres Vargas (OPCALI)
+(2607004, 'EST-A5', '2026-07-15', NULL);   -- Ricardo Daniel De La Torre Garcia (OPCALI)
 
 -- LINEA B
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
@@ -434,7 +434,7 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 (2607007, 'EST-B2', '2026-07-15', NULL),
 (2607008, 'EST-B3', '2026-07-15', NULL),
 (2607032, 'EST-B4', '2026-07-15', NULL),
-(2607009, 'EST-B5', '2026-07-15', NULL);   -- Roberto Flores Silva (OPCALI)
+(2607009, 'EST-B5', '2026-07-15', NULL);   -- Jose Jonathan Gonzalez De La Mora (OPCALI)
 
 -- LINEA C
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
@@ -442,7 +442,7 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 (2607012, 'EST-C2', '2026-07-15', NULL),
 (2607013, 'EST-C3', '2026-07-15', NULL),
 (2607033, 'EST-C4', '2026-07-15', NULL),
-(2607014, 'EST-C5', '2026-07-15', NULL);   -- Héctor Paz Mora (OPCALI)
+(2607014, 'EST-C5', '2026-07-15', NULL);   -- Saul Marquez Gomez (OPCALI)
 
 -- LINEA D
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
@@ -450,20 +450,20 @@ INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALU
 (2607017, 'EST-D2', '2026-07-15', NULL),
 (2607018, 'EST-D3', '2026-07-15', NULL),
 (2607034, 'EST-D4', '2026-07-15', NULL),
-(2607019, 'EST-D5', '2026-07-15', NULL);   -- Carmen Sosa Molina (OPCALI)
+(2607019, 'EST-D5', '2026-07-15', NULL);   -- Misael Urquidez Arredondo (OPCALI)
 
 -- LINEA E — ya cerraba con estación de calidad (EST-E4), no se agregó ninguna
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607021, 'EST-E1', '2026-07-15', NULL),
 (2607022, 'EST-E2', '2026-07-15', NULL),
 (2607023, 'EST-E3', '2026-07-15', NULL),
-(2607024, 'EST-E4', '2026-07-15', NULL);   -- Ramón Blanco Cruz (OPCALI)
+(2607024, 'EST-E4', '2026-07-15', NULL);   -- Ricardo Daniel De La Torre Garcia (OPCALI)
 
 -- LINEA F (EMBALAJE)
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607026, 'EST-F1', '2026-07-15', NULL),
 (2607027, 'EST-F2', '2026-07-15', NULL),
-(2607035, 'EST-F3', '2026-07-15', NULL);   -- Fabiola Cordero Nieto (OPCALI)
+(2607035, 'EST-F3', '2026-07-15', NULL);   -- Rosalba Abigail Lopez Garcia (OPCALI)
 
 
 
@@ -523,12 +523,12 @@ INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
 -- Contraseña = las 3 letras del usuario + 2026
 
 INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
-('0002LTV', 'LTV2026', 1, 2607004),   -- Lucía Torres Vargas    (LINEA A)
-('0004RFS', 'RFS2026', 1, 2607009),   -- Roberto Flores Silva   (LINEA B)
-('0006HPM', 'HPM2026', 1, 2607014),   -- Héctor Paz Mora        (LINEA C)
-('0008CSM', 'CSM2026', 1, 2607019),   -- Carmen Sosa Molina     (LINEA D)
-('0010RBC', 'RBC2026', 1, 2607024),   -- Ramón Blanco Cruz      (LINEA E)
-('0013FCN', 'FCN2026', 1, 2607035);   -- Fabiola Cordero Nieto  (LINEA F, embalaje)
+('0002RTG', 'RTG2026', 1, 2607004),   -- Ricardo Daniel De La Torre Garcia (LINEA A)
+('0004JGM', 'JGM2026', 1, 2607009),   -- Jose Jonathan Gonzalez De La Mora (LINEA B)
+('0006SMG', 'SMG2026', 1, 2607014),   -- Saul Marquez Gomez                (LINEA C)
+('0008MUA', 'MUA2026', 1, 2607019),   -- Misael Urquidez Arredondo         (LINEA D)
+('0010RTG', 'RTG2026', 1, 2607024),   -- Ricardo Daniel De La Torre Garcia (LINEA E)
+('0013RLG', 'RLG2026', 1, 2607035);   -- Rosalba Abigail Lopez Garcia      (LINEA F, embalaje)
 
 
 -- -------------------------------------------------------------- SUPERVISORES
@@ -536,9 +536,9 @@ INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
 -- Contraseña = las 3 letras del usuario + 2026
 
 INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
-('0003CMM', 'CMM2026', 1, 2607005),   -- Chelly Montes Marcos   (LINEA A)
-('0005PNR', 'PNR2026', 1, 2607010),   -- Patricia Navarro Ríos  (LINEA B)
-('0007DRB', 'DRB2026', 1, 2607015),   -- Diana Ríos Blanco      (LINEA C)
-('0009GPS', 'GPS2026', 1, 2607020),   -- Gloria Peña Silva      (LINEA D)
-('0011JCP', 'JCP2026', 1, 2607025),   -- Julia Cabrera Pérez    (LINEA E)
-('0012AJC', 'AJC2026', 1, 2607028);   -- Arturo Jiménez Cruz    (LINEA F, embalaje)
+('0003MDM', 'MDM2026', 1, 2607005),   -- Maria Hilda De Leon Martinez     (LINEA A)
+('0005MGS', 'MGS2026', 1, 2607010),   -- Marlene Yesenia Gutierrez Soto   (LINEA B)
+('0007JMZ', 'JMZ2026', 1, 2607015),   -- Jorge Jonathan Martinez Zambrano (LINEA C)
+('0009FZA', 'FZA2026', 1, 2607020),   -- Fernando Alonso Zuniga Arevalo   (LINEA D)
+('0011MDM', 'MDM2026', 1, 2607025),   -- Maria Hilda De Leon Martinez     (LINEA E)
+('0012LGR', 'LGR2026', 1, 2607028);   -- Luis David Gallardo Ramirez      (LINEA F, embalaje)
