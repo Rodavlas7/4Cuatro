@@ -15,9 +15,7 @@ from . import serializers
 from usuarios.permissions import TienePermisoModulo
 from usuarios.models import EmpleadoLinea
 from django.db import OperationalError
-
-
-
+from produccion.models import Laptop, EdoLaptop
 
 from django.db.models import Q
 
@@ -301,6 +299,13 @@ class DetailInspeccionCalidadAPIView(APIView):
 # UPDATE INSPECCION DE CALIDAD
 # ==========================================
 
+RESULTADO_ESTADO_MAP = {
+    1: 'APROV',
+    0: 'RECHA',
+    2: 'PENSAM',
+}
+
+
 class UpdateInspeccionCalidadAPIView(generics.UpdateAPIView):
 
     permission_classes = [
@@ -317,7 +322,13 @@ class UpdateInspeccionCalidadAPIView(generics.UpdateAPIView):
 
     lookup_field = "numero"
 
+    def perform_update(self, serializer):
+        inspeccion = serializer.save()
+        resultado = inspeccion.resultado
+        estado_codigo = RESULTADO_ESTADO_MAP.get(resultado)
 
+        if estado_codigo and inspeccion.laptop_id:
+            Laptop.objects.filter(pk=inspeccion.laptop_id).update(estado_id=estado_codigo)
 
 
 # . . . . . .  . DELETE
