@@ -21,10 +21,14 @@ def get_choices_lineas_paro(token):
 
 
 def get_choices_lineas_produccion(token):
-    """Líneas activas, para el formulario de inspecciones."""
+    """Líneas activas de ensamblaje para el formulario de inspecciones."""
     lineas = lista(get(url('lineas/lineas/activas/'), headers_token(token)))
 
-    return [(l.get('codigo'), l.get('nombre')) for l in lineas]
+    return [
+        (l.get('codigo'), l.get('nombre'))
+        for l in lineas
+        if l.get('nombre', '').lower().find('ensamblaje') != -1
+    ]
 
 
 def get_choices_laptops(token):
