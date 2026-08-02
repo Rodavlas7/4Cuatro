@@ -15,6 +15,7 @@ DROP TRIGGER IF EXISTS tg_Actualizar_Estado_Laptop_Inspeccion_Calidad;
 DROP TRIGGER IF EXISTS tg_Control_Componentes_Duplicados;
 DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente;
 DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Registrar_Laptop;
+DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Mover_Laptop;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Alta;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Cambio;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Baja;
@@ -510,6 +511,41 @@ BEGIN
 END$$
 
 
+
+
+-- TRIGGER 12: tg_Iniciar_Orden_Al_Mover_Laptop
+--
+-- Evento   : AFTER UPDATE en laptop
+-- Objetivo : El mismo arranque que el TRIGGER 11, pero para la otra forma de
+--            agregarle una laptop a una orden: reasignar una que ya existía.
+--
+-- Hace falta porque el TRIGGER 11 sólo se dispara en INSERT. La pantalla de
+-- edición de laptop deja cambiar la orden, y por ahí una orden 'Pendiente'
+-- recibía su primera laptop sin arrancar.
+--
+-- Sólo actúa cuando la orden REALMENTE cambia: un UPDATE que toque cualquier
+-- otro campo (estado, línea, descripción) no tiene por qué mover la orden. El
+-- operador <=> compara tolerando nulos, cosa que '=' no hace: con '=' una
+-- laptop que pasa de NULL a una orden no se detectaría.
+--
+-- La orden que PIERDE la laptop se queda como estaba. Regresarla a 'Pendiente'
+-- sería adivinar: pudo avanzar a 'En Proceso' por otras razones, y una orden
+-- que retrocede sola confunde más de lo que ayuda.
+
+
+CREATE TRIGGER tg_Iniciar_Orden_Al_Mover_Laptop
+AFTER UPDATE ON laptop
+FOR EACH ROW
+BEGIN
+    IF NOT (NEW.orden <=> OLD.orden) AND NEW.orden IS NOT NULL THEN
+        UPDATE orden_produccion
+           SET estado = 'PROC'
+         WHERE folio  = NEW.orden
+           AND estado = 'PEND';
+    END IF;
+END$$
+
+
 CREATE TRIGGER tg_Sincronizar_Cant_Producida_Alta
 AFTER INSERT ON laptop
 FOR EACH ROW
@@ -631,6 +667,23 @@ UPDATE orden_produccion op
 --   2. tg_Finalizar_Proceso_Embalaje        → UPDATE laptop a 'EMBALA'
 --   3. tg_Sincronizar_Cant_Producida_Cambio → recuenta (la laptop ya
 --        contaba desde 'APROV', así que el número no se mueve)
+--
+-- OJO con esas dos cadenas: los UPDATE de laptop que hacen los triggers 5 y 3
+-- también pasan por tg_Iniciar_Orden_Al_Mover_Laptop, pero ahí NO cambia la
+-- columna `orden`, así que su condición no se cumple y no hace nada. Sólo
+-- reacciona cuando la laptop de verdad se cambia de orden.
+--
+--
+-- LAS DOS FORMAS DE ARRANCAR UNA ORDEN
+--
+-- Una orden 'Pendiente' pasa a 'En Proceso' en cuanto recibe su primera laptop,
+-- y eso puede ocurrir por dos caminos distintos:
+--
+--   tg_Iniciar_Orden_Al_Registrar_Laptop  (INSERT)  laptop nueva en la orden
+--   tg_Iniciar_Orden_Al_Mover_Laptop      (UPDATE)  laptop existente reasignada
+--
+-- Los dos hacen lo mismo y los dos filtran por estado = 'PEND', así que una
+-- orden Cancelada o Completada no se reabre por ninguno de los dos caminos.
 
 
 
