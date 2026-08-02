@@ -617,6 +617,16 @@ BEGIN
     END IF;
 END$$
 
+
+CREATE TRIGGER tg_actualizar_edo_laptop_al_ensamblar
+AFTER INSERT ON registro_ensamblaje
+FOR EACH ROW
+BEGIN
+    UPDATE laptop
+       SET estado = 'PENSAM'
+     WHERE numero = NEW.laptop 
+       AND estado = 'REGIS';
+END$$
 DELIMITER ;
 
 
