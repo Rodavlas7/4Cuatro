@@ -79,20 +79,14 @@
         </li>
  
         <!-- Planta -->
+
         <li class="nav-item mb-2">
-            <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
-               href="#planta" role="button" aria-expanded="false">
-                <span>
-                    <i class="bi bi-diagram-3 me-2"></i><span class="nav-label">Planta</span>
-                </span>
-                <i class="bi bi-chevron-down chevron"></i>
+            <a href="{% url 'lineas-lista' %}" class="nav-link">
+                <i class="bi bi-diagram-3 me-2"></i><span class="nav-label">Planta</span>
             </a>
- 
-            <div class="collapse submenu" id="planta">
-                <a href="{% url 'lineas-lista' %}" class="nav-link small"><span class="nav-label">Líneas de Ensamblaje</span></a>
-                <a href="{% url 'estaciones-lista' %}" class="nav-link small"><span class="nav-label">Estaciones de Trabajo</span></a>
-            </div>
         </li>
+
+
  
         <!-- Materiales -->
 
