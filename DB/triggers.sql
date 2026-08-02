@@ -134,12 +134,11 @@ BEFORE UPDATE ON laptop
 FOR EACH ROW
 BEGIN
     -- Solo actúa cuando el estado cambia específicamente a Aprobada
-    -- y la laptop aún no tiene número de serie asignado
+    -- y la laptop todavía tiene el número de serie temporal (o no tiene ninguno)
     IF NEW.estado = 'APROV'
        AND (OLD.estado IS NULL OR OLD.estado <> 'APROV')
-       AND (NEW.num_serie IS NULL OR NEW.num_serie = '')
+       AND (NEW.num_serie IS NULL OR NEW.num_serie = '' OR NEW.num_serie LIKE 'TMP-%')
     THEN
-        -- Formato: TP-AAAAMMDD-000000
         SET NEW.num_serie = CONCAT(
             'TP-',
             DATE_FORMAT(CURDATE(), '%Y%m%d'),
