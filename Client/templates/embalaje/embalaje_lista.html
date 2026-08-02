@@ -11,29 +11,83 @@
 {% block content %}
 
 <div class="wrap">
-
+<!-- ==========================================
+         TARJETA 1: ENCABEZADO Y FILTROS
+         ========================================== -->
     <div class="emp-card mb-4">
+        
+        <!-- ENCABEZADO -->
         <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
             <div>
-                <h4 class="fw-bold text-dark mb-1">Registros de Embalaje</h4>
-                <p class="text-muted small mb-0">
-                    Consulta y administra los registros de embalaje.
-                </p>
+                <h4 class="fw-bold text-dark mb-1">Registro de Embalaje</h4>
+                <p class="text-muted small mb-0">Gestiona y supervisa el empaquetado final de las laptops producidas.</p>
             </div>
-
             <div>
-            <button 
-                class="btn btn-accent shadow-sm"
-                data-bs-toggle="modal"
-                data-bs-target="#modalNuevoEmbalaje">
-                
-                <i class="bi bi-plus-lg"></i>
-                Nuevo embalaje
-            </button>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalNuevoEmbalaje">
+                    <i class="bi bi-plus-lg"></i> Nuevo embalaje
+                </button>
             </div>
         </div>
-    </div>
 
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3">
+            <form method="GET">
+                <div class="row g-3 align-items-end">
+
+                    <!-- Buscar -->
+                    <div class="col-12 col-md-12 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input
+                                type="text"
+                                name="buscar"
+                                class="form-control border-start-0 ps-1 py-2"
+                                placeholder="Número, Serie de laptop o Tipo..."
+                                value="{{ buscar|default:'' }}"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Fecha inicio -->
+                    <div class="col-6 col-md-3 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Desde</label>
+                        <input
+                            type="date"
+                            name="fecha_inicio"
+                            class="form-control form-control-sm py-2 text-secondary"
+                            value="{{ fecha_inicio|default:'' }}">
+                    </div>
+
+                    <!-- Fecha fin -->
+                    <div class="col-6 col-md-3 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Hasta</label>
+                        <input
+                            type="date"
+                            name="fecha_fin"
+                            class="form-control form-control-sm py-2 text-secondary"
+                            value="{{ fecha_fin|default:'' }}">
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="col-12 col-md-2 col-lg-2 d-flex gap-2">
+                        <button class="btn btn-dark btn-sm py-2 fw-medium d-flex align-items-center justify-content-center gap-2 flex-grow-1" type="submit" title="Filtrar">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                        {% if buscar or fecha_inicio or fecha_fin %}
+                            <!-- Ajustado al 'name' de la ruta en tu urls.py de embalaje -->
+                            <a href="{% url 'embalaje-lista' %}" class="btn btn-outline-danger btn-sm py-2 px-3 d-flex align-items-center justify-content-center" title="Limpiar filtros">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <div class="emp-card overflow-hidden">
@@ -58,10 +112,6 @@
                         Fecha
                     </th>
 
-                    <th class="py-3 text-uppercase text-muted small fw-bold">
-                        Hora
-                    </th>
-
                     <th class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">
                         Acciones
                     </th>
@@ -69,41 +119,50 @@
             </thead>
             <tbody>
 
-            {% for embalaje in embalajes %}
+            {% for e in embalajes %}
 
                 <tr>
-                    <td class="ps-4">
-                        {{ embalaje.numero }}
-                    </td>
-
+                    <td class="ps-4"><span class="badge-id">{{ e.numero }}</span></td>
                     <td>
-                        {{ embalaje.laptop_num_serie }}
+                        <div class="text-dark small fw-medium">
+                            <i class="bi bi-laptop me-1 text-muted"></i>{{ e.laptop_num_serie|default:"—" }}
+                        </div>
                     </td>
 
+                    <td><div class="text-dark small fw-medium">{{ e.tipo_nombre|default:"Sin asignar" }}</div></td>
                     <td>
-                        {{ embalaje.tipo_nombre }}
+                        <div class="text-dark small fw-medium">{{ e.fecha|fecha|default:"—" }}</div>
+                        <div class="text-secondary small" style="font-size: 11px;">
+                            <i class="bi bi-clock me-1"></i>{{ e.hora|hora|default:"—" }}
+                        </div>
                     </td>
-
-                    <td>
-                        {{ embalaje.fecha }}
-                    </td>
-
-                    <td>
-                        {{ embalaje.hora }}
-                    </td>
-
                     <td class="pe-4 text-end">
-                        <div class="emp-actions d-inline-flex gap-1">
+                        <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                            <!-- VER DETALLE -->
+                                <button
+                                    type="button"
+                                    class="btn text-info"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalDetalle"
+                                    data-numero="{{ e.numero }}"
+                                    data-tipo-nombre="{{ e.tipo_nombre|default:'Sin asignar' }}"
+                                    data-fecha="{{ e.fecha|default:'—' }} {{ e.hora|default:'' }}"
+                                    data-laptop-serie="{{ e.laptop_num_serie|default:'' }}"
+                                    title="Ver detalle">
+                                    <i class="bi bi-eye"></i>
+                                </button>
 
-                            <button class="btn text-primary" title="Ver detalle">
-                                <i class="bi bi-list-ul"></i>
-                            </button>
-
-                            <button class="btn text-secondary" title="Editar">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-
-
+                                <!-- EDITAR -->
+                                <button
+                                    type="button"
+                                    class="btn text-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditar"
+                                    data-numero="{{ e.numero }}"
+                                    data-tipo-nombre="{{ e.tipo_nombre|default:'' }}"
+                                    title="Editar embalaje">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
                         </div>
                     </td>
                 </tr>
@@ -181,5 +240,145 @@
         </form>
     </div>
 </div>
+
+<!-- ==========================================
+     MODAL: DETALLE DE EMBALAJE
+     ========================================== -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold">Detalle del Embalaje</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Banner superior -->
+                <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                        style="width: 50px; height: 50px; font-size: 20px;">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div>
+                        <div class="small text-muted mt-1">
+                            Número de Serie
+                        </div>
+                        <div id="det_laptop_serie" class="fw-bold fs-5 text-dark font-monospace"></div>
+                        <span id="det_numero" class="badge-id mt-2 d-inline-block"></span>
+                    </div>
+                </div>
+                            
+                <!-- Lista de datos -->
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                        <span class="text-muted small fw-medium">Tipo de Empaque</span>
+                        <span id="det_tipo_nombre" class="fw-semibold text-primary"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom-0">
+                        <span class="text-muted small fw-medium">Fecha y Hora</span>
+                        <span id="det_fecha" class="fw-semibold text-dark"></span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="modal-footer border-top-0 bg-light">
+                <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+
+<!-- ==========================================
+     MODAL: EDITAR EMBALAJE
+     ========================================== -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate>
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Modificar Embalaje</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Tipo de Embalaje</label>
+                        <select name="tipo" id="edit_tipo" class="form-select" required>
+                            <option value="">— Selecciona —</option>
+                            {% for tipo in tipos %}
+                                <option value="{{ tipo.codigo }}">{{ tipo.codigo }} — {{ tipo.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">Por favor, selecciona un tipo de embalaje.</div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
+                </div>
+                
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- ==========================================
+     SCRIPTS DEL MÓDULO
+     ========================================== -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Lógica para llenar el Modal de Detalles
+    const modalDetalle = document.getElementById('modalDetalle');
+    if (modalDetalle) {
+        modalDetalle.addEventListener('show.bs.modal', function (event) {
+            // El botón que disparó el modal
+            const button = event.relatedTarget;
+            
+            // Extraer la info de los atributos data-*
+            const numero = button.getAttribute('data-numero');
+            const laptopSerie = button.getAttribute('data-laptop-serie');
+            const tipoNombre = button.getAttribute('data-tipo-nombre');
+            const fecha = button.getAttribute('data-fecha');
+            
+            // Inyectar los textos en los elementos del modal
+            document.getElementById('det_numero').textContent = 'Número Embalaje: ' + numero;
+            document.getElementById('det_laptop_serie').textContent = laptopSerie;
+            document.getElementById('det_tipo_nombre').textContent = tipoNombre;
+            document.getElementById('det_fecha').textContent = fecha;
+        });
+    }
+
+    // 2. Lógica para preparar el Modal de Edición
+    const modalEditar = document.getElementById('modalEditar');
+    if (modalEditar) {
+        modalEditar.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const numero = button.getAttribute('data-numero');
+            const tipoNombre = button.getAttribute('data-tipo-nombre');
+            
+            // Actualizar la URL de acción del formulario dinámicamente
+            const form = document.getElementById('formEditar');
+            form.action = `/embalaje/empaquetado/editar/${numero}/`;
+
+            // Buscar en el <select> la opción que coincida y seleccionarla
+            const select = document.getElementById('edit_tipo');
+            Array.from(select.options).forEach(option => {
+                // Si el texto de la opción incluye el nombre del tipo, lo seleccionamos
+                if (option.text.includes(tipoNombre)) {
+                    option.selected = true;
+                }
+            });
+        });
+    }
+});
+</script>
 
 {% endblock %}

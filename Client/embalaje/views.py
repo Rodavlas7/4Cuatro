@@ -34,6 +34,31 @@ def _mensaje_api(response):
                           for campo, errores in datos.items())
     return "Ocurrió un error al procesar la solicitud."
 
+
+def _filtrar_embalajes(embalajes, filtros):
+    """Filtra la lista de embalajes en memoria según los parámetros del GET."""
+    resultado = embalajes
+
+    # Filtro Rango de Fechas
+    fecha_inicio = filtros.get("fecha_inicio")
+    if fecha_inicio:
+        resultado = [e for e in resultado if str(e.get("fecha") or "") >= fecha_inicio]
+
+    fecha_fin = filtros.get("fecha_fin")
+    if fecha_fin:
+        resultado = [e for e in resultado if str(e.get("fecha") or "") <= fecha_fin]
+
+    # Filtro de Búsqueda de texto
+    buscar = (filtros.get("buscar") or "").strip().lower()
+    if buscar:
+        resultado = [e for e in resultado
+                     if buscar in str(e.get("numero") or "")
+                     or buscar in str(e.get("laptop_num_serie") or "").lower()
+                     or buscar in str(e.get("tipo_nombre") or "").lower()
+                     or buscar in str(e.get("tipo_codigo") or "").lower()]
+
+    return resultado
+
 # ------------------------------------------------------------------
 # VISTA PRINCIPAL DE EMBALAJE
 # ------------------------------------------------------------------
@@ -80,28 +105,17 @@ def embalajeListarView(request):
         return redirect('embalaje-lista')
 
     # ------------------------------------------------------------------- GET
-    
-    # --- INICIO BLOQUE DEBUG ---
-    print("\n--- DEBUG API EMBALAJE ---")
-    url_prueba = f"{API}/embalaje/Embalaje/Listar/"
-    print(f"Llamando a: {url_prueba}")
-    
-    respuesta_prueba = get(url_prueba, headers)
-    if respuesta_prueba is not None:
-        print(f"Status Code: {respuesta_prueba.status_code}")
-        try:
-            datos_json = respuesta_prueba.json()
-            print(f"Tipo de dato recibido: {type(datos_json)}")
-            if isinstance(datos_json, dict):
-                print(f"Llaves del diccionario: {datos_json.keys()}")
-        except ValueError:
-            print("El resultado no es un JSON válido.")
-    else:
-        print("La función get() devolvió None. Revisa si el servidor backend está encendido y accesible.")
-    print("--------------------------\n")
-    # --- FIN BLOQUE DEBUG ---
+    embalajes_crudos = _json(f"{API}/embalaje/Embalaje/Listar/", headers)
+    embalajes_crudos = embalajes_crudos if isinstance(embalajes_crudos, list) else []
 
-    embalajes = _json(f"{API}/embalaje/Embalaje/Listar/", headers)
+    filtros = {
+        "buscar": request.GET.get("buscar") or "",
+        "fecha_inicio": request.GET.get("fecha_inicio") or "",
+        "fecha_fin": request.GET.get("fecha_fin") or "",
+    }
+
+    embalajes_filtrados = _filtrar_embalajes(embalajes_crudos, filtros)
+
     laptops = _json(f"{API}/embalaje/Embalaje/Auxiliares/LaptopsDisponibles/", headers)
     tipos = _json(f"{API}/embalaje/Embalaje/Auxiliares/TiposEmbalaje/", headers)
 
@@ -109,8 +123,38 @@ def embalajeListarView(request):
         request,
         "embalaje/embalaje_lista.html",
         {
-            "embalajes": embalajes if isinstance(embalajes, list) else [],
+            "embalajes": embalajes_filtrados,
             "laptops": laptops if isinstance(laptops, list) else [],
             "tipos": tipos if isinstance(tipos, list) else [],
+            "buscar": filtros["buscar"],
+            "fecha_inicio": filtros["fecha_inicio"],
+            "fecha_fin": filtros["fecha_fin"],
         }
     )
+
+
+def embalajeEditarView(request, numero):
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+        headers = _headers(request)
+        tipo = request.POST.get("tipo")
+
+        if not tipo:
+            messages.error(request, "Selecciona un tipo de embalaje válido.")
+            return redirect('embalaje-lista')
+
+        payload = {"tipo": tipo}
+        respuesta = requests.put(
+            f"{API}/embalaje/Embalaje/Actualizar/{numero}/", 
+            json=payload, 
+            headers=headers
+        )
+
+        if respuesta.status_code in (200, 202):
+            messages.success(request, f"Embalaje #{numero} actualizado correctamente.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('embalaje-lista')
