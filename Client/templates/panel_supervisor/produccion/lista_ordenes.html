@@ -77,7 +77,7 @@
                             <i class="bi bi-x-lg"></i>
                         </button>
                     {% else %}
-                        <form method="POST" action="{% url 'panel_supervisor:orden-produccion-cancelar' o.folio %}" class="d-inline" onsubmit="return confirm('¿Cancelar la orden #{{ o.folio }}? La orden no se borra, queda en estado Cancelada.');">
+                        <form method="POST" action="{% url 'panel_supervisor:orden-produccion-cancelar' o.folio %}" class="d-inline" data-confirm="¿Cancelar la orden #{{ o.folio }}? La orden no se borra, queda en estado Cancelada.">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar orden">
                                 <i class="bi bi-x-lg"></i>
@@ -162,7 +162,7 @@
 <!-- MODAL: EDITAR -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog">
-        <form method="POST" id="formEditar" action="">
+        <form method="POST" id="formEditar" action="" data-confirm="¿Guardar cambios?">
             {% csrf_token %}
             <div class="modal-content">
                 <div class="modal-header">

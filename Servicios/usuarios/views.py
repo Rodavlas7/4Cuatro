@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from secrets import token_hex
 
 from django.contrib.auth.hashers import check_password, make_password
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from rest_framework import generics, status
@@ -597,17 +597,32 @@ class RegistroEmpleadoAPIView(APIView):
                 "fecha_inicio": date.today()
             }
 
-            linea_serializer = serializers.CreateEmpleadoLineaSerializer(
-                data=linea_data
-            )
-
-            if not linea_serializer.is_valid():
-                return Response(
-                    linea_serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
+            try:
+                EmpleadoLinea.objects.get(
+                    empleado=empleado,
+                    linea_id=linea.codigo,
+                    fecha_inicio=date.today()
+                )
+            except EmpleadoLinea.DoesNotExist:
+                linea_serializer = serializers.CreateEmpleadoLineaSerializer(
+                    data=linea_data
                 )
 
-            linea_serializer.save()
+                if not linea_serializer.is_valid():
+                    return Response(
+                        linea_serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                try:
+                    linea_serializer.save()
+                except IntegrityError:
+                    return Response(
+                        {
+                            "mensaje": "Ya existe una asignación de línea activa para este empleado con la misma fecha."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
         if debe_estacion and estacion is not None:
             estacion_data = {
@@ -616,17 +631,32 @@ class RegistroEmpleadoAPIView(APIView):
                 "fecha_inicio": date.today()
             }
 
-            estacion_serializer = serializers.CreateEmpleadoEstacionSerializer(
-                data=estacion_data
-            )
-
-            if not estacion_serializer.is_valid():
-                return Response(
-                    estacion_serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
+            try:
+                EmpleadoEstacion.objects.get(
+                    empleado=empleado,
+                    estacion_id=estacion.codigo,
+                    fecha_inicio=date.today()
+                )
+            except EmpleadoEstacion.DoesNotExist:
+                estacion_serializer = serializers.CreateEmpleadoEstacionSerializer(
+                    data=estacion_data
                 )
 
-            estacion_serializer.save()
+                if not estacion_serializer.is_valid():
+                    return Response(
+                        estacion_serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                try:
+                    estacion_serializer.save()
+                except IntegrityError:
+                    return Response(
+                        {
+                            "mensaje": "Ya existe una asignación de estación activa para este empleado con la misma fecha."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
         return Response(
             {
@@ -790,18 +820,24 @@ class UpdateEmpleadoAPIView(APIView):
         linea = request.data.get("linea")
 
         if linea and debe_asignar_linea(empleado.rol_id):
-            EmpleadoLinea.objects.filter(
+            asignacion_activa = EmpleadoLinea.objects.filter(
                 empleado=empleado,
                 fecha_fin__isnull=True
-            ).update(
-                fecha_fin=timezone.now().date()
-            )
+            ).first()
 
-            EmpleadoLinea.objects.create(
-                empleado=empleado,
-                linea_id=linea,
-                fecha_inicio=timezone.now().date()
-            )
+            if asignacion_activa is None or asignacion_activa.linea_id != linea:
+                EmpleadoLinea.objects.filter(
+                    empleado=empleado,
+                    fecha_fin__isnull=True
+                ).update(
+                    fecha_fin=timezone.now().date()
+                )
+
+                EmpleadoLinea.objects.create(
+                    empleado=empleado,
+                    linea_id=linea,
+                    fecha_inicio=timezone.now().date()
+                )
 
         # ===============================
         # CAMBIO DE ESTACION
@@ -810,18 +846,24 @@ class UpdateEmpleadoAPIView(APIView):
         estacion = request.data.get("estacion")
 
         if estacion and debe_asignar_estacion(empleado.rol_id):
-            EmpleadoEstacion.objects.filter(
+            asignacion_activa = EmpleadoEstacion.objects.filter(
                 empleado=empleado,
                 fecha_fin__isnull=True
-            ).update(
-                fecha_fin=timezone.now().date()
-            )
+            ).first()
 
-            EmpleadoEstacion.objects.create(
-                empleado=empleado,
-                estacion_id=estacion,
-                fecha_inicio=timezone.now().date()
-            )
+            if asignacion_activa is None or asignacion_activa.estacion_id != estacion:
+                EmpleadoEstacion.objects.filter(
+                    empleado=empleado,
+                    fecha_fin__isnull=True
+                ).update(
+                    fecha_fin=timezone.now().date()
+                )
+
+                EmpleadoEstacion.objects.create(
+                    empleado=empleado,
+                    estacion_id=estacion,
+                    fecha_inicio=timezone.now().date()
+                )
 
 
         return Response(

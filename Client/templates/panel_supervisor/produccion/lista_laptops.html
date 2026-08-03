@@ -161,7 +161,7 @@
                         </button>
                     {% else %}
                         <form method="POST" action="{% url 'panel_supervisor:laptop-rechazar' l.numero %}" class="d-inline"
-                              onsubmit="return confirm('¿Marcar la laptop #{{ l.numero }} como Rechazada? No se borra el registro.');">
+                              data-confirm="¿Marcar la laptop #{{ l.numero }} como Rechazada? No se borra el registro.">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Rechazar laptop">
                                 <i class="bi bi-x-lg"></i>

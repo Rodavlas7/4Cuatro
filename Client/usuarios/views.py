@@ -239,11 +239,10 @@ class EditarEmpleado(generic.View):
                 f"Empleado No. {numero} actualizado correctamente."
             )
         else:
-            error_data = response.json()
             messages.error(
                 request,
                 f"No se pudo actualizar el empleado No. {numero}. "
-                + error_data.get("mensaje", "")
+                + mensaje_error(response)
             )
 
         return redirect("lista_empleados")
@@ -377,16 +376,22 @@ class ListaUsuarios(generic.View):
 
         empleados_lista = lista(empleados_resp)
 
+        allowed_employee_roles = {"ADMIN", "SUPER", "OPCALI"}
+
         empleados = [
             e for e in empleados_lista
-            if not e.get("usuario")
+            if not e.get("usuario") and e.get("rol_codigo") in allowed_employee_roles
         ]
 
+        roles = [
+            r for r in get_choices_roles(token)
+            if r[0] in allowed_employee_roles
+        ]
 
         context = {
             "usuarios": usuarios,
             "empleados": empleados,
-            "roles": get_choices_roles(token),
+            "roles": roles,
             "buscar": buscar,
             "rol": rol,
             "estado": estado,

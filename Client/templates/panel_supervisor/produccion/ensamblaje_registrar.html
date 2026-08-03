@@ -211,8 +211,7 @@
         </button>
 
         <!-- Aparece solo cuando la laptop queda con todos sus tipos cubiertos -->
-        <button type="submit" name="accion" value="terminar"
-                id="btnTerminar" class="btn btn-danger d-none">
+        <button type="button" id="btnTerminar" class="btn btn-danger d-none">
             <i class="bi bi-flag-fill me-1"></i> Registrar y Terminar Ensamblaje
         </button>
     </div>
@@ -220,6 +219,40 @@
 </form>
 {% endif %}
 
+
+<!-- ==========================================
+     MODAL DE CONFIRMACIÓN: TERMINAR ENSAMBLAJE
+     ========================================== -->
+<div class="modal fade" id="modalConfirmarTerminar" tabindex="-1" aria-labelledby="modalConfirmarTerminarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 mt-2 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center" id="modalConfirmarTerminarLabel">
+                    <i class="bi bi-exclamation-triangle text-warning fs-4 me-2" id="modalIconWarning" style="display: none;"></i>
+                    <i class="bi bi-check-circle-fill text-success fs-4 me-2" id="modalIconSuccess" style="display: none;"></i>
+                    <span id="modalTerminarTitulo">Confirmar cierre</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-3 px-4">
+                <p id="modalTerminarMensaje" class="mb-0 text-dark fw-medium"></p>
+                <div id="contenedorFaltantes" class="bg-danger-subtle border border-danger-subtle rounded-3 p-3 mt-3" style="display: none;">
+                    <ul id="modalTerminarListaFaltantes" class="text-danger small mb-0 ps-3" style="list-style-type: square;"></ul>
+                </div>
+                <div class="alert bg-light border-0 text-muted small mt-3 mb-0 d-flex gap-2 align-items-center py-2">
+                    <i class="bi bi-info-circle fs-6"></i>
+                    Al continuar, se guardará la fecha y hora exacta de fin del ensamblaje.
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 pb-3 px-4">
+                <button type="button" class="btn btn-white border shadow-sm fw-medium" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger shadow-sm fw-medium" id="btnConfirmarTerminarSubmit">
+                    <i class="bi bi-flag-fill me-1"></i> Terminar ensamblaje
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 // ---------------------------------------------------------------------------
@@ -361,23 +394,59 @@ function refrescarCierre() {
 }
 
 if (btnTerminar) {
-    btnTerminar.addEventListener('click', function (e) {
+    var modalTerminarEl = document.getElementById('modalConfirmarTerminar');
+    var modalTerminar = new bootstrap.Modal(modalTerminarEl);
+    var btnConfirmarTerminarSubmit = document.getElementById('btnConfirmarTerminarSubmit');
+
+    btnTerminar.addEventListener('click', function () {
+        modalTerminar.show();
+    });
+
+    modalTerminarEl.addEventListener('show.bs.modal', function () {
         var faltantes = JSON.parse(btnTerminar.dataset.faltantes || '[]');
-        var msg;
+        var tituloEl = document.getElementById('modalTerminarTitulo');
+        var mensajeEl = document.getElementById('modalTerminarMensaje');
+        var listaEl = document.getElementById('modalTerminarListaFaltantes');
+        var contenedorFaltantes = document.getElementById('contenedorFaltantes');
+        var iconWarning = document.getElementById('modalIconWarning');
+        var iconSuccess = document.getElementById('modalIconSuccess');
+
+        listaEl.innerHTML = '';
 
         if (faltantes.length) {
-            msg = 'Vas a TERMINAR el ensamblaje, pero quedan ranuras sin llenar:\n\n';
-            faltantes.forEach(function (f) {
-                msg += '   • ' + f.nombre + ': falta ' + f.falta +
-                       '  (lleva ' + f.total + ' de ' + f.cap + ')\n';
-            });
-            msg += '\n¿Terminar de todos modos? Se guardará la fecha y hora de fin.';
-        } else {
-            msg = 'Todo quedó ensamblado.\n\n¿Terminar el ensamblaje? ' +
-                  'Se guardará la fecha y hora de fin.';
-        }
+            tituloEl.textContent = 'Ensamblaje incompleto';
+            mensajeEl.textContent = 'Vas a terminar el ensamblaje, pero quedan ranuras sin llenar:';
 
-        if (!confirm(msg)) e.preventDefault();
+            faltantes.forEach(function (f) {
+                var li = document.createElement('li');
+                li.innerHTML = '<strong>' + f.nombre + '</strong>: falta ' + f.falta + ' <span class="opacity-75">(lleva ' + f.total + ' de ' + f.cap + ')</span>';
+                listaEl.appendChild(li);
+            });
+
+            contenedorFaltantes.style.display = 'block';
+            iconWarning.style.display = 'inline-block';
+            iconSuccess.style.display = 'none';
+            btnConfirmarTerminarSubmit.className = 'btn btn-danger shadow-sm fw-medium';
+        } else {
+            tituloEl.textContent = 'Ensamblaje completo';
+            mensajeEl.textContent = 'Todo ha quedado correctamente ensamblado en esta laptop. ¿Deseas cerrar el registro?';
+
+            contenedorFaltantes.style.display = 'none';
+            iconWarning.style.display = 'none';
+            iconSuccess.style.display = 'inline-block';
+            btnConfirmarTerminarSubmit.className = 'btn btn-primary shadow-sm fw-medium';
+        }
+    });
+
+    btnConfirmarTerminarSubmit.addEventListener('click', function () {
+        var form = document.querySelector('form[method="POST"]');
+        var inputAccion = document.createElement('input');
+        inputAccion.type = 'hidden';
+        inputAccion.name = 'accion';
+        inputAccion.value = 'terminar';
+        form.appendChild(inputAccion);
+        modalTerminar.hide();
+        form.submit();
     });
 }
 

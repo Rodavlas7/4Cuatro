@@ -1,3 +1,5 @@
+from django.http import HttpRequest
+from django.template.loader import render_to_string
 from django.test import SimpleTestCase
 
 from usuarios.forms import filtrar_lineas_por_rol
@@ -46,3 +48,42 @@ class FiltroLineasPorRolTests(SimpleTestCase):
         filtradas = filtrar_lineas_por_rol(lineas, "OPENSA")
 
         self.assertEqual(filtradas, [{"codigo": "L1", "nombre": "Línea 1", "tipo_codigo": "ENSA"}])
+
+
+class ConfirmacionEnVistasTests(SimpleTestCase):
+    def test_formulario_editar_usuario_pide_confirmacion(self):
+        request = HttpRequest()
+        html = render_to_string(
+            "usuarios/usuarios.html",
+            {
+                "usuarios": [],
+                "empleados": [],
+                "roles": [],
+                "buscar": "",
+                "rol": "",
+                "estado": "",
+            },
+            request=request,
+        )
+
+        self.assertIn('data-confirm="¿Deseas guardar los cambios de este usuario?"', html)
+
+    def test_formulario_editar_empleado_pide_confirmacion(self):
+        request = HttpRequest()
+        html = render_to_string(
+            "usuarios/empleados.html",
+            {
+                "empleados": [],
+                "lineas": [],
+                "estaciones": [],
+                "roles": [],
+                "turnos": [],
+                "buscar": "",
+                "rol": "",
+                "estado": "",
+                "linea": "",
+            },
+            request=request,
+        )
+
+        self.assertIn('data-confirm="¿Deseas guardar los cambios de este empleado?"', html)

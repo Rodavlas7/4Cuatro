@@ -185,5 +185,24 @@
 
     </div>
 
+    <!-- Modal global de confirmación para formularios con data-confirm -->
+    <div class="modal fade" id="modalConfirmarAccion" tabindex="-1" aria-labelledby="modalConfirmarAccionLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0 mt-2 px-4">
+                    <h5 class="modal-title fw-bold" id="modalConfirmarAccionLabel">Confirmar acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-3 px-4">
+                    <p id="modalConfirmarAccionMensaje" class="mb-0 text-dark"></p>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 pb-3 px-4">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger shadow-sm fw-medium" id="modalConfirmarAccionAceptar">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

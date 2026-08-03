@@ -84,7 +84,7 @@
                         </td>
                         <td class="pe-4 text-end">
                             <div class="emp-actions d-inline-flex gap-1 align-items-center">
-                                <form method="POST" action="{% url 'panel_supervisor:renglon-eliminar' orden.numero d.modelo %}" class="d-inline" onsubmit="return confirm('¿Eliminar este renglón?');">
+                                <form method="POST" action="{% url 'panel_supervisor:renglon-eliminar' orden.numero d.modelo %}" class="d-inline" data-confirm="¿Eliminar este renglón?">
                                     {% csrf_token %}
                                     <button type="submit" class="btn text-danger" title="Eliminar renglón">
                                         <i class="bi bi-trash"></i>

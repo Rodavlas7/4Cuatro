@@ -358,7 +358,7 @@
                         <form method="POST"
                               action="{% url 'panel_supervisor:laptop-componente-liberar' laptop.numero c.numero %}"
                               class="d-flex gap-1 justify-content-end"
-                              onsubmit="return confirm('¿Quitar {{ c.modelo_nombre|default:c.modelo_codigo|escapejs }} (#{{ c.numero }}) de esta laptop?');">
+                              data-confirm="¿Quitar {{ c.modelo_nombre|default:c.modelo_codigo|escapejs }} (#{{ c.numero }}) de esta laptop?">
                             {% csrf_token %}
                             <select name="estado" class="form-select form-select-sm" style="width:auto;">
                                 {% for e in estados_componente %}

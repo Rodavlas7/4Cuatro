@@ -251,7 +251,7 @@
 <!-- MODAL: CREAR -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form method="POST" action="{% url 'empleado-crear' %}" class="needs-validation w-100" novalidate>
+        <form id="formCrearEmpleado" method="POST" action="{% url 'empleado-crear' %}" class="needs-validation w-100" novalidate>
             {% csrf_token %}
             <div class="modal-content border-0 shadow">
                 <div class="modal-header border-bottom-0 pb-0">
@@ -377,7 +377,7 @@
 <!-- MODAL: EDITAR -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate>
+        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate data-confirm="¿Guardar cambios?">
             {% csrf_token %}
             <div class="modal-content border-0 shadow">
                 <div class="modal-header border-bottom-0 pb-0">
@@ -447,7 +447,7 @@
                 </div>
                 <div class="modal-footer border-top-0 bg-light">
                     <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
+                    <button type="button" class="btn btn-accent shadow-sm" data-bs-toggle="modal" data-bs-target="#modalConfirmarEditarEmpleado">Guardar cambios</button>
                 </div>
             </div>
         </form>
@@ -473,6 +473,25 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- MODAL: CONFIRMAR EDITAR -->
+<div class="modal fade" id="modalConfirmarEditarEmpleado" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body text-center p-4">
+                <div class="text-warning mb-3">
+                    <i class="bi bi-question-circle" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="fw-bold">¿Confirmar cambios?</h5>
+                <p class="text-muted small mb-4">Si confirmas, se guardarán los cambios en el empleado.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btnConfirmarEditarEmpleado" class="btn btn-accent shadow-sm w-50">Confirmar</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -732,6 +751,10 @@ document.getElementById('modalEditar').addEventListener('show.bs.modal', functio
     document.getElementById('edit_rol').dispatchEvent(new Event('change'));
     const estacionSelect = document.getElementById('edit_estacion');
     estacionSelect.innerHTML = `<option value="${btn.dataset.estacion}">${btn.dataset.estacionnombre}</option>`;
+});
+
+document.getElementById('btnConfirmarEditarEmpleado').addEventListener('click', function () {
+    document.getElementById('formEditar').submit();
 });
 
 // MODAL: Desactivar
