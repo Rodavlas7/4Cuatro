@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import *
 from componentes.models import Componente, ModeloLaptopComponente
 from componentes.serializers import ComponenteSerializer, ModeloLaptopComponenteDetalleSerializer
+from lineas.models import TIPO_LINEA_ENSAMBLAJE
 
 
 # Estados con los que nacen los registros del módulo. Se aplican en la propia
@@ -145,6 +146,29 @@ class RegistroEnsamblajeSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegistroEnsamblaje
         fields = '__all__'
+
+    def validate_linea(self, value):
+        """Solo se ensambla en líneas de ensamblaje. Una de embalaje empaca lo
+        que ya salió armado: ni tiene las estaciones ni surte los componentes.
+
+        El trigger tg_Validar_Linea_Ensamblaje (DB/triggers.sql) lo vuelve a
+        revisar en la base —esa es la barrera que nadie se salta—, pero aquí se
+        atrapa antes para devolver el error en el campo y no un 500 de MySQL."""
+        if value is not None and value.tipo_id != TIPO_LINEA_ENSAMBLAJE:
+            raise serializers.ValidationError(
+                "Solo se puede registrar ensamblaje en líneas de tipo Ensamblaje."
+            )
+        return value
+
+    def validate(self, attrs):
+        """Un ensamblaje siempre va contra una línea: es la que define de qué
+        stock se surte y dónde queda trazada la laptop. Solo se exige al abrirlo;
+        cerrarlo es un PATCH de fecha_fin/hora_fin que no vuelve a mandarla."""
+        if self.instance is None and not attrs.get('linea'):
+            raise serializers.ValidationError(
+                {'linea': 'El registro de ensamblaje necesita una línea de ensamblaje.'}
+            )
+        return attrs
 
 
 class VistaLaptopDetailSerializer(VistaLaptopSerializer):

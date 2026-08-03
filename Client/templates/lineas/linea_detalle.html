@@ -27,6 +27,18 @@
                     <div class="d-flex align-items-center gap-2 text-muted small">
                         <span class="badge-id text-secondary px-2 py-1 bg-light border">{{ linea.codigo }}</span>
                         <span>•</span>
+                        {% if linea.tipo_codigo == 'ENSA' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">
+                                <i class="bi bi-tools me-1"></i>{{ linea.tipo_nombre|default:"Ensamblaje" }}
+                            </span>
+                        {% elif linea.tipo_codigo == 'EMBA' %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2">
+                                <i class="bi bi-box-seam me-1"></i>{{ linea.tipo_nombre|default:"Embalaje" }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-light text-muted border rounded-pill px-2">Sin tipo</span>
+                        {% endif %}
+                        <span>•</span>
                         <span class="fw-medium text-dark"><i class="bi bi-tag me-1"></i>{{ linea.estado_nombre|default:"—" }}</span>
                         <span>•</span>
                         {% if linea.activo %}

@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import generics
 from rest_framework.views import APIView
 from api import procedimientos
-from api.errores import mensaje_de_base
+from api.errores import ErroresDeBaseMixin, mensaje_de_base
 from .models import *
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
@@ -278,7 +278,7 @@ class LaptopModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
         instance.save(update_fields=['estado'])
 
 
-class RegistroEnsamblajeListCreateAPIView(generics.ListCreateAPIView):
+class RegistroEnsamblajeListCreateAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):
     permission_classes = [
                 IsAuthenticated,
                 TienePermisoModulo
@@ -300,7 +300,7 @@ class RegistroEnsamblajeDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'numero'
 
 
-class RegistroEnsamblajeModifyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class RegistroEnsamblajeModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH modifican el registro; DELETE lo cierra (fecha_fin/hora_fin = ahora)
     en lugar de borrar el registro."""
     permission_classes = [

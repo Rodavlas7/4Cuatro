@@ -34,6 +34,7 @@ TRUNCATE TABLE modelo_componente;
 TRUNCATE TABLE modelo_laptop;
 TRUNCATE TABLE tipo_comp;
 TRUNCATE TABLE tipo_embalaje;
+TRUNCATE TABLE tipo_linea;
 TRUNCATE TABLE edo_componente;
 TRUNCATE TABLE edo_laptop;
 TRUNCATE TABLE edo_linea;
@@ -67,6 +68,17 @@ INSERT INTO edo_linea (codigo, nombre, descripcion) VALUES
 ('INAC', 'Inactiva',     'Línea fuera de operación temporalmente'),
 ('PARO', 'En Paro',      'Línea detenida por incidencia registrada'),
 ('MANT', 'Mantenimiento','Línea en proceso de mantenimiento preventivo o correctivo');
+
+
+-- 3.1 TIPOS DE LÍNEA
+--
+-- El tipo dice QUÉ PROCESO corre la línea, no cómo está (eso es edo_linea).
+-- Solo en una línea de tipo ENSA se puede registrar ensamblaje: lo obliga el
+-- trigger tg_Validar_Linea_Ensamblaje (DB/triggers.sql).
+
+INSERT INTO tipo_linea (codigo, nombre, descripcion) VALUES
+('ENSA', 'Ensamblaje', 'Línea donde se arman las laptops a partir de componentes'),
+('EMBA', 'Embalaje',   'Línea donde se empacan y sellan las laptops terminadas');
 
 
 -- 4. ESTADOS DE LAPTOP 
@@ -196,16 +208,18 @@ SELECT 'ML001', mc.codigo,
 FROM modelo_componente mc;
 
 
--- 11. LÍNEAS DE ENSAMBLAJE
--- 5 normales y una de embalaje
+-- 11. LÍNEAS DE PRODUCCIÓN
+-- 5 de ensamblaje (tipo ENSA) y una de embalaje (tipo EMBA). El tipo ya no se
+-- adivina del nombre: es la columna `tipo`, y es la que decide dónde se puede
+-- registrar ensamblaje.
 
-INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
-('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN005', 'Línea E — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'ACTI');
+INSERT INTO linea (codigo, nombre, descripcion, tipo, estado) VALUES
+('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
+('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
+('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
+('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
+('LIN005', 'Línea E — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
+('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'EMBA', 'ACTI');
 
 
 -- 12. ESTACIONES — Líneas de ensamblaje

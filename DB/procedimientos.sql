@@ -290,6 +290,7 @@ BEGIN
     DECLARE v_consecutivo  INT;
     DECLARE v_creadas      INT DEFAULT 0;
     DECLARE v_existe_linea INT;
+    DECLARE v_tipo_linea   VARCHAR(8) DEFAULT NULL;
 
     -- Validaciones
 
@@ -313,11 +314,21 @@ BEGIN
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: la orden no tiene modelo de laptop, no se sabe qué fabricar';
     END IF;
 
-    SELECT COUNT(*) INTO v_existe_linea FROM linea WHERE codigo = p_linea;
+    SELECT COUNT(*), MAX(tipo)
+      INTO v_existe_linea, v_tipo_linea
+      FROM linea
+     WHERE codigo = p_linea;
 
     IF v_existe_linea = 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: esa línea no existe';
+    END IF;
+
+    -- Estas laptops nacen asignadas a la línea, y ahí es donde se van a armar.
+    -- Una línea de embalaje no arma nada, así que no se le pueden colgar.
+    IF v_tipo_linea IS NULL OR v_tipo_linea <> 'ENSA' THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: la línea debe ser de tipo Ensamblaje';
     END IF;
 
     -- Cuántas faltan

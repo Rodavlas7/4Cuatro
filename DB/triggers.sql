@@ -19,6 +19,8 @@ DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Mover_Laptop;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Alta;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Cambio;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Baja;
+DROP TRIGGER IF EXISTS tg_Validar_Linea_Ensamblaje;
+DROP TRIGGER IF EXISTS tg_Validar_Linea_Ensamblaje_Cambio;
 
 DELIMITER $$
 
@@ -624,8 +626,82 @@ FOR EACH ROW
 BEGIN
     UPDATE laptop
        SET estado = 'PENSAM'
-     WHERE numero = NEW.laptop 
+     WHERE numero = NEW.laptop
        AND estado = 'REGIS';
+END$$
+
+
+
+
+-- TRIGGERS 13 y 14: tg_Validar_Linea_Ensamblaje / _Cambio
+--
+-- Evento   : BEFORE INSERT y BEFORE UPDATE en registro_ensamblaje
+-- Objetivo : Que solo se pueda ensamblar en líneas de ensamblaje.
+--
+-- La línea trae un tipo (tipo_linea): ENSA se arma, EMBA se empaca. Un
+-- registro de ensamblaje contra una línea de embalaje no es un descuido de
+-- captura, es una laptop que quedaría trazada en un proceso que no existe ahí,
+-- surtiéndose de un stock que no le toca.
+--
+-- La API y el cliente ya filtran las líneas antes de llegar aquí, pero esta es
+-- la única barrera que también cubre a quien escriba por SQL o por otro cliente.
+--
+-- El de UPDATE solo revisa cuando la línea de verdad cambia (<=> es la
+-- comparación que trata NULL como un valor más): cerrar un ensamblaje pone
+-- fecha_fin/hora_fin y no tiene por qué volver a validar la línea.
+
+
+CREATE TRIGGER tg_Validar_Linea_Ensamblaje
+BEFORE INSERT ON registro_ensamblaje
+FOR EACH ROW
+BEGIN
+    DECLARE v_tipo VARCHAR(8) DEFAULT NULL;
+
+    IF NEW.linea IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: el registro de ensamblaje necesita una línea';
+    END IF;
+
+    SELECT tipo INTO v_tipo FROM linea WHERE codigo = NEW.linea;
+
+    IF v_tipo IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: esa línea no tiene tipo asignado, no se puede ensamblar en ella';
+    END IF;
+
+    IF v_tipo <> 'ENSA' THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: solo se puede registrar ensamblaje en líneas de tipo Ensamblaje';
+    END IF;
+END$$
+
+
+CREATE TRIGGER tg_Validar_Linea_Ensamblaje_Cambio
+BEFORE UPDATE ON registro_ensamblaje
+FOR EACH ROW
+BEGIN
+    DECLARE v_tipo VARCHAR(8) DEFAULT NULL;
+
+    IF NOT (NEW.linea <=> OLD.linea) THEN
+
+        IF NEW.linea IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: el registro de ensamblaje necesita una línea';
+        END IF;
+
+        SELECT tipo INTO v_tipo FROM linea WHERE codigo = NEW.linea;
+
+        IF v_tipo IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: esa línea no tiene tipo asignado, no se puede ensamblar en ella';
+        END IF;
+
+        IF v_tipo <> 'ENSA' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: solo se puede registrar ensamblaje en líneas de tipo Ensamblaje';
+        END IF;
+
+    END IF;
 END$$
 DELIMITER ;
 

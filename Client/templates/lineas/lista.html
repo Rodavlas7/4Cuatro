@@ -54,6 +54,7 @@
                         <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Código</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Nombre</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Descripción</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Tipo</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Estaciones</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Activo</th>
@@ -75,6 +76,19 @@
                             <div class="text-muted small text-truncate" style="max-width: 250px;" title="{{ l.descripcion|default:'' }}">
                                 {{ l.descripcion|default:"—" }}
                             </div>
+                        </td>
+                        <td class="text-center">
+                            {% if l.tipo_codigo == 'ENSA' %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">
+                                    <i class="bi bi-tools me-1"></i>{{ l.tipo_nombre|default:"Ensamblaje" }}
+                                </span>
+                            {% elif l.tipo_codigo == 'EMBA' %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2">
+                                    <i class="bi bi-box-seam me-1"></i>{{ l.tipo_nombre|default:"Embalaje" }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
                         </td>
                         <td class="text-center">
                             <span class="text-secondary small fw-medium">{{ l.estado_nombre|default:"—" }}</span>
@@ -109,6 +123,7 @@
                                     data-codigo="{{ l.codigo }}"
                                     data-nombre="{{ l.nombre|default:'' }}"
                                     data-descripcion="{{ l.descripcion|default:'' }}"
+                                    data-tipo="{{ l.tipo_codigo|default:'' }}"
                                     data-estado="{{ l.estado_codigo|default:'' }}"
                                     data-activo="{{ l.activo|yesno:'true,false' }}"
                                     title="Editar línea">
@@ -127,7 +142,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-diagram-3 text-light d-block mb-2" style="font-size: 2.5rem;"></i>
                             No hay líneas registradas en el sistema.
                         </td>
@@ -164,6 +179,19 @@
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Descripción</label>
                         <input type="text" name="descripcion" class="form-control" maxlength="128" placeholder="Breve descripción de la función...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Tipo de línea <span class="text-danger">*</span></label>
+                        <select name="tipo" class="form-select text-secondary" required>
+                            <option value="">— Selecciona —</option>
+                            {% for t in tipos %}
+                            <option value="{{ t.codigo }}">{{ t.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" style="font-size: 11px;">
+                            Solo en las líneas de <strong>Ensamblaje</strong> se puede registrar ensamblaje.
+                            Las de <strong>Embalaje</strong> únicamente empacan lo que ya salió armado.
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Estado</label>
@@ -214,6 +242,19 @@
                         <input type="text" name="descripcion" id="edit_descripcion" class="form-control" maxlength="128">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label small fw-medium">Tipo de línea <span class="text-danger">*</span></label>
+                        <select name="tipo" id="edit_tipo" class="form-select text-secondary" required>
+                            <option value="">— Selecciona —</option>
+                            {% for t in tipos %}
+                            <option value="{{ t.codigo }}">{{ t.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" style="font-size: 11px;">
+                            Cambiarlo a Embalaje deja de permitir registros de ensamblaje nuevos en esta línea.
+                            Los que ya existen no se tocan.
+                        </div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-medium">Estado</label>
                         <select name="estado" id="edit_estado" class="form-select text-secondary">
                             <option value="">— Selecciona —</option>
@@ -243,6 +284,7 @@ document.getElementById('modalEditar').addEventListener('show.bs.modal', functio
     document.getElementById('edit_codigo').value = btn.dataset.codigo;
     document.getElementById('edit_nombre').value = btn.dataset.nombre;
     document.getElementById('edit_descripcion').value = btn.dataset.descripcion;
+    document.getElementById('edit_tipo').value = btn.dataset.tipo;
     document.getElementById('edit_estado').value = btn.dataset.estado;
     document.getElementById('edit_activo').checked = (btn.dataset.activo === 'true');
 });

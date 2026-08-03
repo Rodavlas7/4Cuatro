@@ -29,6 +29,7 @@ def lineasListView(request):
             "codigo": request.POST.get("codigo"),
             "nombre": request.POST.get("nombre") or None,
             "descripcion": request.POST.get("descripcion") or None,
+            "tipo": request.POST.get("tipo") or None,
             "estado": request.POST.get("estado") or None,
             "activo": request.POST.get("activo") == "on",
         }
@@ -44,6 +45,7 @@ def lineasListView(request):
 
     respuesta_lineas = get(f"{API}/lineas/", headers)
     respuesta_estados = get(f"{API}/lineas/estados/", headers)
+    respuesta_tipos = get(f"{API}/lineas/tipos/", headers)
 
     # Si la API falla se pinta la tabla vacía, pero avisando por qué: una lista
     # en blanco y sin explicación se confunde con "no hay líneas dadas de alta".
@@ -56,6 +58,7 @@ def lineasListView(request):
         {
             "lineas": lista(respuesta_lineas),
             "estados": lista(respuesta_estados),
+            "tipos": lista(respuesta_tipos),
         }
     )
 
@@ -73,6 +76,7 @@ def lineaEditarView(request, codigo):
             "codigo": codigo,
             "nombre": request.POST.get("nombre") or None,
             "descripcion": request.POST.get("descripcion") or None,
+            "tipo": request.POST.get("tipo") or None,
             "estado": request.POST.get("estado") or None,
             "activo": request.POST.get("activo") == "on",
         }

@@ -15,6 +15,7 @@ from django.views import generic
 
 from core import lineas as lineas_del_empleado
 from core.api import get, lista, objeto
+from core.lineas import es_de_ensamblaje, solo_de_ensamblaje
 from core.guards import RolRequeridoMixin, requiere_rol
 from core.roles import ROL_SUPERVISOR
 
@@ -186,6 +187,23 @@ def ensamblajeRegistrarView(request):
             messages.error(request, "Selecciona la línea en la que se ensambla.")
             return redirect('panel_supervisor:ensamblaje-registrar')
 
+        # Y tiene que ser de ensamblaje. Se revisa aquí y no sólo en la API porque
+        # cuando la laptop ya trae un ensamblaje abierto este flujo no vuelve a
+        # POSTear el registro: se iría derecho a surtir piezas de una línea que no
+        # las tiene y el supervisor leería "0 componentes" en vez del motivo real.
+        catalogo_lineas = _json(f"{API}/lineas/", headers)
+        if isinstance(catalogo_lineas, list):
+            linea_obj = next(
+                (l for l in catalogo_lineas if str(l.get("codigo")) == str(linea)),
+                None
+            )
+            if not es_de_ensamblaje(linea_obj):
+                messages.error(
+                    request,
+                    "Solo se puede registrar ensamblaje en líneas de tipo Ensamblaje."
+                )
+                return redirect('panel_supervisor:ensamblaje-registrar')
+
         laptop_obj = next(
             (l for l in _laptops_disponibles(headers) if str(l.get("numero")) == str(laptop)),
             None
@@ -324,9 +342,9 @@ def ensamblajeRegistrarView(request):
     # ------------------------------------------------------------------- GET
     laptops = _laptops_disponibles(headers)
 
-    lineas = _json(f"{API}/lineas/", headers)
-    if not isinstance(lineas, list):
-        lineas = []
+    # Solo las de ENSAMBLAJE: en una línea de embalaje no se arma nada, y la API
+    # y el trigger de la base rechazarían el registro de todas formas.
+    lineas = solo_de_ensamblaje(_json(f"{API}/lineas/", headers))
 
     laptop_sel = request.GET.get("laptop") or ""
     linea_sel = request.GET.get("linea") or ""

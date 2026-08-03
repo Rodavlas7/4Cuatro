@@ -10,6 +10,12 @@ class EdoLineaSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class TipoLineaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoLinea
+        fields = '__all__'
+
+
 class LineaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Linea

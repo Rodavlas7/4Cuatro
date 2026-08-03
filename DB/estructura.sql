@@ -137,6 +137,7 @@ CREATE TABLE linea (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
   descripcion varchar(128) DEFAULT NULL,
+  tipo varchar(8) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
   activo BOOLEAN DEFAULT FALSE,
   PRIMARY KEY (codigo)
@@ -260,6 +261,17 @@ CREATE TABLE tipo_embalaje (
   PRIMARY KEY (codigo)
 );
 
+-- Qué proceso corre la línea (ensamblaje o embalaje). Es distinto de edo_linea:
+-- ese dice cómo está la línea (activa, en paro...), este dice para qué sirve, y
+-- es lo que decide si en ella se puede registrar ensamblaje.
+DROP TABLE IF EXISTS tipo_linea;
+CREATE TABLE tipo_linea (
+  codigo varchar(8) NOT NULL,
+  nombre varchar(32) DEFAULT NULL,
+  descripcion varchar(64) DEFAULT NULL,
+  PRIMARY KEY (codigo)
+);
+
 DROP TABLE IF EXISTS turno;
 CREATE TABLE turno (
   codigo varchar(8) NOT NULL,
@@ -345,6 +357,7 @@ ALTER TABLE laptop ADD CONSTRAINT FK_laptop_lote FOREIGN KEY (lote) REFERENCES l
 
 -- Llaves foráneas para la tabla linea
 ALTER TABLE linea ADD CONSTRAINT FK_linea_estado FOREIGN KEY (estado) REFERENCES edo_linea(codigo);
+ALTER TABLE linea ADD CONSTRAINT FK_linea_tipo FOREIGN KEY (tipo) REFERENCES tipo_linea(codigo);
 
 -- Llaves foráneas para la tabla modelo_componente
 ALTER TABLE modelo_componente ADD CONSTRAINT FK_modelo_componente_tipo_componente FOREIGN KEY (tipo_componente) REFERENCES tipo_comp(codigo);
@@ -388,6 +401,7 @@ CREATE UNIQUE INDEX IUK_modelo_laptop_nombre ON modelo_laptop(nombre);
 CREATE UNIQUE INDEX IUK_rol_nombre ON rol(nombre);
 CREATE UNIQUE INDEX IUK_tipo_comp_nombre ON tipo_comp(nombre);
 CREATE UNIQUE INDEX IUK_tipo_embalaje_nombre ON tipo_embalaje(nombre);
+CREATE UNIQUE INDEX IUK_tipo_linea_nombre ON tipo_linea(nombre);
 CREATE UNIQUE INDEX IUK_turno_nombre ON turno(nombre);
 CREATE UNIQUE INDEX IUK_usuario_usuario ON usuario(usuario);
 CREATE UNIQUE INDEX IUK_usuario_empleado ON usuario(empleado);
