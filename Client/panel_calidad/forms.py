@@ -4,6 +4,7 @@ Versión del panel de calidad.
 """
 
 from core.api import get, headers_token, lista, url
+from core.lineas import es_de_ensamblaje
 
 
 def get_choices_laptops(token):
@@ -24,5 +25,5 @@ def get_choices_lineas_produccion(token):
     return [
         (l.get("codigo"), l.get("nombre"))
         for l in lineas
-        if l.get("nombre", "").lower().find("ensamblaje") != -1
+        if es_de_ensamblaje(l)
     ]

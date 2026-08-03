@@ -2,17 +2,36 @@
 
 from core.api import get, headers_token, lista, url
 import unicodedata
+
+from core.lineas import TIPO_EMBALAJE, TIPO_ENSAMBLAJE
+
+
 def normalizar(texto):
     return ''.join(
         c for c in unicodedata.normalize("NFD", texto)
         if unicodedata.category(c) != "Mn"
     ).lower()
 
-def get_choices_lineas(token):
-    """Líneas activas."""
-    lineas = lista(get(url('lineas/lineas/activas/'), headers_token(token)))
+def filtrar_lineas_por_rol(lineas, rol_codigo):
+    """Filtra líneas por el rol del empleado."""
+    if rol_codigo in {None, "", "ADMIN", "SUPER", "OPCALI"}:
+        return lineas
 
-    return [(l["codigo"], l["nombre"]) for l in lineas]
+    if rol_codigo == "OPEMBA":
+        return [l for l in lineas if l.get("tipo_codigo") == TIPO_EMBALAJE]
+
+    if rol_codigo == "OPENSA":
+        return [l for l in lineas if l.get("tipo_codigo") == TIPO_ENSAMBLAJE]
+
+    return lineas
+
+
+def get_choices_lineas(token, rol_codigo=None):
+    """Líneas activas filtradas por rol del empleado."""
+    lineas = lista(get(url('lineas/lineas/activas/'), headers_token(token)))
+    lineas_filtradas = filtrar_lineas_por_rol(lineas, rol_codigo)
+
+    return [(l["codigo"], l["nombre"], l.get("tipo_codigo")) for l in lineas_filtradas]
 
 def get_choices_estaciones(token, linea_id=None, rol_codigo=None):
     """Estaciones activas filtradas por línea y rol."""

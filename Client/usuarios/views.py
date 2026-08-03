@@ -108,7 +108,7 @@ class ListaEmpleados(generic.View):
 
             "empleados": empleados,
 
-            "lineas": get_choices_lineas(token),
+            "lineas": get_choices_lineas(token, rol),
             "estaciones": get_choices_estaciones(token),
             "roles": get_choices_roles(token),
             "turnos": get_choices_turnos(token),

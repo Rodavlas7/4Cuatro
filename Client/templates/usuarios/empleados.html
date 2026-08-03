@@ -74,7 +74,7 @@
                         <label class="form-label text-muted small fw-bold mb-1">Línea</label>
                         <select name="linea" class="form-select form-select-sm py-2 text-secondary">
                             <option value="">Todas</option>
-                            {% for codigo, nombre in lineas %}
+                            {% for codigo, nombre, tipo_codigo in lineas %}
                                 <option value="{{ codigo }}" {% if linea == codigo %}selected{% endif %}>{{ nombre }}</option>
                             {% empty %}
                                 <option>Línea 1</option>
@@ -304,8 +304,8 @@
                             <label class="form-label small fw-medium">Línea</label>
                             <select name="linea" id="id_linea_crear" class="form-select">
                                 <option value="">— Selecciona —</option>
-                                {% for codigo, nombre in lineas %}
-                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% for codigo, nombre, tipo_codigo in lineas %}
+                                <option value="{{ codigo }}" data-tipo="{{ tipo_codigo|default:'' }}">{{ nombre }}</option>
                                 {% endfor %}
                             </select>
                             <div class="invalid-feedback">Selecciona una línea.</div>
@@ -432,8 +432,8 @@
                             <label class="form-label small fw-medium">Línea actual</label>
                             <select name="linea" id="edit_linea" class="form-select">
                                 <option value="">Selecciona una línea</option>
-                                {% for codigo, nombre in lineas %}
-                                <option value="{{ codigo }}">{{ nombre }}</option>
+                                {% for codigo, nombre, tipo_codigo in lineas %}
+                                <option value="{{ codigo }}" data-tipo="{{ tipo_codigo|default:'' }}">{{ nombre }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -595,6 +595,54 @@ manejarVisibilidadPorRol('edit_rol', {
 
 // Filtro dinámico de estaciones según línea elegida
 // Filtro dinámico de estaciones según línea y rol
+function filtrarLineasPorRol(rolSelectId, lineaSelectId) {
+    const rolSelect = document.getElementById(rolSelectId);
+    const lineaSelect = document.getElementById(lineaSelectId);
+
+    function actualizar() {
+        const rol = rolSelect.value;
+        const opciones = Array.from(lineaSelect.options);
+
+        if (rol === "ADMIN") {
+            Array.from(lineaSelect.options).forEach(opcion => {
+                opcion.hidden = true;
+                opcion.disabled = true;
+            });
+            lineaSelect.value = '';
+            return;
+        }
+
+        let mostrarTodas = true;
+
+        if (rol === "OPEMBA") {
+            mostrarTodas = false;
+        } else if (rol === "OPENSA") {
+            mostrarTodas = false;
+        }
+
+        let opcionSeleccionada = null;
+        opciones.forEach(opcion => {
+            if (opcion.value === lineaSelect.value) {
+                opcionSeleccionada = opcion;
+            }
+        });
+
+        Array.from(lineaSelect.options).forEach(opcion => {
+            const tipo = opcion.getAttribute('data-tipo') || '';
+            const debeMostrar = mostrarTodas || rol === 'OPCALI' || (rol === 'OPEMBA' && tipo === 'EMBA') || (rol === 'OPENSA' && tipo === 'ENSA');
+            opcion.hidden = !debeMostrar;
+            opcion.disabled = !debeMostrar;
+        });
+
+        if (opcionSeleccionada && opcionSeleccionada.hidden) {
+            lineaSelect.value = '';
+        }
+    }
+
+    rolSelect.addEventListener('change', actualizar);
+    actualizar();
+}
+
 function filtrarEstaciones(lineaSelectId, estacionSelectId, rolSelectId) {
 
     const lineaSelect = document.getElementById(lineaSelectId);
@@ -635,6 +683,9 @@ function filtrarEstaciones(lineaSelectId, estacionSelectId, rolSelectId) {
 
     });
 }
+
+filtrarLineasPorRol('id_rol_crear', 'id_linea_crear');
+filtrarLineasPorRol('edit_rol', 'edit_linea');
 
 filtrarEstaciones(
     'id_linea_crear',
@@ -678,6 +729,7 @@ document.getElementById('modalEditar').addEventListener('show.bs.modal', functio
     document.getElementById('edit_rol').value = btn.dataset.rol;
     document.getElementById('edit_turno').value = btn.dataset.turno;
     document.getElementById('edit_linea').value = btn.dataset.linea;
+    document.getElementById('edit_rol').dispatchEvent(new Event('change'));
     const estacionSelect = document.getElementById('edit_estacion');
     estacionSelect.innerHTML = `<option value="${btn.dataset.estacion}">${btn.dataset.estacionnombre}</option>`;
 });
