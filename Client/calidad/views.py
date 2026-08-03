@@ -109,7 +109,12 @@ class CrearInspeccion(generic.View):
         )
 
         if response.status_code == 201:
-            messages.success(request, "Inspección registrada correctamente.")
+            datos = response.json()
+            numero = datos.get("numero") or datos.get("id") or datos.get("inspeccion")
+            if numero:
+                messages.success(request, f"Inspección registrada correctamente. Número: {numero}")
+            else:
+                messages.success(request, "Inspección registrada correctamente.")
         else:
             error_data = response.json()
             mensaje = error_data.get("mensaje") or str(error_data)

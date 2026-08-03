@@ -37,7 +37,12 @@ def lineasListView(request):
         respuesta = requests.post(f"{API}/lineas/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Línea registrada correctamente.")
+            datos = respuesta.json()
+            codigo = datos.get("codigo") or datos.get("id")
+            if codigo:
+                messages.success(request, f"Línea registrada correctamente. Código: {codigo}")
+            else:
+                messages.success(request, "Línea registrada correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 
@@ -151,7 +156,12 @@ def estacionesListView(request):
         respuesta = requests.post(f"{API}/lineas/estaciones/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Estación registrada correctamente.")
+            datos = respuesta.json()
+            codigo = datos.get("codigo") or datos.get("id")
+            if codigo:
+                messages.success(request, f"Estación registrada correctamente. Código: {codigo}")
+            else:
+                messages.success(request, "Estación registrada correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 

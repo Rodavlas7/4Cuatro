@@ -66,7 +66,12 @@ def componentesListView(request):
         respuesta = requests.post(f"{API}/componentes/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Componente registrado correctamente.")
+            datos = respuesta.json()
+            numero = datos.get("numero") or datos.get("id") or datos.get("codigo")
+            if numero:
+                messages.success(request, f"Componente registrado correctamente. Número: {numero}")
+            else:
+                messages.success(request, "Componente registrado correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 
@@ -174,7 +179,12 @@ def modelosListView(request):
         respuesta = requests.post(f"{API}/componentes/modelos/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Modelo de componente registrado correctamente.")
+            datos = respuesta.json()
+            numero = datos.get("numero") or datos.get("id") or datos.get("codigo")
+            if numero:
+                messages.success(request, f"Modelo de componente registrado correctamente. Código: {numero}")
+            else:
+                messages.success(request, "Modelo de componente registrado correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 
@@ -281,7 +291,12 @@ def lotesListView(request):
         respuesta = requests.post(f"{API}/componentes/lotes/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Lote registrado correctamente.")
+            datos = respuesta.json()
+            numero = datos.get("numero") or datos.get("id") or datos.get("codigo")
+            if numero:
+                messages.success(request, f"Lote registrado correctamente. Número: {numero}")
+            else:
+                messages.success(request, "Lote registrado correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 
@@ -364,7 +379,12 @@ def ordenesListView(request):
         respuesta = requests.post(f"{API}/componentes/ordenes/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Orden de material registrada correctamente.")
+            datos = respuesta.json()
+            numero = datos.get("numero") or datos.get("id") or datos.get("codigo")
+            if numero:
+                messages.success(request, f"Orden de material registrada correctamente. Número: {numero}")
+            else:
+                messages.success(request, "Orden de material registrada correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 
