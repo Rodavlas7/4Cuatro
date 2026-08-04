@@ -317,6 +317,12 @@ html {
    BLOQUEO DE SCROLL CON MODALES ACTIVOS
 ==================================================================== */
 
+
+/* Sobrescribimos la inyección en línea de Bootstrap para proteger el 'sticky' */
+body.modal-open {
+    overflow: clip !important;
+}
+
 /* 1. Apoyamos el bloqueo nativo de Bootstrap y evitamos el "efecto rebote" */
 html.modal-open,
 body.modal-open {
