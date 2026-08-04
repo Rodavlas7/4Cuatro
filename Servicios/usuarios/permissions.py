@@ -8,7 +8,7 @@ from rest_framework.permissions import BasePermission
 PERMISOS_ROL = {
 
     "ADMIN": [
-        "usuarios",
+        "usuarios", 
         "empleados",
         "lineas",
         "estaciones",
