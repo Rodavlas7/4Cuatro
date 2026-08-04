@@ -34,6 +34,7 @@ USE cuatro;
 DROP PROCEDURE IF EXISTS sp_Liberar_Componentes_Laptop;
 DROP PROCEDURE IF EXISTS sp_Cancelar_Orden_Produccion;
 DROP PROCEDURE IF EXISTS sp_Iniciar_Ensamblaje_Orden;
+DROP PROCEDURE IF EXISTS sp_Dashboard_Resumen;
 
 DELIMITER $$
 
@@ -68,31 +69,31 @@ CREATE PROCEDURE sp_Liberar_Componentes_Laptop(
     IN p_estado_destino VARCHAR(8)
 )
 BEGIN
-    DECLARE v_destino    VARCHAR(8);
-    DECLARE v_existe     INT;
-    DECLARE v_liberados  INT DEFAULT 0;
-    DECLARE v_mermados   INT DEFAULT 0;
-    DECLARE v_cerrados   INT DEFAULT 0;
+    DECLARE destino_componentes VARCHAR(8);
+    DECLARE laptop_existe       INT;
+    DECLARE total_liberados     INT DEFAULT 0;
+    DECLARE total_mermados      INT DEFAULT 0;
+    DECLARE total_cerrados      INT DEFAULT 0;
 
-    SET v_destino = IFNULL(p_estado_destino, 'EDC001');
+    SET destino_componentes = IFNULL(p_estado_destino, 'EDC001');
 
     -- Validaciones
 
-    SELECT COUNT(*) INTO v_existe FROM laptop WHERE numero = p_laptop;
+    SELECT COUNT(*) INTO laptop_existe FROM laptop WHERE numero = p_laptop;
 
-    IF v_existe = 0 THEN
+    IF laptop_existe = 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Liberar_Componentes_Laptop: esa laptop no existe';
     END IF;
 
-    IF v_destino NOT IN ('EDC001', 'EDC003') THEN
+    IF destino_componentes NOT IN ('EDC001', 'EDC003') THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Liberar_Componentes_Laptop: los componentes solo pueden regresar a Disponible o Dañado';
     END IF;
 
     -- Cuántos se van a quedar como están, para reportarlo
     SELECT COUNT(*)
-      INTO v_mermados
+      INTO total_mermados
       FROM componente c
       JOIN registro_ensamblaje re ON re.numero = c.registro_ensamblaje
      WHERE re.laptop = p_laptop
@@ -103,12 +104,12 @@ BEGIN
     -- 'NULL <> EDC004' no es TRUE, es NULL, y esas filas se quedarían fuera.
     UPDATE componente c
       JOIN registro_ensamblaje re ON re.numero = c.registro_ensamblaje
-       SET c.estado              = v_destino,
+       SET c.estado              = destino_componentes,
            c.registro_ensamblaje = NULL
      WHERE re.laptop = p_laptop
        AND (c.estado IS NULL OR c.estado <> 'EDC004');
 
-    SET v_liberados = ROW_COUNT();
+    SET total_liberados = ROW_COUNT();
 
     -- Cerrar los ensamblajes que siguieran abiertos
     UPDATE registro_ensamblaje
@@ -117,13 +118,13 @@ BEGIN
      WHERE laptop    = p_laptop
        AND fecha_fin IS NULL;
 
-    SET v_cerrados = ROW_COUNT();
+    SET total_cerrados = ROW_COUNT();
 
-    SELECT p_laptop    AS laptop,
-           v_liberados AS componentes_liberados,
-           v_destino   AS estado_destino,
-           v_mermados  AS mermados_conservados,
-           v_cerrados  AS ensamblajes_cerrados;
+    SELECT p_laptop            AS laptop,
+           total_liberados     AS componentes_liberados,
+           destino_componentes AS estado_destino,
+           total_mermados      AS mermados_conservados,
+           total_cerrados      AS ensamblajes_cerrados;
 END$$
 
 
@@ -164,35 +165,35 @@ CREATE PROCEDURE sp_Cancelar_Orden_Produccion(
     IN p_folio INT
 )
 BEGIN
-    DECLARE v_estado     VARCHAR(8);
-    DECLARE v_liberados  INT DEFAULT 0;
-    DECLARE v_rechazadas INT DEFAULT 0;
-    DECLARE v_intactas   INT DEFAULT 0;
+    DECLARE estado_orden      VARCHAR(8);
+    DECLARE total_liberados   INT DEFAULT 0;
+    DECLARE total_rechazadas  INT DEFAULT 0;
+    DECLARE total_respetadas  INT DEFAULT 0;
 
     -- Validaciones
 
-    SELECT estado INTO v_estado
+    SELECT estado INTO estado_orden
       FROM orden_produccion
      WHERE folio = p_folio;
 
-    IF v_estado IS NULL THEN
+    IF estado_orden IS NULL THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Cancelar_Orden_Produccion: esa orden no existe o no tiene estado';
     END IF;
 
-    IF v_estado = 'CANC' THEN
+    IF estado_orden = 'CANC' THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Cancelar_Orden_Produccion: esa orden ya estaba cancelada';
     END IF;
 
-    IF v_estado = 'COMP' THEN
+    IF estado_orden = 'COMP' THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Cancelar_Orden_Produccion: esa orden ya se completó, no se puede cancelar';
     END IF;
 
     -- Cuántas laptops terminadas se van a respetar, para reportarlo
     SELECT COUNT(*)
-      INTO v_intactas
+      INTO total_respetadas
       FROM laptop
      WHERE orden  = p_folio
        AND estado IN ('APROV', 'EMBALA');
@@ -207,7 +208,7 @@ BEGIN
        AND l.estado IN ('REGIS', 'PENSAM')
        AND (c.estado IS NULL OR c.estado <> 'EDC004');
 
-    SET v_liberados = ROW_COUNT();
+    SET total_liberados = ROW_COUNT();
 
     UPDATE registro_ensamblaje re
       JOIN laptop l ON l.numero = re.laptop
@@ -223,17 +224,17 @@ BEGIN
      WHERE orden  = p_folio
        AND estado IN ('REGIS', 'PENSAM');
 
-    SET v_rechazadas = ROW_COUNT();
+    SET total_rechazadas = ROW_COUNT();
 
     -- 3. La orden queda cancelada
     UPDATE orden_produccion
        SET estado = 'CANC'
      WHERE folio  = p_folio;
 
-    SELECT p_folio      AS folio,
-           v_rechazadas AS laptops_rechazadas,
-           v_intactas   AS laptops_respetadas,
-           v_liberados  AS componentes_liberados;
+    SELECT p_folio          AS folio,
+           total_rechazadas AS laptops_rechazadas,
+           total_respetadas AS laptops_respetadas,
+           total_liberados  AS componentes_liberados;
 END$$
 
 
@@ -281,95 +282,176 @@ CREATE PROCEDURE sp_Iniciar_Ensamblaje_Orden(
     IN p_linea VARCHAR(8)
 )
 BEGIN
-    DECLARE v_estado       VARCHAR(8);
-    DECLARE v_modelo       VARCHAR(8);
-    DECLARE v_lote         VARCHAR(8);
-    DECLARE v_planificada  INT;
-    DECLARE v_existentes   INT;
-    DECLARE v_faltantes    INT;
-    DECLARE v_consecutivo  INT;
-    DECLARE v_creadas      INT DEFAULT 0;
-    DECLARE v_existe_linea INT;
-    DECLARE v_tipo_linea   VARCHAR(8) DEFAULT NULL;
+    DECLARE estado_orden       VARCHAR(8);
+    DECLARE modelo_orden       VARCHAR(8);
+    DECLARE lote_orden         VARCHAR(8);
+    DECLARE total_planificadas INT;
+    DECLARE total_existentes   INT;
+    DECLARE total_faltantes    INT;
+    DECLARE consecutivo_serie  INT;
+    DECLARE total_creadas      INT DEFAULT 0;
+    DECLARE linea_existe       INT;
+    DECLARE tipo_de_linea      VARCHAR(8) DEFAULT NULL;
 
     -- Validaciones
 
     SELECT estado, modelo_laptop, lote, IFNULL(cant_planificada, 0)
-      INTO v_estado, v_modelo, v_lote, v_planificada
+      INTO estado_orden, modelo_orden, lote_orden, total_planificadas
       FROM orden_produccion
      WHERE folio = p_folio;
 
-    IF v_estado IS NULL THEN
+    IF estado_orden IS NULL THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: esa orden no existe o no tiene estado';
     END IF;
 
-    IF v_estado NOT IN ('PEND', 'PROC') THEN
+    IF estado_orden NOT IN ('PEND', 'PROC') THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: solo se le pueden agregar laptops a una orden Pendiente o En Proceso';
     END IF;
 
-    IF v_modelo IS NULL THEN
+    IF modelo_orden IS NULL THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: la orden no tiene modelo de laptop, no se sabe qué fabricar';
     END IF;
 
     SELECT COUNT(*), MAX(tipo)
-      INTO v_existe_linea, v_tipo_linea
+      INTO linea_existe, tipo_de_linea
       FROM linea
      WHERE codigo = p_linea;
 
-    IF v_existe_linea = 0 THEN
+    IF linea_existe = 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: esa línea no existe';
     END IF;
 
     -- Estas laptops nacen asignadas a la línea, y ahí es donde se van a armar.
     -- Una línea de embalaje no arma nada, así que no se le pueden colgar.
-    IF v_tipo_linea IS NULL OR v_tipo_linea <> 'ENSA' THEN
+    IF tipo_de_linea IS NULL OR tipo_de_linea <> 'ENSA' THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: la línea debe ser de tipo Ensamblaje';
     END IF;
 
     -- Cuántas faltan
 
-    SELECT COUNT(*) INTO v_existentes FROM laptop WHERE orden = p_folio;
+    SELECT COUNT(*) INTO total_existentes FROM laptop WHERE orden = p_folio;
 
-    SET v_faltantes = v_planificada - v_existentes;
+    SET total_faltantes = total_planificadas - total_existentes;
 
-    IF v_faltantes <= 0 THEN
+    IF total_faltantes <= 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: esta orden ya tiene todas las laptops que planificó';
     END IF;
 
     -- Desde qué consecutivo seguir con las series provisionales
     SELECT IFNULL(MAX(CAST(SUBSTRING(num_serie, 5) AS UNSIGNED)), 0)
-      INTO v_consecutivo
+      INTO consecutivo_serie
       FROM laptop
      WHERE num_serie LIKE 'TMP-%';
 
-    WHILE v_creadas < v_faltantes DO
+    WHILE total_creadas < total_faltantes DO
 
-        SET v_consecutivo = v_consecutivo + 1;
+        SET consecutivo_serie = consecutivo_serie + 1;
 
         INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, linea, lote)
-        VALUES (CONCAT('TMP-', LPAD(v_consecutivo, 4, '0')),
+        VALUES (CONCAT('TMP-', LPAD(consecutivo_serie, 4, '0')),
                 CONCAT('Alta en lote de la orden #', p_folio),
                 p_folio,
-                v_modelo,
+                modelo_orden,
                 'REGIS',
                 p_linea,
-                v_lote);
+                lote_orden);
 
-        SET v_creadas = v_creadas + 1;
+        SET total_creadas = total_creadas + 1;
 
     END WHILE;
 
-    SELECT p_folio                    AS folio,
-           v_creadas                  AS laptops_creadas,
-           v_existentes               AS laptops_previas,
-           v_planificada              AS cant_planificada,
-           p_linea                    AS linea;
+    SELECT p_folio            AS folio,
+           total_creadas      AS laptops_creadas,
+           total_existentes   AS laptops_previas,
+           total_planificadas AS cant_planificada,
+           p_linea            AS linea;
+END$$
+
+
+-- ============================================================
+-- 4. sp_Dashboard_Resumen
+-- ============================================================
+--
+-- Objetivo : Devolver en un solo renglón los números del dashboard de
+--            administrador para un rango de fechas.
+--
+-- Parámetros:
+--   p_desde  Primer día del rango. NULL = desde que existe la planta.
+--   p_hasta  Último día del rango. NULL = hasta hoy.
+--
+-- ADVERTENCIA — éste no es como los otros tres
+-- --------------------------------------------
+-- Los de arriba existen porque tocan muchas filas de varias tablas y tienen
+-- que pasar o no pasar completas. Éste no escribe nada: solamente lee. No hay
+-- transacción que proteger ni atomicidad que ganar.
+--
+-- El dashboard NO lo usa. El panel de administrador se sirve de las vistas
+-- vista_dash_* (DB/vistas.sql), que Django mapea con modelos managed=False y
+-- que la API puede filtrar, ordenar y paginar como cualquier otra consulta.
+-- Un procedimiento devuelve un conjunto de tuplas suelto: se lee con
+-- cursor.callproc(), no pasa por un serializer y no se le puede encadenar nada.
+--
+-- Entonces, ¿para qué está? Para tener a la mano la versión "un solo CALL con
+-- el rango como parámetro", que es lo que una vista no puede hacer (en MySQL
+-- las vistas no reciben parámetros). Sirve para demostrarlo y para consultarlo
+-- desde la consola:
+--
+--     CALL sp_Dashboard_Resumen('2026-07-01', '2026-07-31');
+--     CALL sp_Dashboard_Resumen(NULL, NULL);   -- todo el histórico
+--
+-- Si algún día se decide que el dashboard corra sobre procedimientos, éste es
+-- el punto de partida; mientras tanto, la fuente de verdad son las vistas.
+--
+-- Qué cuenta como producida: la laptop embalada, igual que en las vistas y
+-- que en tg_Control_Estado_Orden_Produccion.
+
+CREATE PROCEDURE sp_Dashboard_Resumen(
+    IN p_desde DATE,
+    IN p_hasta DATE
+)
+BEGIN
+    -- Rango abierto por cualquiera de los dos lados. '1000-01-01' es el
+    -- mínimo que admite un DATE en MySQL, así que sirve de "sin límite".
+    DECLARE desde DATE DEFAULT IFNULL(p_desde, '1000-01-01');
+    DECLARE hasta DATE DEFAULT IFNULL(p_hasta, CURDATE());
+
+    SELECT
+        desde AS rango_desde,
+        hasta AS rango_hasta,
+
+        (SELECT IFNULL(SUM(total), 0)
+           FROM vista_dash_produccion_diaria
+          WHERE fecha BETWEEN desde AND hasta)          AS producidas,
+
+        (SELECT IFNULL(SUM(total), 0)
+           FROM vista_dash_calidad_diaria
+          WHERE fecha BETWEEN desde AND hasta)          AS inspecciones,
+
+        (SELECT IFNULL(SUM(aprobadas), 0)
+           FROM vista_dash_calidad_diaria
+          WHERE fecha BETWEEN desde AND hasta)          AS inspecciones_aprobadas,
+
+        (SELECT IFNULL(SUM(rechazadas), 0)
+           FROM vista_dash_calidad_diaria
+          WHERE fecha BETWEEN desde AND hasta)          AS inspecciones_rechazadas,
+
+        (SELECT IFNULL(SUM(total), 0)
+           FROM vista_dash_paros_diaria
+          WHERE fecha BETWEEN desde AND hasta)          AS paros,
+
+        (SELECT IFNULL(SUM(minutos), 0)
+           FROM vista_dash_paros_diaria
+          WHERE fecha BETWEEN desde AND hasta)          AS paros_minutos,
+
+        (SELECT COUNT(*)
+           FROM orden_produccion
+          WHERE fecha BETWEEN desde AND hasta)          AS ordenes_creadas;
 END$$
 
 

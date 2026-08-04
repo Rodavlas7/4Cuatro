@@ -7,20 +7,16 @@ cuando el cliente era uno solo; se llegan desde el sidebar de este panel.
 
 El acceso lo cuida `core.middleware.AccesoPorRolMiddleware`: sólo el rol ADMIN
 entra a /panel/admin/ y a las apps que le pertenecen.
+
+Dónde está cada vista
+---------------------
+Este archivo se quedó vacío a propósito. Las dos pantallas propias del panel
+crecieron lo suficiente para merecer su propio módulo, y así se ve de un vistazo
+cuál es cuál:
+
+    views_dashboard.py     la portada, con las estadísticas de la planta
+    views_trazabilidad.py  la consulta de trazabilidad por orden de producción
+
+Las dos leen de /api/dashboard/ (la app `dashboard` de Servicios), que es de sólo
+lectura y sólo para ADMIN.
 """
-
-from django.shortcuts import render
-from django.views import generic
-
-from core.guards import RolRequeridoMixin
-from core.roles import ROL_ADMIN
-
-
-class Dashboard(RolRequeridoMixin, generic.View):
-    """Portada del panel de administrador."""
-
-    roles_permitidos = (ROL_ADMIN,)
-    template_name = 'panel_admin/dashboard.html'
-
-    def get(self, request):
-        return render(request, self.template_name)
