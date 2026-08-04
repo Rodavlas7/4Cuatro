@@ -164,5 +164,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Añádelo al final de settings.py
 MAINTENANCE_PATHS = [
     '/perfil/',
+    '/reportes/'
+    
+    
 
 ]
