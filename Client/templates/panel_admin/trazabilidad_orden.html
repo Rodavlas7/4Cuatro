@@ -1,0 +1,403 @@
+{% extends 'panel_admin/base.html' %}
+{% load formato %}
+
+{% comment %}
+   T R A Z A B I L I D A D   P O R   O R D E N   D E   P R O D U C C I Ó N
+
+   Contesta una sola pregunta: "cuéntame todo lo que le pasó al folio N".
+
+   Es pantalla aparte y no un pedazo de produccion/detalle_orden.html a
+   propósito: esa es la pantalla operativa y la comparten el admin y el
+   supervisor, mientras que ésta es de consulta y sólo del admin.
+
+   Los datos vienen de las cuatro vistas vista_traza_* (DB/vistas.sql), que la
+   API devuelve juntas en una sola llamada.
+{% endcomment %}
+
+{% block titulo_pagina %}Trazabilidad de orden{% endblock %}
+{% block topbar_titulo %}Trazabilidad{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item">
+        <a href="{% url 'panel_admin:trazabilidad' %}">Trazabilidad</a>
+    </li>
+    {% if orden %}
+        <li class="breadcrumb-item active" aria-current="page">Folio {{ orden.folio }}</li>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- ==========================================
+     BUSCADOR
+     ========================================== -->
+<div class="emp-card mb-4">
+
+    <div class="emp-header">
+        <div class="emp-eyebrow"><span class="dot"></span> Consulta</div>
+        <h4 class="fw-bold text-dark mb-1">Trazabilidad por orden de producción</h4>
+        <p class="text-muted small mb-0">
+            Escribe un folio para ver su avance, sus laptops, el material que
+            consumió y los paros que le pegaron.
+        </p>
+    </div>
+
+    <div class="emp-toolbar px-4 py-3">
+        <form method="GET" action="{% url 'panel_admin:trazabilidad' %}">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-5 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="number" name="folio" min="1" value="{{ folio|default_if_none:'' }}"
+                               class="form-control border-start-0 ps-1 py-2"
+                               placeholder="Folio de la orden..." required>
+                        <button class="btn btn-dark px-3" type="submit">Consultar</button>
+                    </div>
+                </div>
+
+                {# Atajo a las órdenes recientes, para no obligar a adivinar un folio. #}
+                {% if ordenes %}
+                    <div class="col-12 col-md-7 col-lg-8">
+                        <div class="d-flex flex-wrap align-items-center gap-1">
+                            <span class="text-muted small me-1">Recientes:</span>
+                            {% for o in ordenes|slice:":8" %}
+                                <a href="{% url 'panel_admin:trazabilidad-orden' o.folio %}"
+                                   class="badge rounded-pill text-decoration-none
+                                          {% if o.folio == folio %}bg-dark text-white
+                                          {% else %}bg-light text-secondary border{% endif %}">
+                                    #{{ o.folio }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+
+{% if error %}
+
+    <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>{{ error }}</div>
+    </div>
+
+{% elif not orden %}
+
+    <!-- Todavía no se ha consultado nada -->
+    <div class="emp-card">
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-diagram-2 d-block fs-1 mb-3 opacity-50"></i>
+            <h6 class="text-dark fw-bold mb-1">Elige una orden</h6>
+            <p class="small mb-0">Escribe un folio arriba o toca uno de los recientes.</p>
+        </div>
+    </div>
+
+{% else %}
+
+<!-- ==========================================
+     RESUMEN DE LA ORDEN
+     ========================================== -->
+<div class="emp-card mb-4">
+
+    <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge-id">Folio #{{ orden.folio }}</span>
+                <span class="badge rounded-pill px-2 py-1 fw-semibold
+                    {% if orden.estado_codigo == 'COMP' %}bg-success-subtle text-success border border-success-subtle
+                    {% elif orden.estado_codigo == 'PROC' %}bg-warning-subtle text-warning border border-warning-subtle
+                    {% elif orden.estado_codigo == 'CANC' %}bg-danger-subtle text-danger border border-danger-subtle
+                    {% else %}bg-light text-secondary border{% endif %}">
+                    {{ orden.estado_nombre|default:"Sin estado" }}
+                </span>
+            </div>
+            <h4 class="fw-bold text-dark mb-1">{{ orden.modelo_nombre|default:"Sin modelo" }}</h4>
+            <p class="text-muted small mb-0">
+                Creada el {{ orden.fecha|fecha_hora:orden.hora }}
+                {% if orden.lote_codigo %} · Lote {{ orden.lote_codigo }}{% endif %}
+            </p>
+        </div>
+
+        <a href="{% url 'orden-produccion-detalle' orden.folio %}" class="btn btn-sm btn-outline-primary flex-shrink-0">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Abrir la orden
+        </a>
+    </div>
+
+    <!-- Barra de avance apilada -->
+    <div class="px-4 py-4 border-bottom">
+        <div class="d-flex align-items-baseline justify-content-between mb-2">
+            <span class="text-muted small fw-bold text-uppercase">Avance</span>
+            <span class="fw-bold text-dark">
+                {{ orden.cant_producida|default:0 }} / {{ orden.cant_planificada|default:0 }}
+                <span class="text-muted fw-normal small">({{ orden.avance|default:0 }}%)</span>
+            </span>
+        </div>
+
+        {% if avance %}
+            <div class="traza-avance">
+                {% for tramo in avance %}
+                    <div class="tramo {{ tramo.clase }}" style="--valor: {{ tramo.ancho }}%"
+                         title="{{ tramo.etiqueta }}: {{ tramo.cantidad }}"></div>
+                {% endfor %}
+            </div>
+            <div class="traza-leyenda">
+                {% for tramo in avance %}
+                    <span><i class="marca {{ tramo.clase }}"></i>{{ tramo.etiqueta }}: {{ tramo.cantidad }}</span>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="traza-avance"></div>
+            <div class="traza-leyenda">
+                <span>Todavía no se registran laptops para esta orden.</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Números de la orden -->
+    <div class="row g-0 text-center">
+        <div class="col-6 col-md-3 p-3 border-end">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Laptops</div>
+            <div class="fs-4 fw-bold text-dark">{{ orden.laptops_totales|default:0 }}</div>
+        </div>
+        <div class="col-6 col-md-3 p-3 border-end">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Componentes</div>
+            <div class="fs-4 fw-bold text-dark">{{ orden.componentes_usados|default:0 }}</div>
+        </div>
+        <div class="col-6 col-md-3 p-3 border-end">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Inspecciones</div>
+            <div class="fs-4 fw-bold text-dark">{{ orden.inspecciones|default:0 }}</div>
+            {% if orden.inspecciones_rechazadas %}
+                <div class="text-danger" style="font-size: 11px;">
+                    {{ orden.inspecciones_rechazadas }} rechazada{{ orden.inspecciones_rechazadas|pluralize }}
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-6 col-md-3 p-3">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Ensamblaje</div>
+            <div class="small fw-medium text-dark pt-1">
+                {{ orden.ensamblaje_inicio|fecha|default:"—" }}
+            </div>
+            <div class="text-muted" style="font-size: 11px;">
+                <i class="bi bi-arrow-return-right me-1"></i>{{ orden.ensamblaje_fin|fecha|default:"sin cerrar" }}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ==========================================
+     LAPTOPS DE LA ORDEN
+     ========================================== -->
+<div class="emp-card mb-4 overflow-hidden">
+    <div class="emp-header py-3">
+        <h5 class="fw-bold text-dark mb-0">Laptops de la orden</h5>
+        <p class="text-muted small mb-0">Su paso por ensamblaje, calidad y embalaje.</p>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 w-100">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Laptop</th>
+                    <th class="py-3 text-uppercase text-muted small fw-bold">Línea</th>
+                    <th class="py-3 text-uppercase text-muted small fw-bold">Ensamblaje</th>
+                    <th class="py-3 text-uppercase text-muted small fw-bold text-center">Piezas</th>
+                    <th class="py-3 text-uppercase text-muted small fw-bold text-center">Calidad</th>
+                    <th class="py-3 text-uppercase text-muted small fw-bold">Embalaje</th>
+                    <th class="pe-4 py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in laptops %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-laptop text-secondary fs-5"></i>
+                                <div>
+                                    <a href="{% url 'laptop-detalle' l.numero %}"
+                                       class="fw-bold text-dark text-decoration-none">
+                                        Laptop #{{ l.numero }}
+                                    </a>
+                                    <div class="font-monospace text-secondary" style="font-size: 11px;">
+                                        {{ l.num_serie|default:"Sin serie" }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="small text-dark">{{ l.linea_nombre|default:"—" }}</td>
+                        <td>
+                            <div class="small text-dark">{{ l.ensamblaje_inicio|fecha|default:"—" }}</div>
+                            <div class="text-secondary" style="font-size: 11px;">
+                                <i class="bi bi-arrow-return-right me-1"></i>{{ l.ensamblaje_fin|fecha|default:"sin cerrar" }}
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-2 py-1
+                                {% if l.componentes %}bg-primary-subtle text-primary border border-primary-subtle
+                                {% else %}bg-light text-secondary border{% endif %}">
+                                {{ l.componentes|default:0 }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold
+                                {% if l.resultado_clase == 'ok' %}bg-success-subtle text-success border border-success-subtle
+                                {% elif l.resultado_clase == 'mal' %}bg-danger-subtle text-danger border border-danger-subtle
+                                {% elif l.resultado_clase == 'medio' %}bg-warning-subtle text-warning border border-warning-subtle
+                                {% else %}bg-light text-secondary border{% endif %}">
+                                {{ l.resultado_texto }}
+                            </span>
+                            {% if l.inspecciones > 1 %}
+                                <div class="text-muted" style="font-size: 10px;">
+                                    {{ l.inspecciones }} inspecciones
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="small text-dark">{{ l.embalaje_fecha|fecha|default:"—" }}</td>
+                        <td class="pe-4 text-center">
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold
+                                {% if l.estado_codigo == 'EMBALA' %}bg-success-subtle text-success border border-success-subtle
+                                {% elif l.estado_codigo == 'RECHA' %}bg-danger-subtle text-danger border border-danger-subtle
+                                {% elif l.estado_codigo == 'PENSAM' %}bg-warning-subtle text-warning border border-warning-subtle
+                                {% else %}bg-light text-secondary border{% endif %}">
+                                {{ l.estado_nombre|default:"—" }}
+                            </span>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-laptop d-block fs-2 mb-2 opacity-50"></i>
+                            <div class="small">Esta orden todavía no tiene laptops registradas.</div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<div class="row g-3">
+
+    <!-- ==========================================
+         MATERIAL CONSUMIDO
+         ========================================== -->
+    <div class="col-12 col-xl-7">
+        <div class="emp-card h-100 overflow-hidden">
+            <div class="emp-header py-3">
+                <h5 class="fw-bold text-dark mb-0">Material consumido</h5>
+                <p class="text-muted small mb-0">
+                    De qué lote y de qué modelo salieron las piezas de esta orden.
+                </p>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Componente</th>
+                            <th class="py-3 text-uppercase text-muted small fw-bold">Lote</th>
+                            <th class="pe-4 py-3 text-uppercase text-muted small fw-bold">Piezas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in componentes %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold text-dark small">{{ c.modelo_nombre|default:"—" }}</div>
+                                    <div class="text-muted" style="font-size: 11px;">
+                                        {{ c.tipo_nombre|default:"Sin tipo" }}
+                                        {% if c.fabricante %} · {{ c.fabricante }}{% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge-id">{{ c.lote_codigo|default:"Sin lote" }}</span>
+                                </td>
+                                <td class="pe-4" style="min-width: 140px;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold text-dark small">{{ c.piezas }}</span>
+                                        <span class="traza-piezas flex-grow-1">
+                                            <span style="--valor: {{ c.ancho }}%"></span>
+                                        </span>
+                                    </div>
+                                    <div class="text-muted" style="font-size: 11px;">
+                                        en {{ c.laptops }} laptop{{ c.laptops|pluralize }}
+                                        {% if c.mermados %} · {{ c.mermados }} mermados{% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-5">
+                                    <i class="bi bi-boxes d-block fs-2 mb-2 opacity-50"></i>
+                                    <div class="small">Todavía no se ha montado material en esta orden.</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         PAROS
+         ========================================== -->
+    <div class="col-12 col-xl-5">
+        <div class="emp-card h-100">
+            <div class="emp-header py-3">
+                <h5 class="fw-bold text-dark mb-0">Paros de sus líneas</h5>
+                {% comment %}
+                    Se dice "de sus líneas" y no "de la orden" a propósito: en la
+                    base no hay vínculo directo entre paro y orden, se cruzan por
+                    línea y fecha. Es una aproximación y hay que decirlo.
+                {% endcomment %}
+                <p class="text-muted small mb-0">
+                    Paros ocurridos en las líneas de esta orden desde que se creó.
+                </p>
+            </div>
+
+            <ul class="list-group list-group-flush">
+                {% for p in paros %}
+                    <li class="list-group-item px-4 py-3">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div class="min-w-0">
+                                <div class="fw-semibold text-dark small">
+                                    {{ p.razon|default:"Sin razón registrada" }}
+                                </div>
+                                <div class="text-muted" style="font-size: 11px;">
+                                    {{ p.linea_nombre|default:"Sin línea" }} ·
+                                    {{ p.fecha_inicio|fecha_hora:p.hora_inicio }}
+                                </div>
+                            </div>
+                            {% if p.abierto %}
+                                <span class="badge rounded-pill flex-shrink-0 px-2 py-1 fw-semibold bg-warning-subtle text-warning border border-warning-subtle">
+                                    Abierto
+                                </span>
+                            {% else %}
+                                <span class="badge rounded-pill flex-shrink-0 px-2 py-1 fw-semibold bg-success-subtle text-success border border-success-subtle">
+                                    {{ p.minutos }} min
+                                </span>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item px-4 py-5 text-center text-muted small">
+                        <i class="bi bi-check2-circle d-block fs-2 mb-2 text-success opacity-75"></i>
+                        Ninguna línea de esta orden se detuvo.
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

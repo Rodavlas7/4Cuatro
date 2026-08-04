@@ -30,5 +30,6 @@ urlpatterns = [
     path("api/componentes/", include("componentes.urls")),
     path("api/embalaje/", include("embalaje.urls")),
     path("api/calidad/", include("calidad.urls")),
+    path("api/dashboard/", include("dashboard.urls")),
     re_path(r'^.*$', not_found, name='not-found'),
 ]

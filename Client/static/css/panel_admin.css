@@ -4,4 +4,374 @@
    Este archivo es del equipo del panel admin. Sólo lo carga
    templates/panel_admin/base.html, así que lo que escribas aquí no toca a los
    otros paneles. Lo común va en panel.css.
+
+   Todo lo de abajo se apoya en las variables de global.css (--color-*,
+   --radius-*, --shadow-*, --space-*). No hay un solo color escrito a mano: si
+   mañana cambia la paleta, esta hoja la sigue sin tocarse.
+
+   Las gráficas son HTML y CSS, sin librerías. Los porcentajes de alto y ancho
+   los calcula la vista en Python (views_dashboard.py) y llegan en un
+   style="--valor: N%", porque el lenguaje de plantillas de Django no divide.
    ========================================================================== */
+
+
+/* ==========================================
+   T A R J E T A S   D E   K P I
+   ========================================== */
+
+/* Hereda el lenguaje de .emp-card (global.css) y le agrega lo suyo: una franja
+   de color a la izquierda que dice de qué módulo habla el número.
+
+   OJO con el display: block. Las tarjetas que llevan a algún lado son <a>, y un
+   <a> nace inline. Un elemento inline ignora height y no reserva el espacio de
+   su padding, así que sin esta línea esas tarjetas se rompen: el recuadro sale
+   cortado y el texto se desborda encima de la de al lado. Las que son <div> no
+   lo notan, y por eso el defecto sólo se ve en algunas. */
+.kpi-card {
+    display: block;
+    color: inherit;                 /* que el <a> no herede el azul de enlace */
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-md);
+    height: 100%;
+    transition: var(--transition);
+}
+
+/* El hover sólo se enciende en las tarjetas que llevan a algún lado. */
+a.kpi-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    color: inherit;
+}
+
+.kpi-card .kpi-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--color-text-light);
+    margin-bottom: var(--space-xs);
+}
+
+.kpi-card .kpi-valor {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--color-text);
+}
+
+/* La unidad va junto al número pero más chica, para que "1,240 pzas" se lea
+   como un dato y no como dos. */
+.kpi-card .kpi-unidad {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-light);
+    margin-left: var(--space-xs);
+}
+
+.kpi-card .kpi-pie {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+    margin-top: var(--space-xs);
+}
+
+/* Franja lateral por significado. Son los mismos colores que Bootstrap usa
+   para success/warning/danger/info, tomados de las variables. */
+.kpi-card.kpi-ok      { border-left-color: var(--color-success); }
+.kpi-card.kpi-alerta  { border-left-color: var(--color-warning); }
+.kpi-card.kpi-mal     { border-left-color: var(--color-danger);  }
+.kpi-card.kpi-info    { border-left-color: var(--color-info);    }
+.kpi-card.kpi-neutro  { border-left-color: var(--color-primary); }
+
+.kpi-card.kpi-ok     .kpi-label i { color: var(--color-success); }
+.kpi-card.kpi-alerta .kpi-label i { color: var(--color-warning); }
+.kpi-card.kpi-mal    .kpi-label i { color: var(--color-danger);  }
+.kpi-card.kpi-info   .kpi-label i { color: var(--color-info);    }
+.kpi-card.kpi-neutro .kpi-label i { color: var(--color-primary); }
+
+
+/* ==========================================
+   G R Á F I C A   D E   B A R R A S   ( V E R T I C A L )
+   ========================================== */
+
+/* Una barra por día. El alto de cada una llega en --valor desde la plantilla. */
+.dash-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 160px;
+    padding-top: var(--space-sm);
+}
+
+.dash-chart .dash-col {
+    flex: 1 1 0;
+    min-width: 0;              /* deja que las columnas se encojan de verdad */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.dash-chart .dash-bar {
+    height: var(--valor, 0%);
+    min-height: 2px;           /* un día en cero sigue siendo un día: se ve la línea */
+    background-color: var(--color-accent);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: var(--transition);
+}
+
+/* Un día sin movimiento se pinta gris, para que no parezca producción mínima. */
+.dash-chart .dash-col.vacio .dash-bar {
+    background-color: var(--color-border);
+}
+
+.dash-chart .dash-col:hover .dash-bar {
+    background-color: var(--color-primary);
+}
+
+/* Globo con el dato exacto. Se arma con CSS puro porque un tooltip de Bootstrap
+   aquí serían 30 instancias de JavaScript para enseñar dos números. */
+.dash-chart .dash-col::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 6px;
+    padding: 4px 8px;
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+    z-index: 2;
+}
+
+.dash-chart .dash-col:hover::after {
+    opacity: 1;
+}
+
+/* Etiquetas del eje. Sólo se enseñan algunas: con 30 días, escribir las 30
+   fechas es ilegible, así que la plantilla marca las que tocan. */
+.dash-eje {
+    display: flex;
+    gap: 3px;
+    margin-top: var(--space-xs);
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-xs);
+}
+
+.dash-eje span {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+    font-size: 10px;
+    color: var(--color-text-light);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+
+/* ==========================================
+   B A R R A S   H O R I Z O N T A L E S
+   ========================================== */
+
+/* Para los rankings (rechazos por línea, paros por línea). El ancho llega en
+   --valor. */
+.dash-rank {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.dash-rank .rank-fila {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px var(--space-sm);
+    align-items: center;
+}
+
+.dash-rank .rank-nombre {
+    font-size: var(--text-xs);
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dash-rank .rank-valor {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.dash-rank .rank-riel {
+    grid-column: 1 / -1;
+    height: 8px;
+    background-color: var(--bs-light);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.dash-rank .rank-barra {
+    display: block;
+    height: 100%;
+    width: var(--valor, 0%);
+    border-radius: var(--radius-full);
+    background-color: var(--color-accent);
+}
+
+.dash-rank .rank-barra.mal    { background-color: var(--color-danger);  }
+.dash-rank .rank-barra.alerta { background-color: var(--color-warning); }
+
+
+/* ==========================================
+   L Í N E A   D E   T I E M P O
+   ========================================== */
+
+/* Los últimos movimientos del sistema. El hilo vertical es un borde en el
+   contenedor, y cada evento pone su punto encima. */
+.dash-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 var(--space-lg);
+    border-left: 2px solid var(--color-border);
+}
+
+.dash-timeline li {
+    position: relative;
+    padding-bottom: var(--space-md);
+}
+
+.dash-timeline li:last-child {
+    padding-bottom: 0;
+}
+
+.dash-timeline li::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--space-lg) * -1 - 5px);   /* centrado sobre el borde */
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-border);
+    border: 2px solid var(--color-white);
+    box-sizing: content-box;
+}
+
+/* El punto se pinta según el tipo de evento, que es lo que deja escanear la
+   lista sin leerla. */
+.dash-timeline li.ev-EMBALAJE::before   { background-color: var(--color-success); }
+.dash-timeline li.ev-CALIDAD::before    { background-color: var(--color-info);    }
+.dash-timeline li.ev-ENSAMBLAJE::before { background-color: var(--color-accent);  }
+.dash-timeline li.ev-PARO::before       { background-color: var(--color-danger);  }
+.dash-timeline li.ev-ORDEN::before      { background-color: var(--color-primary); }
+
+.dash-timeline .ev-titulo {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.dash-timeline .ev-detalle,
+.dash-timeline .ev-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+}
+
+
+/* ==========================================
+   T R A Z A B I L I D A D
+   ========================================== */
+
+/* Barra de avance apilada de la orden: cada tramo es un estado de sus laptops.
+   El ancho de cada tramo llega en --valor. */
+.traza-avance {
+    display: flex;
+    height: 14px;
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    background-color: var(--bs-light);
+    border: 1px solid var(--color-border);
+}
+
+.traza-avance .tramo {
+    width: var(--valor, 0%);
+    transition: var(--transition);
+}
+
+.traza-avance .tramo.embaladas  { background-color: var(--color-success); }
+.traza-avance .tramo.aprobadas  { background-color: #34a853; }
+.traza-avance .tramo.proceso    { background-color: var(--color-warning); }
+.traza-avance .tramo.rechazadas { background-color: var(--color-danger);  }
+
+/* Leyenda de la barra. El cuadrito reusa los mismos colores. */
+.traza-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-top: var(--space-sm);
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+}
+
+.traza-leyenda .marca {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: -1px;
+}
+
+.traza-leyenda .marca.embaladas  { background-color: var(--color-success); }
+.traza-leyenda .marca.aprobadas  { background-color: #34a853; }
+.traza-leyenda .marca.proceso    { background-color: var(--color-warning); }
+.traza-leyenda .marca.rechazadas { background-color: var(--color-danger);  }
+
+/* Barrita de piezas en la tabla de material consumido. */
+.traza-piezas {
+    height: 6px;
+    background-color: var(--bs-light);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    min-width: 60px;
+}
+
+.traza-piezas span {
+    display: block;
+    height: 100%;
+    width: var(--valor, 0%);
+    background-color: var(--color-accent);
+    border-radius: var(--radius-full);
+}
+
+
+/* ==========================================
+   R E S P O N S I V O
+   ========================================== */
+
+@media (max-width: 575.98px) {
+
+    /* En un teléfono, 30 barras de 3px no dicen nada. Se achica el alto y se
+       aprieta el espacio para que al menos se lea la forma de la tendencia. */
+    .dash-chart {
+        height: 120px;
+        gap: 2px;
+    }
+
+    .kpi-card .kpi-valor {
+        font-size: var(--text-xl);
+    }
+}

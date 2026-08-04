@@ -71,11 +71,24 @@
             </a>
         </li>
  
-        <!-- Trazabilidad -->
+        <!-- Trazabilidad
+             Son dos consultas distintas y por eso son dos pantallas: una sigue
+             el ensamblaje (por laptop) y la otra la orden de producción
+             completa. La de orden es del panel admin; la de ensamblaje ya
+             existía y la comparten otras pantallas. -->
         <li class="nav-item mb-2">
-            <a href="{% url 'ensamblaje-seguimiento' %}" class="nav-link">
-                <i class="bi bi-search me-2"></i><span class="nav-label">Trazabilidad</span>
+            <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
+               href="#trazabilidad" role="button" aria-expanded="false">
+                <span>
+                    <i class="bi bi-search me-2"></i><span class="nav-label">Trazabilidad</span>
+                </span>
+                <i class="bi bi-chevron-down chevron"></i>
             </a>
+
+            <div class="collapse submenu" id="trazabilidad">
+                <a href="{% url 'panel_admin:trazabilidad' %}" class="nav-link"><span class="nav-label">Por orden de producción</span></a>
+                <a href="{% url 'ensamblaje-seguimiento' %}" class="nav-link"><span class="nav-label">Seguimiento de ensamblaje</span></a>
+            </div>
         </li>
  
         <!-- Planta -->

@@ -140,3 +140,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+// ---------------------------------------------------------------------------
+// ATAJO "/" PARA ENFOCAR EL BUSCADOR (RNF03 Atajos de teclado)
+// ---------------------------------------------------------------------------
+document.addEventListener('keydown', function (event) {
+    if (event.key !== '/') return;
+
+    var activo = document.activeElement;
+    var yaEscribiendo = activo && (activo.tagName === 'INPUT' || activo.tagName === 'TEXTAREA' || activo.tagName === 'SELECT' || activo.isContentEditable);
+    if (yaEscribiendo) return;
+
+    // La plantilla de ensamblaje usa name="q"; el resto usa name="buscar".
+    var buscador = document.querySelector('input[name="buscar"], input[name="q"]');
+    if (!buscador) return;
+
+    event.preventDefault();
+    buscador.focus();
+});

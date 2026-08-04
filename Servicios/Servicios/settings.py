@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'api',
     'calidad',
     'componentes',
+    'dashboard',
     'embalaje',
     'lineas',
     'produccion',
