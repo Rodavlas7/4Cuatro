@@ -158,3 +158,37 @@ document.addEventListener('keydown', function (event) {
     event.preventDefault();
     buscador.focus();
 });
+
+// ---------------------------------------------------------------------------
+// ENTER APLICA EL FILTRO DESDE CUALQUIER CAMPO DEL FORMULARIO, NO SOLO EL
+// BUSCADOR (RNF03 Atajos de teclado)
+// ---------------------------------------------------------------------------
+document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter') return;
+
+    var activo = document.activeElement;
+
+    // Un textarea, botón o enlace ya sabe qué hacer con su propio Enter.
+    if (activo && (activo.tagName === 'TEXTAREA' || activo.tagName === 'BUTTON' || activo.tagName === 'A')) return;
+
+    // Si hay un modal abierto, el Enter es para el formulario del modal
+    // (guardar, registrar), no para el filtro de la lista de atrás.
+    if (document.querySelector('.modal.show')) return;
+
+    var buscador = document.querySelector('input[name="buscar"], input[name="q"]');
+    if (!buscador) return;
+
+    var formFiltro = buscador.closest('form');
+    if (!formFiltro) return;
+
+    // Si ya se está escribiendo en el buscador, el navegador envía el
+    // formulario por su cuenta; no hay que duplicar el submit.
+    if (activo === buscador) return;
+
+    event.preventDefault();
+    if (formFiltro.requestSubmit) {
+        formFiltro.requestSubmit();
+    } else {
+        formFiltro.submit();
+    }
+});
