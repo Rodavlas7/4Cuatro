@@ -51,7 +51,7 @@
                     <tr>
                         <td class="ps-4">
                             <a href="{% url 'orden-produccion-detalle' o.folio %}" class="text-decoration-none">
-                                <span class="badge-id text-primary">#{{ o.folio }}</span>
+                                <span class="badge-id text-primary">{{ o.folio }}</span>
                             </a>
                         </td>
                         <td>
@@ -65,7 +65,7 @@
                             <div class="text-secondary small" style="font-size: 11px;">{{ o.modelo_codigo|default:"" }}</div>
                         </td>
                         <td>
-                            <div class="text-dark small fw-medium"><i class="bi bi-box-seam me-1 text-muted"></i>{{ o.lote_codigo|default:"—" }}</div>
+                            <div class="text-dark small fw-medium">{{ o.lote_codigo|default:"—" }}</div>
                         </td>
                         <td class="text-center">
                             <div class="d-inline-flex align-items-center gap-2">
@@ -321,7 +321,7 @@
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
     document.getElementById('formEditar').action = "/produccion/ordenes/editar/" + btn.dataset.folio + "/";
-    document.getElementById('edit_titulo_folio').textContent = "#" + btn.dataset.folio;
+    document.getElementById('edit_titulo_folio').textContent = btn.dataset.folio;
     document.getElementById('edit_fecha').value = btn.dataset.fecha;
     // La API manda la hora como HH:MM:SS y el input type="time" espera HH:MM.
     document.getElementById('edit_hora').value = btn.dataset.hora.slice(0, 5);

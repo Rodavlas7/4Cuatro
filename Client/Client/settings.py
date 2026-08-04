@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ob*!ktbw$zun7-xvi6h8hbr+b-)!0z_($6x674jl&)gb_=7gg&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
 
@@ -164,5 +164,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Añádelo al final de settings.py
 MAINTENANCE_PATHS = [
     '/perfil/',
+    '/reportes/'
+    
+    
 
 ]
