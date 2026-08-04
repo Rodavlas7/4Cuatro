@@ -1,78 +1,84 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mantenimiento - TraceX</title>
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Archivo CSS Global de TraceX -->
-    <link rel="stylesheet" href="{% static 'css/global.css' %}">
-    
-    <style>
-        body {
-            /* Forzamos el color de fondo definido en tus variables */
-            background-color: var(--color-bg) !important;
-        }
-        .maintenance-wrapper {
-            max-width: 500px;
-            width: 100%;
-        }
-        .spin-slow {
-            font-size: 5rem;
-            color: var(--color-warning);
-            animation: spin 4s linear infinite;
-            display: inline-block;
-        }
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
-        .logo-tracex {
-            height: 65px;
-            object-fit: contain;
-        }
-        
-        /* Botón estilo outline usando tus variables */
-        .btn-white {
-            background-color: var(--color-white);
-            color: var(--color-text);
-            border: 1px solid var(--color-border);
-            font-weight: 500;
-            transition: var(--transition);
-        }
-        .btn-white:hover {
-            background-color: var(--color-bg);
-            color: var(--color-text);
-        }
-    </style>
-</head>
-<body class="min-vh-100 d-flex align-items-center justify-content-center p-3">
+{% extends 'base/base_layout.html' %}
 
-    <div class="maintenance-wrapper text-center">
-        <!-- Contenedor usando tu clase personalizada -->
-        <div class="emp-card p-5 mb-4">
+{% block content %}
+<style>
+    /* 1. EL TRUCO: Ocultamos el Topbar, Navbar y cualquier Header heredado */
+    header, nav, .navbar, .topbar, .sidebar { 
+        display: none !important; 
+    }
+
+    /* 2. ELIMINAR SCROLL: Reseteamos márgenes y forzamos ocultar cualquier desbordamiento */
+    body, html {
+        background-color: #f4f7f9 !important; 
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 100vh !important;
+        overflow: hidden !important; /* <-- Esto elimina la barra vertical y horizontal */
+    }
+    
+    /* 3. Estilos de tu tarjeta (Tamaño intermedio perfecto) */
+    .mantenimiento-card {
+        max-width: 750px; 
+        border-radius: 20px;
+    }
+    .linea-decorativa {
+        height: 5px; 
+        width: 80px; 
+        border-radius: 3px;
+    }
+
+    /* 4. Animación del engrane */
+    @keyframes girarLento {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .engrane-animado {
+        animation: girarLento 12s linear infinite;
+    }
+</style>
+
+<!-- Le agregamos p-0 y m-0 para matar el padding/margen de Bootstrap -->
+<div class="container-fluid d-flex justify-content-center align-items-center p-0 m-0" style="height: 100vh;">
+    
+    <!-- (El resto de tu tarjeta sigue exactamente igual aquí adentro...) -->    
+    <!-- Tarjeta principal -->
+    <div class="card shadow-lg border-0 bg-white p-4 p-md-5 text-center mantenimiento-card w-100 mx-3">
+        
+        <!-- ILUSTRACIÓN VIRTUAL -->
+        <div class="mb-4 position-relative d-inline-block mx-auto mt-2">
+            <!-- Laptop central -->
+            <i class="bi bi-laptop" style="font-size: 11rem; color: #1a2b4c; line-height: 1;"></i>
             
-            <!-- Logo TraceX adjunto -->
-            <img src="{% static 'img/logo.svg' %}" alt="TraceX Logo" class="logo-tracex mb-4">
-            
-            <div class="mb-3">
-                <i class="bi bi-gear-wide-connected spin-slow"></i>
+            <!-- Engrane animado -->
+            <div class="position-absolute" style="bottom: 15px; right: -25px;">
+                <i class="bi bi-gear-fill text-primary engrane-animado d-inline-block" style="font-size: 5.5rem;"></i>
             </div>
             
-            <h1 class="fw-bold mb-3 h4" style="color: var(--color-text);">Mantenimiento Pogramado.</h1>
-            <p class="mb-4" style="color: var(--color-text-light);">
-                Esta opción se encuentra temporalmente fuera de servicio debido a un manterimiento programado. El servicio estará operativo nuevamente en breve. Intente más tarde.
-            </p>
-            
-            <!-- Botón secundario con historia del navegador -->
-            <button onclick="history.back()" class="btn btn-white d-inline-flex align-items-center gap-2 px-4 py-2">
-                <i class="bi bi-arrow-left"></i> Regresar a la página anterior
-            </button>
+            <!-- Cono -->
+            <div class="position-absolute" style="top: 25px; left: -35px;">
+                <i class="bi bi-cone-striped text-warning" style="font-size: 4rem;"></i>
+            </div>
         </div>
-    </div>
 
-</body>
-</html>
+        <!-- Título - Tamaño grande pero sin romper líneas -->
+        <h2 class="fw-bold mb-3 fs-1" style="color: #1a2b4c;">Pausa por mantenimiento</h2>
+        
+        <!-- Línea azul -->
+        <div class="bg-primary mx-auto mb-4 linea-decorativa"></div>
+
+        <!-- Texto descriptivo - Tamaño legible y amigable -->
+        <p class="text-muted mb-4 fs-5 lh-base px-md-4">
+            Esta opción se encuentra temporalmente fuera de servicio debido a un mantenimiento programado.<br> 
+            <strong class="text-primary">Intente más tarde.</strong>
+        </p>
+
+        <!-- Botón de regreso - Proporcional a la tarjeta -->
+        <div class="mt-2 mb-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary px-4 py-2 rounded-3 fw-bold text-dark shadow-sm" style="border-color: #dce1e6; font-size: 1.1rem;">
+                <i class="bi bi-arrow-left me-2"></i> Regresar
+            </a>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

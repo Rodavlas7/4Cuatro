@@ -107,7 +107,7 @@
                         </a>
                         {% endif %}
                         <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
-                            <i class="bi bi-filter"></i> Filtrar resultados
+                             <i class="bi bi-funnel"></i> Filtrar
                         </button>
                     </div>
                 </div>
@@ -123,7 +123,7 @@
             <table class="table table-hover align-middle mb-0 w-100">
                 <thead class="table-light">
                     <tr>
-                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">#</th>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Num.</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Identificación</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo y Orden</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Ubicación (Línea/Lote)</th>
@@ -141,12 +141,12 @@
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-upc-scan text-secondary fs-5"></i>
+                                
                                 <div>
-                                    <div class="font-monospace fw-bold text-dark">{{ l.num_serie|default:"—" }}</div>
-                                    <div class="text-muted small text-truncate" style="max-width: 200px; font-size: 11px;" title="{{ l.descripcion|default:'' }}">
+                                    <div class="text-dark small fw-medium">{{ l.num_serie|default:"—" }}</div>
+                                    <!--<div class="text-muted small text-truncate" style="max-width: 200px; font-size: 11px;" title="{{ l.descripcion|default:'' }}">
                                         {{ l.descripcion|default:"Sin descripción" }}
-                                    </div>
+                                    </div> -->
                                 </div>
                             </div>
                         </td>
@@ -164,7 +164,7 @@
                         </td>
                         <td>
                             <div class="text-dark small fw-medium">{{ l.linea_nombre|default:"—" }}</div>
-                            <div class="text-secondary small" style="font-size: 11px;"><i class="bi bi-box me-1"></i>Lote: {{ l.lote_codigo|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">LOTE:  {{ l.lote_codigo|default:"—" }}</div>
                         </td>
                         <td class="text-center">
                             <span class="badge rounded-pill px-2 py-1 fw-semibold
@@ -183,7 +183,7 @@
                                     <i class="bi bi-list-ul"></i>
                                 </a>
 
-                                <!-- RECHAZAR LAPTOP -->
+                                <!-- RECHAZAR LAPTOP 
                                 {% if l.estado_codigo == 'RECHA' %}
                                     <button type="button" class="btn text-muted" disabled title="Ya está rechazada">
                                         <i class="bi bi-x-lg"></i>
@@ -198,6 +198,7 @@
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 {% endif %}
+                                -->
                             </div>
                         </td>
                     </tr>
