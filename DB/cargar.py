@@ -72,6 +72,7 @@ ARCHIVOS = [
     ('estructura.sql', 'Tablas'),
     ('datos.sql', 'Catálogos y usuarios'),
     ('triggers.sql', 'Triggers'),
+    ('datos_pruebas.sql', 'Datos de prueba'),
     ('datos_pruebas2.sql', 'Datos de prueba'),
     ('vistas.sql', 'Vistas'),
     ('procedimientos.sql', 'Procedimientos'),
