@@ -1,0 +1,250 @@
+{% extends 'panel_admin/base.html' %}
+{% load formato %}
+
+{% block topbar_titulo %}Auditoría de Trazabilidad{% endblock %}
+{% block breadcrumbs %}
+    <!--<li class="breadcrumb-item"><a href="{% url 'trazabilidad:trazabilidad' %}">Trazabilidad</a></li>-->
+    <li class="breadcrumb-item active" aria-current="page">Trazabilidad</li>
+{% endblock %}
+
+{% block content %}
+<div class="wrap pb-5">
+
+    <!-- ==========================================
+         RF43: BUSCADOR UNIFICADO POR NÚMERO DE SERIE
+         ========================================== -->
+    <div class="emp-card mb-4">
+        <div class="emp-header px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold text-dark mb-1">Módulo de Trazabilidad</h5>
+                <p class="text-muted small mb-0">Ingresa el Número de Serie de la laptop para extraer su historial operativo completo.</p>
+            </div>
+            <div>
+                <!-- Asegúrate de cambiar el href por la ruta o etiqueta de Django correcta -->
+                <a href="/reportes/" class="btn btn-primary px-4 py-2 d-inline-flex align-items-center gap-2 rounded-3 shadow-sm fw-medium">
+                    <i class="bi bi-file-earmark-arrow-down"></i> Descargar reportes
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-4 bg-light bg-opacity-50 border-top">
+            <form method="GET" action="{% url 'trazabilidad:trazabilidad' %}">
+                <div class="input-group input-group-lg shadow-sm">
+                    <span class="input-group-text bg-white border-end-0 text-primary"><i class="bi bi-upc-scan fs-4"></i></span>
+                    <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control border-start-0 py-3" placeholder="Ej. TP-202610-0012 o Folio de Orden..." required autocomplete="off">
+                    <button class="btn btn-dark px-5 fw-bold" type="submit">Consultar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if error %}
+        <div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center gap-3 p-4">
+            <i class="bi bi-exclamation-triangle-fill fs-2 text-warning"></i>
+            <div>
+                <h5 class="fw-bold mb-1 text-dark">Unidad no encontrada</h5>
+                <p class="mb-0 text-muted">El sistema no registra ninguna unidad asociada al identificador <strong>{{ query }}</strong>. Verifica el código e inténtalo de nuevo.</p>
+            </div>
+        </div>
+    {% elif laptop %}
+
+    <!-- ENCABEZADO DE RESULTADO -->
+    <div class="emp-card mb-4 shadow-sm">
+        <div class="emp-header p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 text-primary rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="bi bi-laptop fs-1"></i>
+                </div>
+                <div>
+                    <span class="badge bg-dark mb-1">Serie Validada</span>
+                    <h2 class="fw-bold text-dark mb-0 font-monospace" style="letter-spacing: -1px;">{{ laptop.num_serie|default:"TMP-PENDIENTE" }}</h2>
+                    <p class="text-muted small mb-0 mt-1">Num. Laptop: {{ laptop.numero }} <span class="mx-2">•</span> Modelo: <strong class="text-dark">{{ laptop.modelo_nombre|default:laptop.modelo_codigo }}</strong></p>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="text-uppercase text-muted small fw-bold mb-1">Estado Operativo</div>
+                <span class="badge fs-5 rounded-pill px-4 py-2 fw-medium shadow-sm
+                    {% if laptop.estado_codigo == 'EMBALA' %}bg-success-subtle text-success border border-success-subtle
+                    {% elif laptop.estado_codigo == 'RECHA' %}bg-danger-subtle text-danger border border-danger-subtle
+                    {% elif laptop.estado_codigo == 'APROV' %}bg-primary-subtle text-primary border border-primary-subtle
+                    {% else %}bg-light text-secondary border{% endif %}">
+                    {{ laptop.estado_nombre|default:"En Tránsito" }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESPONSABLES OPERATIVOS (RF48 Y RF49) -->
+    <div class="row g-4 mb-4">
+        <!-- RF48: Consultar supervisor responsable -->
+        <div class="col-md-6">
+            <div class="emp-card h-100 p-4 border-start border-4 border-info shadow-sm d-flex align-items-start gap-3">
+                <i class="bi bi-person-badge fs-2 text-info opacity-75"></i>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Supervisor de Línea</span>
+                    <h5 class="fw-bold text-dark mb-1">{{ supervisor }}</h5>
+                    <span class="badge bg-light border text-dark"><i class="bi bi-geo-alt me-1"></i>{{ linea.nombre|default:laptop.linea_nombre|default:"Sin línea asociada" }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RF49: Consultar inspector responsable -->
+        <div class="col-md-6">
+            <div class="emp-card h-100 p-4 border-start border-4 {% if ultima_inspeccion.resultado == 1 %}border-success{% elif ultima_inspeccion.resultado == 0 %}border-danger{% else %}border-warning{% endif %} shadow-sm d-flex align-items-start gap-3">
+                <i class="bi bi-shield-check fs-2 {% if ultima_inspeccion.resultado == 1 %}text-success{% elif ultima_inspeccion.resultado == 0 %}text-danger{% else %}text-warning{% endif %} opacity-75"></i>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Inspector de Calidad </span>
+                    <h5 class="fw-bold text-dark mb-1">{{ inspector }}</h5>
+                    {% if ultima_inspeccion %}
+                        <div class="text-secondary small mt-1">Dictamen: <strong class="{% if ultima_inspeccion.resultado == 1 %}text-success{% elif ultima_inspeccion.resultado == 0 %}text-danger{% else %}text-warning{% endif %}">{{ ultima_inspeccion.resultado_nombre }}</strong></div>
+                    {% else %}
+                        <span class="badge bg-light text-muted border">Evaluación Pendiente</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- RF44: Consultar orden de producción asociada -->
+        <div class="col-xl-5">
+            <div class="emp-card h-100 shadow-sm">
+                <div class="emp-header px-4 py-3 bg-light bg-opacity-50 border-bottom">
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-card-checklist text-primary me-2"></i>Orden de Producción </h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-4">
+                            <span class="text-muted small fw-medium">Folio de Orden</span>
+                            <span class="badge-id fs-6">#{{ orden.folio|default:"N/A" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-4">
+                            <span class="text-muted small fw-medium">Lote de Fabricación</span>
+                            <strong class="text-dark">{{ orden.lote_codigo|default:"Sin Lote" }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-4">
+                            <span class="text-muted small fw-medium">Fecha de Apertura</span>
+                            <span class="text-dark">{{ orden.fecha|fecha|default:"—" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-4">
+                            <span class="text-muted small fw-medium">Cantidad Solicitada</span>
+                            <span class="text-dark fw-bold">{{ orden.cant_planificada|default:"0" }} unidades</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RF45 Y RF46: Consultar línea y estaciones participantes -->
+        <div class="col-xl-7">
+            <div class="emp-card h-100 shadow-sm">
+                <div class="emp-header px-4 py-3 bg-light bg-opacity-50 border-bottom">
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-diagram-3 text-primary me-2"></i>Ultima Línea de Ensamblaje</h6>
+                </div>
+                <div class="card-body p-4">
+                    <!-- RF45 -->
+                    <p class="small text-muted mb-4">Línea de producción asignada: <strong class="text-dark">{{ linea.nombre|default:laptop.linea_nombre|default:"Desconocida" }}</strong> <span class="badge bg-light text-secondary border ms-1">{{ linea.codigo|default:"N/A" }}</span></p>
+                    
+                    <!-- RF46 -->
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for est in estaciones %}
+                            <div class="border rounded-pill px-3 py-2 bg-white shadow-sm d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary rounded-circle" style="width: 24px; height: 24px; line-height: 18px;">{{ forloop.counter }}</span>
+                                <span class="small fw-medium text-dark">{{ est.nombre }}</span>
+                            </div>
+                            {% if not forloop.last %}
+                                <div class="d-flex align-items-center text-muted opacity-50"><i class="bi bi-arrow-right"></i></div>
+                            {% endif %}
+                        {% empty %}
+                            <div class="alert bg-light text-muted small w-100 border-0 mb-0"><i class="bi bi-info-circle me-1"></i> No hay secuencia de estaciones físicas registradas para esta línea.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RF47: Consultar componentes utilizados -->
+    <div class="emp-card mb-4 shadow-sm overflow-hidden">
+        <div class="emp-header px-4 py-3 bg-light bg-opacity-50 border-bottom d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-cpu text-primary me-2"></i>Componentes Utilizados</h5>
+            <span class="badge bg-secondary rounded-pill">{{ componentes|length }} piezas instaladas</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Tipo de Componente</th>
+                        <th class="py-3 text-uppercase text-muted small fw-bold">Modelo y Código</th>
+                        <!--<th class="py-3 text-uppercase text-muted small fw-bold">Fabricante</th>-->
+                        <th class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Número de Serie (Auditoría)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in componentes %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-dark small">{{ c.tipo_nombre|default:"Genérico" }}</td>
+                        <td>
+                            <div class="fw-medium text-dark">{{ c.modelo_nombre|default:c.modelo_codigo }}</div>
+                            <div class="text-secondary" style="font-size: 11px;">{{ c.modelo_codigo }}</div>
+                        </td>
+                        <!--<td class="text-muted small">{{ c.modelo_fabricante|default:"No especificado" }}</td>-->    
+                        <td class="pe-4 text-end">
+                            <span class="badge bg-light text-dark border font-monospace shadow-sm fs-6 px-3 py-2">{{ c.num_serie|default:"SIN SERIE" }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-5 text-muted"><i class="bi bi-motherboard text-light d-block fs-1 mb-2"></i>No hay registro de componentes físicos instalados para este equipo.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RF50: Consultar historial completo de fabricación -->
+    <div class="emp-card shadow-sm p-4">
+        <h5 class="fw-bold text-dark mb-4 pb-2 border-bottom"><i class="bi bi-clock-history text-primary me-2"></i>Historial Completo de Fabricación </h5>
+        
+        {% if bitacora %}
+        <div class="position-relative ms-2 mt-3">
+            <!-- Riel vertical -->
+            <div class="position-absolute top-0 bottom-0 border-start border-2 border-light" style="left: 0.65rem; z-index: 1;"></div>
+
+            {% for ev in bitacora %}
+            <div class="position-relative mb-4 pb-1">
+                <!-- Ícono -->
+                <span class="position-absolute translate-middle-x bg-white d-flex align-items-center justify-content-center text-{{ ev.clase }}" 
+                      style="left: 0.75rem; top: 0; width: 36px; height: 36px; z-index: 2; border-radius: 50%; box-shadow: 0 0 0 4px #fff;">
+                    <i class="bi {{ ev.icono }} fs-5 bg-{{ ev.clase }}-subtle rounded-circle p-2 border border-{{ ev.clase }}-subtle"></i>
+                </span>
+                
+                <!-- Contenido -->
+                <div class="ms-5 ps-2">
+                    <div class="d-flex flex-column flex-sm-row justify-content-sm-between align-items-sm-center mb-1">
+                        <strong class="text-dark fs-6">{{ ev.titulo }}</strong>
+                        <span class="badge bg-light text-secondary border mt-1 mt-sm-0">
+                            <i class="bi bi-calendar3 me-1"></i> {% if ev.fecha %}{{ ev.fecha|fecha_hora:ev.hora }}{% else %}Sin estampa de tiempo{% endif %}
+                        </span>
+                    </div>
+                    {% if ev.detalle %}
+                        <p class="text-secondary small mb-1">{{ ev.detalle }}</p>
+                    {% endif %}
+                    {% if ev.observaciones %}
+                        <div class="bg-light border-start border-3 border-secondary p-3 mt-2 rounded-end">
+                            <span class="small fst-italic text-muted">«{{ ev.observaciones }}»</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-journal-x text-light d-block mb-3" style="font-size: 3rem;"></i>
+            <span class="text-muted fw-medium">Todavía no hay eventos consolidados en la historia de esta unidad.</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
