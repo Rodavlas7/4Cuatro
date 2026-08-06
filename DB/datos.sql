@@ -43,7 +43,6 @@ TRUNCATE TABLE rol;
 TRUNCATE TABLE turno;
  
 -- Reactivar validación de FKs
-SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. ROLES
 
@@ -111,22 +110,22 @@ INSERT INTO edo_produccion (codigo, nombre) VALUES
 
 -- 7. TIPOS DE COMPONENTE
 
-INSERT INTO tipo_comp (codigo, nombre) VALUES
-('TC001', 'Procesador'),
-('TC002', 'Memoria RAM'),
-('TC003', 'Almacenamiento SSD'),
-('TC004', 'Tarjeta Madre'),
-('TC005', 'Pantalla'),
-('TC006', 'Batería'),
-('TC007', 'Teclado'),
-('TC008', 'Touchpad'),
-('TC009', 'Cámara Web'),
-('TC010', 'Tarjeta de Red'),
-('TC011', 'Disipador / Ventilador'),
-('TC012', 'Chasis Superior'),
-('TC013', 'Chasis Inferior'),
-('TC014', 'Conector de Carga'),
-('TC015', 'Altavoces');
+INSERT INTO tipo_comp (codigo, nombre, necesario) VALUES
+('TC001', 'Procesador', 'TC004'),
+('TC002', 'Memoria RAM', 'TC004'),
+('TC003', 'Almacenamiento SSD', 'TC004'),
+('TC004', 'Tarjeta Madre', 'TC012'),
+('TC005', 'Pantalla', 'TC012'),
+('TC006', 'Batería', 'TC004'),
+('TC007', 'Teclado', 'TC012'),
+('TC008', 'Touchpad', 'TC012'),
+('TC009', 'Cámara Web', 'TC005'),
+('TC010', 'Tarjeta de Red', 'TC004'),
+('TC011', 'Disipador / Ventilador', 'TC001'),
+('TC012', 'Chasis Superior', 'TC011'),
+('TC013', 'Chasis Inferior', NULL),
+('TC014', 'Conector de Carga', 'TC012'),
+('TC015', 'Altavoces', 'TC012');
 
 
 -- 8. TIPOS DE EMBALAJE
@@ -213,13 +212,13 @@ FROM modelo_componente mc;
 -- adivina del nombre: es la columna `tipo`, y es la que decide dónde se puede
 -- registrar ensamblaje.
 
-INSERT INTO linea (codigo, nombre, descripcion, tipo, estado) VALUES
-('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
-('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
-('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
-('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
-('LIN005', 'Línea E — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI'),
-('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'EMBA', 'ACTI');
+INSERT INTO linea (codigo, nombre, descripcion, tipo, estado, siguiente) VALUES
+('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN002'),
+('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN003'),
+('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN004'),
+('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN005'),
+('LIN005', 'Línea E — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN006'),
+('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'EMBA', 'ACTI', NULL);
 
 
 -- 12. ESTACIONES — Líneas de ensamblaje
@@ -556,3 +555,7 @@ INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
 ('0009FZA', 'FZA2026', 1, 2607020),   -- Fernando Alonso Zuniga Arevalo   (LINEA D)
 ('0011MDM', 'MDM2026', 1, 2607025),   -- Maria Hilda De Leon Martinez     (LINEA E)
 ('0012LGR', 'LGR2026', 1, 2607028);   -- Luis David Gallardo Ramirez      (LINEA F, embalaje)
+
+
+
+SET FOREIGN_KEY_CHECKS = 1;

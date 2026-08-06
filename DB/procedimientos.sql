@@ -248,14 +248,16 @@ END$$
 --
 -- Parámetros:
 --   p_folio  Folio de la orden.
---   p_linea  Línea donde se van a ensamblar. Va como parámetro porque
---            orden_produccion NO tiene columna de línea: la línea es de la
---            laptop, no de la orden.
 --
 -- Qué hace:
 --   Crea (cant_planificada - las que ya existen) laptops en estado Registrada,
 --   heredando el modelo y el lote de la orden. NO abre el registro de
 --   ensamblaje: eso sigue siendo laptop por laptop, cuando de verdad arranca.
+--
+--   La línea ya NO se pide. La tabla laptop no tiene columna de línea: dónde
+--   se está armando una laptop lo dice su registro_ensamblaje, y ése se abre
+--   después, unidad por unidad. Estas laptops nacen sin línea, que es lo
+--   correcto: todavía no las está armando nadie.
 --
 -- Se puede correr dos veces sin duplicar: siempre mira cuántas faltan.
 --
@@ -278,8 +280,7 @@ END$$
 --                                            Embaladas, no la infla.
 
 CREATE PROCEDURE sp_Iniciar_Ensamblaje_Orden(
-    IN p_folio INT,
-    IN p_linea VARCHAR(8)
+    IN p_folio INT
 )
 BEGIN
     DECLARE estado_orden       VARCHAR(8);
@@ -290,8 +291,6 @@ BEGIN
     DECLARE total_faltantes    INT;
     DECLARE consecutivo_serie  INT;
     DECLARE total_creadas      INT DEFAULT 0;
-    DECLARE linea_existe       INT;
-    DECLARE tipo_de_linea      VARCHAR(8) DEFAULT NULL;
 
     -- Validaciones
 
@@ -315,23 +314,6 @@ BEGIN
             SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: la orden no tiene modelo de laptop, no se sabe qué fabricar';
     END IF;
 
-    SELECT COUNT(*), MAX(tipo)
-      INTO linea_existe, tipo_de_linea
-      FROM linea
-     WHERE codigo = p_linea;
-
-    IF linea_existe = 0 THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: esa línea no existe';
-    END IF;
-
-    -- Estas laptops nacen asignadas a la línea, y ahí es donde se van a armar.
-    -- Una línea de embalaje no arma nada, así que no se le pueden colgar.
-    IF tipo_de_linea IS NULL OR tipo_de_linea <> 'ENSA' THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error sp_Iniciar_Ensamblaje_Orden: la línea debe ser de tipo Ensamblaje';
-    END IF;
-
     -- Cuántas faltan
 
     SELECT COUNT(*) INTO total_existentes FROM laptop WHERE orden = p_folio;
@@ -353,13 +335,12 @@ BEGIN
 
         SET consecutivo_serie = consecutivo_serie + 1;
 
-        INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, linea, lote)
+        INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote)
         VALUES (CONCAT('TMP-', LPAD(consecutivo_serie, 4, '0')),
                 CONCAT('Alta en lote de la orden #', p_folio),
                 p_folio,
                 modelo_orden,
                 'REGIS',
-                p_linea,
                 lote_orden);
 
         SET total_creadas = total_creadas + 1;
@@ -369,8 +350,7 @@ BEGIN
     SELECT p_folio            AS folio,
            total_creadas      AS laptops_creadas,
            total_existentes   AS laptops_previas,
-           total_planificadas AS cant_planificada,
-           p_linea            AS linea;
+           total_planificadas AS cant_planificada;
 END$$
 
 

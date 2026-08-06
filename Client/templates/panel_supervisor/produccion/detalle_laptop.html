@@ -202,14 +202,10 @@
 
                 <div class="col-md-6">
                     <label class="form-label">Línea</label>
-                    <select name="linea" class="form-select">
-                        <option value="">— Sin línea —</option>
-                        {% for l in lineas %}
-                        <option value="{{ l.codigo }}" {% if laptop.linea_codigo == l.codigo %}selected{% endif %}>
-                            {{ l.codigo }} — {{ l.nombre }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <!-- Sin name y deshabilitado: la laptop no guarda línea. La que
+                         se ve es la de su último registro de ensamblaje. -->
+                    <input type="text" class="form-control"
+                           value="{{ laptop.linea_nombre|default:'— Sin línea —' }}" disabled>
                 </div>
 
                 <div class="col-md-6">

@@ -397,14 +397,17 @@ class CancelarOrdenProduccionAPIView(AccionDeProcedimientoAPIView):
 
 class IniciarEnsamblajeOrdenAPIView(AccionDeProcedimientoAPIView):
     """Da de alta las laptops que le faltan a la orden para llegar a su
-    cantidad planificada. La línea va en el cuerpo porque orden_produccion no
-    la tiene: la línea es de la laptop."""
+    cantidad planificada.
+
+    No recibe línea: las laptops nacen sin ella. En qué línea se arma cada una
+    lo dice su registro de ensamblaje, y ése se abre después, unidad por
+    unidad."""
 
     modulo = "orden_produccion"
     procedimiento = "sp_Iniciar_Ensamblaje_Orden"
 
     def argumentos(self, request, folio=None):
-        return (folio, request.data.get('linea'))
+        return (folio,)
 
 
 class LiberarComponentesLaptopAPIView(AccionDeProcedimientoAPIView):

@@ -280,15 +280,6 @@
                                 Calidad reemplazará esto por la definitiva (TP-AAAAMMDD-...) al aprobar.
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-medium">Línea de Ensamblaje</label>
-                            <select name="linea" class="form-select">
-                                <option value="">— Sin línea asignada —</option>
-                                {% for l in lineas %}
-                                <option value="{{ l.codigo }}">{{ l.codigo }} — {{ l.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -299,7 +290,7 @@
                     <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start mt-4">
                         <i class="bi bi-info-circle-fill text-primary mt-1"></i>
                         <div>
-                            La laptop se registrará en estado <strong>Registrada</strong>. Si es la primera de su orden, la orden pasará automáticamente a <strong>En Proceso</strong>.
+                            La laptop se registrará en estado <strong>Registrada</strong> y sin línea: la línea queda registrada al abrirle su ensamblaje. Si es la primera de su orden, la orden pasará automáticamente a <strong>En Proceso</strong>.
                         </div>
                     </div>
                 </div>

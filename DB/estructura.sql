@@ -1,4 +1,4 @@
--- Active: 1784571729921@@127.0.0.1@3306@cuatro
+-- Active: 1783038914702@@localhost@3306@cuatro
 
 -- TRACEX — Estructura de base de datos
 -- Version: 2026-07-15
@@ -127,7 +127,6 @@ CREATE TABLE laptop (
   orden int DEFAULT NULL,
   modelo varchar(8) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
-  linea varchar(8) DEFAULT NULL,
   lote varchar(8) DEFAULT NULL,
   PRIMARY KEY (numero)
 );
@@ -139,7 +138,8 @@ CREATE TABLE linea (
   descripcion varchar(128) DEFAULT NULL,
   tipo varchar(8) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
-  activo BOOLEAN DEFAULT FALSE,
+  activo BOOLEAN DEFAULT TRUE,
+  siguiente VARCHAR(8) DEFAULT NULL,
   PRIMARY KEY (codigo)
 );
 
@@ -251,6 +251,7 @@ DROP TABLE IF EXISTS tipo_comp;
 CREATE TABLE tipo_comp (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
+  necesario VARCHAR(8) DEFAULT NULL,
   PRIMARY KEY (codigo)
 );
 
@@ -352,15 +353,19 @@ ALTER TABLE inspeccion_calidad ADD CONSTRAINT FK_inspeccion_calidad_linea FOREIG
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_orden FOREIGN KEY (orden) REFERENCES orden_produccion(folio);
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_modelo FOREIGN KEY (modelo) REFERENCES modelo_laptop(codigo);
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_estado FOREIGN KEY (estado) REFERENCES edo_laptop(codigo);
-ALTER TABLE laptop ADD CONSTRAINT FK_laptop_linea FOREIGN KEY (linea) REFERENCES linea(codigo);
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_lote FOREIGN KEY (lote) REFERENCES lote_laptop(codigo);
 
 -- Llaves foráneas para la tabla linea
 ALTER TABLE linea ADD CONSTRAINT FK_linea_estado FOREIGN KEY (estado) REFERENCES edo_linea(codigo);
 ALTER TABLE linea ADD CONSTRAINT FK_linea_tipo FOREIGN KEY (tipo) REFERENCES tipo_linea(codigo);
+ALTER TABLE linea ADD CONSTRAINT FK_linea_siguiente FOREIGN KEY (siguiente) REFERENCES linea(codigo);
+
 
 -- Llaves foráneas para la tabla modelo_componente
 ALTER TABLE modelo_componente ADD CONSTRAINT FK_modelo_componente_tipo_componente FOREIGN KEY (tipo_componente) REFERENCES tipo_comp(codigo);
+
+-- Llves foraneas para la tabla tipo_comp
+ALTER TABLE tipo_comp ADD CONSTRAINT FK_tipo_comp_necesario_instalado FOREIGN KEY (necesario) REFERENCES tipo_comp(codigo);
 
 -- Llaves foráneas para la tabla puente modelo_laptop_componente
 ALTER TABLE modelo_laptop_componente ADD CONSTRAINT FK_mlc_modelo_laptop FOREIGN KEY (modelo_laptop) REFERENCES modelo_laptop(codigo);

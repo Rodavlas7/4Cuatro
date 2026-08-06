@@ -51,6 +51,10 @@ class Linea(models.Model):
     descripcion = models.CharField(max_length=128, blank=True, null=True)
     tipo = models.ForeignKey(TipoLinea, models.DO_NOTHING, db_column='tipo', blank=True, null=True)
     estado = models.ForeignKey(EdoLinea, models.DO_NOTHING, db_column='estado', blank=True, null=True)
+    # A qué línea pasa la unidad al salir de ésta. Encadena el recorrido de la
+    # planta (LIN001 → LIN002 → ... → embalaje). NULL = es la última.
+    siguiente = models.ForeignKey('self', models.DO_NOTHING, db_column='siguiente',
+                                  blank=True, null=True, related_name='anterior')
     activo = models.BooleanField(blank=True, null=True)
 
     class Meta:
@@ -80,6 +84,8 @@ class VistaLinea(models.Model):
     tipo_nombre = models.CharField(max_length=32, blank=True, null=True)
     estado_codigo = models.CharField(max_length=8, blank=True, null=True)
     estado_nombre = models.CharField(max_length=32, blank=True, null=True)
+    siguiente_codigo = models.CharField(max_length=8, blank=True, null=True)
+    siguiente_nombre = models.CharField(max_length=32, blank=True, null=True)
     activo = models.BooleanField(blank=True, null=True)
     total_estaciones = models.IntegerField(blank=True, null=True)
 
