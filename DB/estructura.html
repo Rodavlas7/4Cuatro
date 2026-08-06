@@ -154,7 +154,6 @@ erDiagram
     int orden FK
     varchar modelo FK
     varchar estado FK
-    varchar linea FK
   }
   registro_ensamblaje {
     int numero PK
@@ -202,7 +201,7 @@ erDiagram
   <section>
     <div class="head">
       <h2>Mapa completo</h2>
-      <p>Las 30 tablas y sus 39 llaves foráneas. <code>linea</code> es el eje de la planta: ocho tablas apuntan a ella. Los catálogos <code>edo_*</code> y <code>tipo_*</code> son hojas: nadie sale de ellos.</p>
+      <p>Las 30 tablas y sus 39 llaves foráneas. <code>linea</code> es el eje de la planta: ocho tablas apuntan a ella, y una es ella misma — <code>siguiente</code> encadena el recorrido de la unidad. <code>tipo_comp</code> hace lo mismo con <code>necesario</code>: qué pieza tiene que estar puesta antes.</p>
     </div>
     <div class="sheet">
       <div class="sheet-scroll">
@@ -213,10 +212,10 @@ erDiagram
   linea ||--o{ paro : ""
   linea ||--o{ orden_material : ""
   linea ||--o{ componente : ""
-  linea ||--o{ laptop : ""
   linea ||--o{ registro_ensamblaje : ""
   linea ||--o{ inspeccion_calidad : ""
   linea ||--o{ empleado_linea : ""
+  linea ||--o| linea : "siguiente"
   edo_linea ||--o{ linea : ""
   tipo_linea ||--o{ linea : ""
   rol ||--o{ empleado : ""
@@ -228,6 +227,7 @@ erDiagram
   usuario ||--o{ sesion : ""
   empleado ||--o{ inspeccion_calidad : ""
   tipo_comp ||--o{ modelo_componente : ""
+  tipo_comp ||--o| tipo_comp : "necesario"
   modelo_componente ||--o{ componente : ""
   modelo_componente ||--o{ detalle_material : ""
   modelo_componente ||--o{ modelo_laptop_componente : ""
@@ -279,7 +279,8 @@ erDiagram
             <div class="col"><span>descripcion</span><i>varchar(128)</i></div>
             <div class="col"><span class="k k-fk">FK</span><span>tipo</span><i>tipo_linea</i></div>
             <div class="col"><span class="k k-fk">FK</span><span>estado</span><i>edo_linea</i></div>
-            <div class="col"><span>activo</span><i>bool · false</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>siguiente</span><i>linea</i></div>
+            <div class="col"><span>activo</span><i>bool · true</i></div>
           </div>
         </div>
         <div class="tbl">
@@ -460,10 +461,11 @@ erDiagram
         </div>
         <div class="tbl">
           <b>tipo_comp</b>
-          <em>Familia de componente: procesador, RAM, etc.</em>
+          <em>Familia de componente: procesador, RAM, etc. <code>necesario</code> apunta al tipo que tiene que estar montado antes que éste.</em>
           <div class="cols">
             <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
             <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>necesario</span><i>tipo_comp</i></div>
           </div>
         </div>
         <div class="tbl">
@@ -505,7 +507,6 @@ erDiagram
             <div class="col"><span class="k k-fk">FK</span><span>orden</span><i>orden_produccion.folio</i></div>
             <div class="col"><span class="k k-fk">FK</span><span>modelo</span><i>modelo_laptop</i></div>
             <div class="col"><span class="k k-fk">FK</span><span>estado</span><i>edo_laptop</i></div>
-            <div class="col"><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
             <div class="col"><span class="k k-fk">FK</span><span>lote</span><i>lote_laptop</i></div>
           </div>
         </div>

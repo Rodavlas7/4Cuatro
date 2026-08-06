@@ -183,15 +183,9 @@
                                 <input type="text" class="form-control bg-light" value="{{ laptop.lote_codigo|default:'—' }}" disabled>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-medium">Línea de Ensamblaje</label>
-                                <select name="linea" class="form-select">
-                                    <option value="">— Sin línea —</option>
-                                    {% for l in lineas %}
-                                    <option value="{{ l.codigo }}" {% if laptop.linea_codigo == l.codigo %}selected{% endif %}>
-                                        {{ l.codigo }} — {{ l.nombre }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
+                                <label class="form-label small fw-medium text-muted">Línea de Ensamblaje</label>
+                                <input type="text" class="form-control bg-light" value="{{ laptop.linea_nombre|default:'— Sin línea —' }}" disabled>
+                                <div class="form-text" style="font-size: 11px;">La laptop no guarda línea: es la de su último registro de ensamblaje.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-medium">Estado Administrativo</label>

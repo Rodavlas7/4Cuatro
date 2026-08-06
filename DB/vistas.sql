@@ -11,6 +11,7 @@ DROP VIEW IF EXISTS vista_ordenes_produccion;
 DROP VIEW IF EXISTS vista_componentes;
 DROP VIEW IF EXISTS vista_paros;
 DROP VIEW IF EXISTS vista_laptops;
+DROP VIEW IF EXISTS vista_laptop_linea;
 DROP VIEW IF EXISTS vista_empleados;
 DROP VIEW IF EXISTS vista_usuarios;
 DROP VIEW IF EXISTS vista_inspeccion_calidad;
@@ -33,9 +34,10 @@ DROP VIEW IF EXISTS vista_traza_orden_paros;
 -- VISTA: vista_lineas
 --
 -- Objetivo : Consulta general del módulo de líneas — une la línea con
---            el nombre de su estado (edo_linea), el de su tipo (tipo_linea)
---            y el total de estaciones que tiene registradas, para no
---            resolver el join en cada consulta desde el backend.
+--            el nombre de su estado (edo_linea), el de su tipo (tipo_linea),
+--            el de la línea que le sigue en el recorrido y el total de
+--            estaciones que tiene registradas, para no resolver el join en
+--            cada consulta desde el backend.
 
 CREATE VIEW vista_lineas AS
 SELECT
@@ -46,13 +48,17 @@ SELECT
     tl.nombre           AS tipo_nombre,
     l.estado            AS estado_codigo,
     el.nombre           AS estado_nombre,
+    l.siguiente         AS siguiente_codigo,
+    sig.nombre          AS siguiente_nombre,
     l.activo,
     COUNT(e.codigo)     AS total_estaciones
 FROM linea l
 LEFT JOIN edo_linea  el ON el.codigo = l.estado
 LEFT JOIN tipo_linea tl ON tl.codigo = l.tipo
+LEFT JOIN linea      sig ON sig.codigo = l.siguiente
 LEFT JOIN estacion   e  ON e.linea   = l.codigo
-GROUP BY l.codigo, l.nombre, l.descripcion, l.tipo, tl.nombre, l.estado, el.nombre, l.activo;
+GROUP BY l.codigo, l.nombre, l.descripcion, l.tipo, tl.nombre, l.estado, el.nombre,
+         l.siguiente, sig.nombre, l.activo;
 
 
 -- VISTA: vista_estaciones
@@ -129,12 +135,47 @@ FROM paro p
 LEFT JOIN linea l ON l.codigo = p.linea;
 
 
+-- VISTA: vista_laptop_linea
+--
+-- Objetivo : Decir en qué línea está cada laptop, ahora que la tabla laptop
+--            ya no guarda esa columna.
+--
+--            La línea de una laptop es la de su ensamblaje MÁS RECIENTE: una
+--            laptop pasa por varias líneas (linea.siguiente encadena el
+--            recorrido) y cada paso deja su propio registro_ensamblaje. El
+--            último es dónde está ahora; si nunca se le abrió uno, todavía no
+--            está en ninguna línea y las dos columnas salen NULL.
+--
+--            Va en su propia vista y no repetida en cada consulta porque la
+--            usan vista_laptops, el dashboard y trazabilidad. MySQL no deja
+--            subconsultas en el FROM de una vista, pero sí unir con otra
+--            vista, que es como se enchufa aquí.
+
+CREATE VIEW vista_laptop_linea AS
+SELECT
+    lap.numero AS laptop,
+
+    (SELECT r.linea
+       FROM registro_ensamblaje r
+      WHERE r.laptop = lap.numero
+      ORDER BY r.fecha_inicio DESC, r.hora_inicio DESC, r.numero DESC
+      LIMIT 1)                                                          AS linea_codigo,
+
+    (SELECT li.nombre
+       FROM registro_ensamblaje r
+       LEFT JOIN linea li ON li.codigo = r.linea
+      WHERE r.laptop = lap.numero
+      ORDER BY r.fecha_inicio DESC, r.hora_inicio DESC, r.numero DESC
+      LIMIT 1)                                                          AS linea_nombre
+FROM laptop lap;
+
+
 -- VISTA: vista_laptops
 --
 -- Objetivo : Consulta general de laptops — une la laptop con los nombres
---            de su modelo (modelo_laptop), su estado (edo_laptop) y su
---            línea (linea), para no resolver esos joins en cada consulta
---            desde el backend.
+--            de su modelo (modelo_laptop) y su estado (edo_laptop), más la
+--            línea en la que va (vista_laptop_linea), para no resolver esos
+--            joins en cada consulta desde el backend.
 
 CREATE VIEW vista_laptops AS
 SELECT
@@ -146,13 +187,13 @@ SELECT
     ml.nombre       AS modelo_nombre,
     lap.estado      AS estado_codigo,
     el.nombre        AS estado_nombre,
-    lap.linea        AS linea_codigo,
-    l.nombre          AS linea_nombre,
+    vll.linea_codigo AS linea_codigo,
+    vll.linea_nombre AS linea_nombre,
     lap.lote          AS lote_codigo
 FROM laptop lap
 LEFT JOIN modelo_laptop ml ON ml.codigo = lap.modelo
 LEFT JOIN edo_laptop    el ON el.codigo = lap.estado
-LEFT JOIN linea         l  ON l.codigo  = lap.linea;
+LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero;
 
 
 -- VISTA: vista_componentes
@@ -396,18 +437,18 @@ LEFT JOIN laptop l ON l.numero = re.laptop;
 
 CREATE VIEW vista_dash_produccion_diaria AS
 SELECT
-    CONCAT(re.fecha, '|', IFNULL(lap.linea, '-'), '|', IFNULL(lap.modelo, '-')) AS clave,
+    CONCAT(re.fecha, '|', IFNULL(vll.linea_codigo, '-'), '|', IFNULL(lap.modelo, '-')) AS clave,
     re.fecha,
-    lap.linea            AS linea_codigo,
-    l.nombre             AS linea_nombre,
+    vll.linea_codigo     AS linea_codigo,
+    vll.linea_nombre     AS linea_nombre,
     lap.modelo           AS modelo_codigo,
     ml.nombre            AS modelo_nombre,
     COUNT(*)             AS total
 FROM registro_embalaje re
 JOIN laptop lap            ON lap.numero = re.laptop
-LEFT JOIN linea l          ON l.codigo   = lap.linea
+LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero
 LEFT JOIN modelo_laptop ml ON ml.codigo  = lap.modelo
-GROUP BY re.fecha, lap.linea, l.nombre, lap.modelo, ml.nombre;
+GROUP BY re.fecha, vll.linea_codigo, vll.linea_nombre, lap.modelo, ml.nombre;
 
 
 -- VISTA: vista_dash_calidad_diaria
@@ -480,9 +521,8 @@ SELECT
     -- El conteo va por `estado`, que es lo que le importa a un dashboard de
     -- planta, y la baja lógica se reporta aparte en lugar de mezclarse.
     --
-    -- No es un detalle teórico: datos.sql inserta las líneas sin la columna
-    -- `activo`, y como es DEFAULT FALSE todas nacen dadas de baja. Si este
-    -- bloque filtrara por activo = 1, el dashboard mostraría cero líneas.
+    -- datos.sql inserta las líneas sin la columna `activo`; hoy es DEFAULT
+    -- TRUE, así que nacen dadas de alta y sólo las baja el DELETE de la API.
     (SELECT COUNT(*) FROM linea)                                         AS lineas_totales,
     (SELECT COUNT(*) FROM linea WHERE estado = 'ACTI')                   AS lineas_activas,
     (SELECT COUNT(*) FROM linea WHERE estado = 'INAC')                   AS lineas_inactivas,
@@ -573,12 +613,12 @@ CREATE VIEW vista_dash_actividad AS
         CONCAT('Serie ', IFNULL(lap.num_serie, '?'),
                ' · ', IFNULL(te.nombre, 'sin tipo'))            AS detalle,
         re.laptop                          AS referencia,
-        lap.linea                          AS linea_codigo,
-        l.nombre                           AS linea_nombre
+        vll.linea_codigo                   AS linea_codigo,
+        vll.linea_nombre                   AS linea_nombre
     FROM registro_embalaje re
     LEFT JOIN laptop lap        ON lap.numero = re.laptop
     LEFT JOIN tipo_embalaje te  ON te.codigo  = re.tipo
-    LEFT JOIN linea l           ON l.codigo   = lap.linea
+    LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero
 
 UNION ALL
 
@@ -757,8 +797,8 @@ SELECT
     ml.nombre      AS modelo_nombre,
     lap.estado     AS estado_codigo,
     el.nombre      AS estado_nombre,
-    lap.linea      AS linea_codigo,
-    l.nombre       AS linea_nombre,
+    vll.linea_codigo AS linea_codigo,
+    vll.linea_nombre AS linea_nombre,
     lap.lote       AS lote_codigo,
 
     (SELECT COUNT(*)        FROM registro_ensamblaje r WHERE r.laptop = lap.numero) AS ensamblajes,
@@ -785,7 +825,7 @@ SELECT
 FROM laptop lap
 LEFT JOIN modelo_laptop ml ON ml.codigo = lap.modelo
 LEFT JOIN edo_laptop    el ON el.codigo = lap.estado
-LEFT JOIN linea         l  ON l.codigo  = lap.linea;
+LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero;
 
 
 -- VISTA: vista_traza_orden_componentes
@@ -824,10 +864,16 @@ GROUP BY x.orden, c.modelo, mc.nombre, mc.fabricante, tc.nombre, c.lote;
 --            entre paro y orden en la base, así que se cruzan por el único
 --            terreno que comparten: la línea y el tiempo.
 --
---            Un paro entra si ocurrió en una línea donde la orden tiene
---            laptops Y empezó el día que se creó la orden o después. Es una
---            aproximación, no un vínculo formal, y por eso se llama
+--            Un paro entra si ocurrió en una línea por donde pasaron laptops
+--            de la orden Y empezó el día que se creó la orden o después. Es
+--            una aproximación, no un vínculo formal, y por eso se llama
 --            "paros de sus líneas" en pantalla y no "paros de la orden".
+--
+--            El puente es registro_ensamblaje y no la laptop: la laptop ya no
+--            guarda línea. Se toman TODOS sus ensamblajes, no nada más el
+--            último, porque un paro en cualquier línea del recorrido le pegó
+--            a la orden igual. El DISTINCT es el que evita que un paro salga
+--            repetido por cada laptop que pasó por esa línea.
 
 CREATE VIEW vista_traza_orden_paros AS
 SELECT DISTINCT
@@ -848,7 +894,8 @@ SELECT DISTINCT
         TIMESTAMP(p.fecha_fin,    IFNULL(p.hora_fin,    '00:00:00'))
     ), 0) AS minutos
 FROM paro p
-JOIN laptop x           ON x.linea = p.linea
-JOIN orden_produccion o ON o.folio = x.orden
-LEFT JOIN linea l       ON l.codigo = p.linea
+JOIN registro_ensamblaje r ON r.linea  = p.linea
+JOIN laptop x              ON x.numero = r.laptop
+JOIN orden_produccion o    ON o.folio  = x.orden
+LEFT JOIN linea l          ON l.codigo = p.linea
 WHERE p.fecha_inicio >= o.fecha;

@@ -21,7 +21,12 @@ from lineas.models import Linea
 class TipoComp(models.Model):
     codigo = models.CharField(primary_key=True, max_length=8)
     nombre = models.CharField(unique=True, max_length=32, blank=True, null=True)
- 
+    # Qué tipo tiene que estar montado ANTES que éste: el procesador necesita la
+    # tarjeta madre, la cámara necesita la pantalla. NULL = no depende de nada
+    # (el chasis inferior, que es por donde se empieza).
+    necesario = models.ForeignKey('self', models.DO_NOTHING, db_column='necesario',
+                                  blank=True, null=True, related_name='habilita')
+
     class Meta:
         managed = False
         db_table = 'tipo_comp'

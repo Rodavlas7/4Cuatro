@@ -97,8 +97,12 @@ class Laptop(models.Model):
     orden = models.ForeignKey(OrdenProduccion, models.DO_NOTHING, db_column='orden', blank=True, null=True)
     modelo = models.ForeignKey(ModeloLaptop, models.DO_NOTHING, db_column='modelo', blank=True, null=True)
     estado = models.ForeignKey(EdoLaptop, models.DO_NOTHING, db_column='estado', blank=True, null=True)
-    linea = models.ForeignKey(Linea, models.DO_NOTHING, db_column='linea', blank=True, null=True)
     lote = models.ForeignKey(LoteLaptop, models.DO_NOTHING, db_column='lote', blank=True, null=True)
+
+    # La laptop NO guarda línea. En qué línea va lo dice su registro de
+    # ensamblaje más reciente: una unidad pasa por varias líneas (linea.siguiente
+    # encadena el recorrido) y cada paso deja su propio registro. Para leerlo ya
+    # resuelto está VistaLaptop, que mapea vista_laptops.
 
     class Meta:
         managed = False
@@ -166,6 +170,8 @@ class VistaLaptop(models.Model):
     modelo_nombre = models.CharField(max_length=32, blank=True, null=True)
     estado_codigo = models.CharField(max_length=8, blank=True, null=True)
     estado_nombre = models.CharField(max_length=32, blank=True, null=True)
+    # Derivadas del último registro_ensamblaje de la laptop (vista_laptop_linea
+    # en DB/vistas.sql). NULL mientras no se le haya abierto ninguno.
     linea_codigo = models.CharField(max_length=8, blank=True, null=True)
     linea_nombre = models.CharField(max_length=32, blank=True, null=True)
     lote_codigo = models.CharField(max_length=8, blank=True, null=True)

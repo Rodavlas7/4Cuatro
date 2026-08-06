@@ -169,17 +169,12 @@
                         de la orden, y nacen en estado <strong>Registrada</strong>.
                     </p>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-medium text-muted">Línea de ensamblaje</label>
-                        <input type="text" class="form-control bg-light" value="{{ mi_linea_nombre|default:'—' }}" disabled>
-                        <div class="form-text" style="font-size: 11px;">Es tu línea: se asigna sola.</div>
-                    </div>
-
                     <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start">
                         <i class="bi bi-info-circle-fill text-primary mt-1"></i>
                         <div>
-                            El número de serie sale provisional (TMP-0001, TMP-0002…). El ensamblaje de cada
-                            laptop se abre después, cuando de verdad arranca.
+                            El número de serie sale provisional (TMP-0001, TMP-0002…). Nacen sin línea: el
+                            ensamblaje de cada laptop se abre después, cuando de verdad arranca, y es ahí
+                            donde queda registrada la línea.
                         </div>
                     </div>
                 </div>

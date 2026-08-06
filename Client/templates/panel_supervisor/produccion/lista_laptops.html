@@ -246,16 +246,6 @@
                             </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label">Línea</label>
-                            <select name="linea" class="form-select">
-                                <option value="">— Sin línea —</option>
-                                {% for l in lineas %}
-                                <option value="{{ l.codigo }}">{{ l.codigo }} — {{ l.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
                         <div class="col-12">
                             <label class="form-label">Descripción</label>
                             <input type="text" name="descripcion" class="form-control" maxlength="256">
@@ -265,7 +255,8 @@
 
                     <div class="alert alert-secondary mt-3 mb-0 py-2 small">
                         <i class="bi bi-info-circle me-1"></i>
-                        La laptop se registra en estado <strong>Registrada</strong>. Si es
+                        La laptop se registra en estado <strong>Registrada</strong> y sin línea:
+                        la línea queda registrada al abrirle su ensamblaje. Si es
                         la primera de su orden, la orden pasará sola a
                         <strong>En Proceso</strong>.
                     </div>

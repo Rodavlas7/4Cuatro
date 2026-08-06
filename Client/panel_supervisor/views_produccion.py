@@ -13,7 +13,6 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.views import generic
 
-from core import lineas as lineas_del_empleado
 from core.api import get, lista, objeto
 from core.lineas import es_de_ensamblaje, solo_de_ensamblaje
 from core.guards import RolRequeridoMixin, requiere_rol
@@ -619,29 +618,19 @@ def ordenProduccionCancelarView(request, folio):
 def ordenProduccionIniciarEnsamblajeView(request, folio):
     """Da de alta de un jalón las laptops que le faltan a la orden.
 
-    A diferencia del panel de admin, aquí la línea NO se elige: es la del
-    supervisor. Mismo criterio que en materiales — él trabaja una sola línea y
-    no le toca decidir en cuál se ensambla."""
+    No se manda línea: la laptop no la guarda. En cuál se arma cada una lo dice
+    su registro de ensamblaje, y el supervisor lo abre después desde su propia
+    pantalla, ya contra su línea."""
 
     if 'token' not in request.session:
         return redirect('login')
 
     if request.method == "POST":
 
-        linea = lineas_del_empleado.de_la_sesion(request)
-
-        if not linea:
-            messages.error(
-                request,
-                "No tienes una línea asignada, así que no se pueden registrar laptops. "
-                "Pídele a un administrador que te asigne una."
-            )
-            return redirect('panel_supervisor:orden-produccion-detalle', folio=folio)
-
         headers = _headers(request)
         respuesta = requests.post(
             f"{API}/produccion/{folio}/iniciar-ensamblaje/",
-            json={"linea": linea['codigo']},
+            json={},
             headers=headers,
         )
 
@@ -649,7 +638,7 @@ def ordenProduccionIniciarEnsamblajeView(request, folio):
             creadas = respuesta.json().get('laptops_creadas', 0)
             messages.success(
                 request,
-                f"Se registraron {creadas} laptop(s) para la orden #{folio} en {linea['nombre']}."
+                f"Se registraron {creadas} laptop(s) para la orden #{folio}."
             )
         else:
             messages.error(request, _mensaje_api(respuesta))
@@ -695,8 +684,6 @@ def ordenProduccionDetalleView(request, folio):
     planificadas = orden.get("cant_planificada") or 0
     registradas = len(laptops)
 
-    mi_linea = lineas_del_empleado.de_la_sesion(request) or {}
-
     return render(
         request,
         "panel_supervisor/produccion/detalle_orden.html",
@@ -710,11 +697,10 @@ def ordenProduccionDetalleView(request, folio):
             "embaladas": embaladas,
             # Se topa en 100 para que la barra no se desborde si se registraron too many
             "porcentaje": min(100, round(registradas * 100 / planificadas)) if planificadas else 0,
-            # Para las dos acciones del encabezado. La línea va fija: es la del
-            # supervisor, no la elige (igual que en materiales).
+            # Para las dos acciones del encabezado: sólo tienen sentido mientras
+            # la orden siga abierta.
             "abierta": orden.get("estado_codigo") in EDOS_ORDEN_ABIERTA,
             "faltantes": max(0, planificadas - registradas),
-            "mi_linea_nombre": mi_linea.get("nombre"),
         }
     )
 
@@ -1180,13 +1166,14 @@ def laptopsListView(request):
 
         # Ni modelo ni lote ni estado se capturan: los dos primeros los hereda de
         # su orden (la API los resuelve) y el estado siempre es Registrada.
+        # La línea tampoco: la laptop no la guarda. Se sabrá en qué línea va
+        # cuando se le abra su registro de ensamblaje.
         payload = {
             "num_serie": (request.POST.get("num_serie") or "").strip()
                          or _serie_temporal_sugerida(laptops_actuales),
             "descripcion": request.POST.get("descripcion") or None,
             "orden": orden,
             "estado": EDO_LAPTOP_REGISTRADA,
-            "linea": request.POST.get("linea") or None,
         }
 
         respuesta = requests.post(f"{API}/produccion/laptops/", json=payload, headers=headers)
@@ -1308,16 +1295,17 @@ def laptopEditarView(request, numero):
 
         headers = _headers(request)
 
-        # Tres campos quedan fuera del payload a propósito:
+        # Cuatro campos quedan fuera del payload a propósito:
         #   num_serie     — se fija al registrar y solo la reescribe el trigger
         #                   tg_Generar_Numero_Serie_Final al aprobar en calidad.
         #   modelo y lote — se heredan de la orden; la API los recalcula sola en
         #                   cada guardado, así que mandarlos no serviría de nada.
+        #   linea         — la laptop no la guarda: sale de su registro de
+        #                   ensamblaje, que se edita en su propia pantalla.
         payload = {
             "descripcion": request.POST.get("descripcion") or None,
             "orden": request.POST.get("orden") or None,
             "estado": request.POST.get("estado") or None,
-            "linea": request.POST.get("linea") or None,
         }
 
         respuesta = requests.patch(
