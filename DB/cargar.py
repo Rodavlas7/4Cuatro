@@ -15,7 +15,7 @@ El orden
     1. estructura.sql      tablas
     2. datos.sql           catálogos y usuarios (empieza truncando)
     3. triggers.sql        reglas de negocio
-    4. datos_pruebas.sql   datos transaccionales de ejemplo
+    4. datos_pruebas2.sql   datos transaccionales de ejemplo
     5. vistas.sql          vistas de consulta
     6. procedimientos.sql  operaciones en lote
     7. encriptar_contrasenas.py
@@ -72,13 +72,13 @@ ARCHIVOS = [
     ('estructura.sql', 'Tablas'),
     ('datos.sql', 'Catálogos y usuarios'),
     ('triggers.sql', 'Triggers'),
-    ('datos_pruebas.sql', 'Datos de prueba'),
+    ('datos_pruebas2.sql', 'Datos de prueba'),
     ('vistas.sql', 'Vistas'),
     ('procedimientos.sql', 'Procedimientos'),
 ]
 
 # Nombre del archivo de datos de prueba, para poder saltárselo con --sin-pruebas.
-PRUEBAS = 'datos_pruebas.sql'
+PRUEBAS = 'datos_pruebas2.sql'
 
 # Para leer el `USE <base>;` que traen los .sql adentro.
 USE = re.compile(r'^\s*USE\s+`?(\w+)`?\s*;', re.IGNORECASE | re.MULTILINE)
