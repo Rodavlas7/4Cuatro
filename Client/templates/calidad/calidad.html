@@ -242,23 +242,24 @@
                         </td>
                         <td class="pe-4 text-end">
                             <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                
                                <!-- VER DETALLE -->
                                 <button
-                                    type="button"
-                                    class="btn text-info"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#modalDetalle"
-                                    data-numero="{{ i.numero }}"
-                                    data-resultado="{{ i.resultado_nombre|default:'' }}"
-                                    data-fecha="{{ i.fecha|fecha_hora:i.hora|default:'—' }}"
-                                    data-laptop-numero="{{ i.laptop_numero|default:'' }}"
-                                    data-laptop-serie="{{ i.laptop_num_serie|default:'' }}"
-                                    data-empleado="{{ i.empleado_nombre|default:'' }}"
-                                    data-linea="{{ i.linea_nombre|default:'' }}"
-                                    data-observaciones="{{ i.observaciones|default:'' }}"
-                                    title="Ver detalle">
-                                    <i class="bi bi-eye"></i>
-                                </button>
+                                type="button"
+                                class="btn text-info"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDetalle"
+
+                                data-numero="{{ i.numero }}"
+                                data-resultado="{{ i.resultado|default:'' }}"
+                                data-fecha="{{ i.fecha|fecha_hora:i.hora|default:'—' }}"
+                                data-laptop-numero="{{ i.laptop|default:'' }}"
+                                data-laptop-serie="{{ i.num_serie|default:'' }}"
+                                data-empleado="{{ i.empleado|default:'' }}"
+                                data-linea="{{ i.linea|default:'' }}"
+                                data-observaciones="{{ i.observaciones|default:'' }}"
+
+                                title="Ver detalle">
 
                                 <!-- EDITAR -->
                                 <button
