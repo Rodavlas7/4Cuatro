@@ -16,9 +16,12 @@ urlpatterns = [
     path('', views_dashboard.Dashboard.as_view(), name='dashboard'),
 
     # La trazabilidad acepta el folio en la URL o por el buscador (?folio=N),
+    # por eso son dos rutas al mismo lugar.}
+        # La trazabilidad acepta el folio en la URL o por el buscador (?folio=N),
     # por eso son dos rutas al mismo lugar.
     path('trazabilidad/', views_trazabilidad.TrazabilidadOrden.as_view(),
          name='trazabilidad'),
     path('trazabilidad/<int:folio>/', views_trazabilidad.TrazabilidadOrden.as_view(),
          name='trazabilidad-orden'),
+
 ]

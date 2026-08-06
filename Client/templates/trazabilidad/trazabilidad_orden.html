@@ -19,10 +19,10 @@
 
 {% block breadcrumbs %}
     <li class="breadcrumb-item">
-        <a href="{% url 'panel_admin:trazabilidad' %}">Trazabilidad</a>
+        <a href="{% url 'trazabilidad:trazabilidad' %}">Trazabilidad</a>
     </li>
     {% if orden %}
-        <li class="breadcrumb-item active" aria-current="page">Orden {{ orden.folio }}</li>
+        <li class="breadcrumb-item active" aria-current="page">Folio {{ orden.folio }}</li>
     {% endif %}
 {% endblock %}
 
