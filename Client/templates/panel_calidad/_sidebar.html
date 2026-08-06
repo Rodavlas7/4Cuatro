@@ -33,7 +33,14 @@
             </a>
         </li>
 
-        <!-- Inspecciones -->
+        <!-- Mi línea: el flujo guiado laptop -> ensamblaje -> inspección -->
+        <li class="nav-item mb-2">
+            <a class="nav-link" href="{% url 'panel_calidad:flujo-laptops' %}">
+                <i class="bi bi-diagram-3 me-2"></i><span class="nav-label">Mi línea</span>
+            </a>
+        </li>
+
+        <!-- Inspecciones (histórico y consulta) -->
         <li class="nav-item mb-2">
             <a class="nav-link" href="{% url 'panel_calidad:inspecciones' %}">
                 <i class="bi bi-check2-circle me-2"></i><span class="nav-label">Inspecciones</span>

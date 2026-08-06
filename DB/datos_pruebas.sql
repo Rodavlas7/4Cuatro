@@ -28,6 +28,7 @@ USE cuatro;
 -- ============================================================
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE componente;
+TRUNCATE TABLE detalle_inspeccion;
 TRUNCATE TABLE detalle_material;
 TRUNCATE TABLE inspeccion_calidad;
 TRUNCATE TABLE registro_embalaje;
@@ -61,9 +62,17 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 
 
 -- ============================================================
---  2. LAPTOPS  (se crean en su estado de trabajo: REGIS o PENSAM.
---     Las que terminan APROV/RECHA/EMBALA pasan por inspección/embalaje
---     más abajo. num_serie es UNIQUE, por eso cada una es distinta.)
+--  2. LAPTOPS
+--
+--  El estado que se manda aquí ya no decide nada: tg_Arrancar_Laptop_En_
+--  Ensamblaje deja en PENSAM a toda laptop que nazca en REGIS, y acto seguido
+--  tg_Abrir_Ensamblaje_Primera_Linea le abre su registro en la línea A. Ese es
+--  el arranque del reloj de ensamblaje que pide el proceso.
+--
+--  Las que terminan APROV/RECHA/EMBALA llegan ahí por el recorrido de la
+--  sección 3, no por lo que se escriba en esta columna.
+--
+--  num_serie es UNIQUE, por eso cada una es distinta.
 -- ============================================================
 INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
 ('TMP-0001', 'Unidad 1 - recién registrada',          1, 'ML001', 'REGIS',  'LOT2026A'),  -- numero 1
@@ -79,78 +88,224 @@ INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
 
 
 -- ============================================================
---  3. REGISTROS DE ENSAMBLAJE  (para las laptops 2,3,4,5,6,7)
---     Se insertan mientras la laptop está en PENSAM (los triggers
---     BEFORE INSERT lo permiten en ese estado).
---     Abiertos = fecha_fin NULL ; Cerrados = fecha_fin con valor.
--- ============================================================
-INSERT INTO registro_ensamblaje (fecha_inicio, fecha_fin, hora_inicio, hora_fin, laptop, linea) VALUES
-('2026-07-21', NULL,         '08:10:00', NULL,        2, 'LIN001'),  -- registro 1 (L2, abierto)
-('2026-07-21', NULL,         '08:15:00', NULL,        3, 'LIN002'),  -- registro 2 (L3, abierto)
-('2026-07-21', '2026-07-21', '08:00:00', '10:00:00',  4, 'LIN001'),  -- registro 3 (L4, cerrado)
-('2026-07-21', '2026-07-21', '08:05:00', '09:30:00',  5, 'LIN001'),  -- registro 4 (L5, cerrado)
-('2026-07-21', NULL,         '08:20:00', NULL,        6, 'LIN003'),  -- registro 5 (L6, abierto)
-('2026-07-20', '2026-07-20', '08:00:00', '11:00:00',  7, 'LIN001');  -- registro 6 (L7, cerrado)
-
-
--- ============================================================
---  4. COMPONENTES INSTALADOS  (asignados a un registro_ensamblaje).
---     El trigger tg_Validar_Capacidad_Componente valida que no se
---     exceda la capacidad por TIPO del BOM (CPU 1, RAM 2, SSD 2, resto 1).
+--  3. RECORRIDO POR LAS LÍNEAS
 --
---     La 'linea' de la pieza es la que la INSTALÓ, según la estación que
---     monta ese tipo (ver el mapa en la sección de stock, al final). No
---     tiene por qué coincidir con la del registro_ensamblaje: ese es el de
---     la línea donde ARRANCÓ la laptop, y el mismo registro va acumulando
---     piezas conforme la laptop pasa por las demás líneas.
---       Procesador y RAM -> LIN002 · SSD -> LIN003
---       Tarjeta madre    -> LIN002 · Batería -> LIN004
+--  Los registros de ensamblaje ya NO se insertan a mano:
+--    - el alta de la laptop abre sola el de la primera línea
+--      (tg_Abrir_Ensamblaje_Primera_Linea);
+--    - cada inspección aprobada cierra el de su línea y abre el de la
+--      siguiente (tg_Actualizar_Estado_Laptop_Inspeccion_Calidad).
+--
+--  Así que aquí se recorre el proceso de verdad: se instalan las piezas que
+--  monta la línea donde va la laptop, se inspecciona, y el relevo lo hace la
+--  base. @reg guarda el registro ABIERTO de la laptop en turno, y hay que
+--  volver a leerlo después de cada inspección aprobada porque el trigger abre
+--  uno nuevo.
+--
+--  A dónde llega cada una:
+--    L1  recién registrada, sin piezas         -> abierta en A
+--    L2  con las piezas de A                   -> abierta en A
+--    L3  pasó A, ya con piezas de B            -> abierta en B
+--    L4  pasó A, B, C y D                      -> APROBADA
+--    L5  pasó A, rechazada en B por una pieza  -> RECHAZADA
+--    L6  pasó A y B                            -> abierta en C
+--    L7  pasó todo, se embala más abajo        -> APROBADA -> EMBALADA
+--    L8  de orden cancelada, sin piezas        -> abierta en A
+--
+--  Qué monta cada línea (ver el mapa de estaciones en datos.sql):
+--    A  chasis superior, touchpad, teclado, altavoces, conector de carga
+--    B  tarjeta madre, procesador, memoria RAM (x2)
+--    C  SSD (x2), tarjeta de red, disipador
+--    D  pantalla, cámara web, batería, chasis inferior
 -- ============================================================
--- L2 (registro 1) — juego completo
-INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L2-CPU', 'Procesador',    'LIN002', 'MC001', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-RAM1','RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-RAM2','RAM módulo 2',  'LIN002', 'MC006', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-SSD', 'SSD',           'LIN003', 'MC009', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-MB',  'Tarjeta madre', 'LIN002', 'MC012', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-BAT', 'Batería',       'LIN004', 'MC017', 'LCOMP-001', 'EDC002', 1);
 
--- L3 (registro 2) — parcial
-INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L3-CPU', 'Procesador',   'LIN002', 'MC001', 'LCOMP-001', 'EDC002', 2),
-('CMP-L3-RAM1','RAM módulo 1', 'LIN002', 'MC005', 'LCOMP-001', 'EDC002', 2);
+-- El trigger arranca los registros con la fecha de hoy. Se alinean con las del
+-- resto del archivo para que los reportes por fecha den algo coherente.
+UPDATE registro_ensamblaje
+   SET fecha_inicio = '2026-07-21', hora_inicio = '08:00:00'
+ WHERE fecha_fin IS NULL;
 
--- L4 (registro 3) — juego completo (Intel)
-INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L4-CPU', 'Procesador',    'LIN002', 'MC002', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-RAM1','RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-RAM2','RAM módulo 2',  'LIN002', 'MC007', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-SSD', 'SSD',           'LIN003', 'MC010', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-MB',  'Tarjeta madre', 'LIN002', 'MC013', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-BAT', 'Batería',       'LIN004', 'MC017', 'LCOMP-002', 'EDC002', 3);
 
--- L5 (registro 4) — parcial
+-- L2 — se queda en la línea A con sus piezas puestas
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 2 AND fecha_fin IS NULL);
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L5-CPU', 'Procesador', 'LIN002', 'MC001', 'LCOMP-001', 'EDC002', 4),
-('CMP-L5-SSD', 'SSD',        'LIN003', 'MC009', 'LCOMP-001', 'EDC002', 4);
+('CMP-L2-CHS', 'Chasis superior',   'LIN001', 'MC028', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L2-TPD', 'Touchpad',          'LIN001', 'MC020', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L2-KBD', 'Teclado',           'LIN001', 'MC018', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L2-SPK', 'Altavoces',         'LIN001', 'MC031', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L2-PWR', 'Conector de carga', 'LIN001', 'MC030', 'LCOMP-001', 'EDC002', @reg);
 
--- L6 (registro 5) — parcial
-INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L6-CPU', 'Procesador',   'LIN002', 'MC003', 'LCOMP-002', 'EDC002', 5),
-('CMP-L6-RAM1','RAM módulo 1', 'LIN002', 'MC006', 'LCOMP-002', 'EDC002', 5);
 
--- L7 (registro 6) — juego completo
+-- L3 — pasa la A y se queda a medias en la B
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 3 AND fecha_fin IS NULL);
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L7-CPU', 'Procesador',    'LIN002', 'MC001', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-RAM1','RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-RAM2','RAM módulo 2',  'LIN002', 'MC006', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-SSD', 'SSD',           'LIN003', 'MC009', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-MB',  'Tarjeta madre', 'LIN002', 'MC012', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-BAT', 'Batería',       'LIN004', 'MC017', 'LCOMP-001', 'EDC002', 6);
+('CMP-L3-CHS', 'Chasis superior',   'LIN001', 'MC028', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L3-TPD', 'Touchpad',          'LIN001', 'MC021', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L3-KBD', 'Teclado',           'LIN001', 'MC019', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L3-SPK', 'Altavoces',         'LIN001', 'MC031', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L3-PWR', 'Conector de carga', 'LIN001', 'MC030', 'LCOMP-001', 'EDC002', @reg);
+
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Chasis, teclado y audio correctos', '2026-07-21', '09:10:00', 3, 2607004, 'LIN001');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 3 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L3-MB',  'Tarjeta madre', 'LIN002', 'MC012', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L3-CPU', 'Procesador',    'LIN002', 'MC001', 'LCOMP-001', 'EDC002', @reg);
+
+
+-- L4 — recorre las cuatro líneas y sale aprobada
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 4 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L4-CHS', 'Chasis superior',   'LIN001', 'MC028', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-TPD', 'Touchpad',          'LIN001', 'MC020', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-KBD', 'Teclado',           'LIN001', 'MC018', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-SPK', 'Altavoces',         'LIN001', 'MC031', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-PWR', 'Conector de carga', 'LIN001', 'MC030', 'LCOMP-002', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Línea A conforme', '2026-07-21', '08:40:00', 4, 2607004, 'LIN001');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 4 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L4-MB',   'Tarjeta madre', 'LIN002', 'MC013', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-CPU',  'Procesador',    'LIN002', 'MC002', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-RAM1', 'RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-RAM2', 'RAM módulo 2',  'LIN002', 'MC007', 'LCOMP-002', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Placa, CPU y RAM conformes', '2026-07-21', '09:20:00', 4, 2607009, 'LIN002');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 4 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L4-SSD1', 'SSD 1',         'LIN003', 'MC010', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-SSD2', 'SSD 2',         'LIN003', 'MC009', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-WIFI', 'Tarjeta de red','LIN003', 'MC024', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-THM',  'Disipador',     'LIN003', 'MC027', 'LCOMP-002', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Almacenamiento, red y térmico conformes', '2026-07-21', '10:05:00', 4, 2607014, 'LIN003');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 4 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L4-PAN', 'Pantalla',        'LIN004', 'MC014', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-CAM', 'Cámara web',      'LIN004', 'MC022', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-BAT', 'Batería',         'LIN004', 'MC017', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L4-BOT', 'Chasis inferior', 'LIN004', 'MC029', 'LCOMP-002', 'EDC002', @reg);
+-- Última línea: esta aprobación sí es la final, la laptop pasa a APROV.
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Equipo cerrado y probado, aprobada', '2026-07-21', '10:30:00', 4, 2607019, 'LIN004');
+
+
+-- L5 — pasa la A y la rechazan en la B por un módulo de RAM
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 5 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L5-CHS', 'Chasis superior',   'LIN001', 'MC028', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L5-TPD', 'Touchpad',          'LIN001', 'MC021', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L5-KBD', 'Teclado',           'LIN001', 'MC019', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L5-SPK', 'Altavoces',         'LIN001', 'MC031', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L5-PWR', 'Conector de carga', 'LIN001', 'MC030', 'LCOMP-001', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Línea A conforme', '2026-07-21', '08:50:00', 5, 2607004, 'LIN001');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 5 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L5-MB',   'Tarjeta madre', 'LIN002', 'MC012', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L5-CPU',  'Procesador',    'LIN002', 'MC001', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L5-RAM1', 'RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-001', 'EDC003', @reg);
+
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(0, 'Módulo de RAM no detectado en POST, se rechaza', '2026-07-21', '09:45:00', 5, 2607009, 'LIN002');
+
+-- Aquí se ve para qué sirve detalle_inspeccion: la inspección dice que la laptop
+-- se rechaza, y esto dice cuál pieza la reprobó.
+SET @insp := LAST_INSERT_ID();
+SET @comp := (SELECT numero FROM componente WHERE num_serie = 'CMP-L5-RAM1');
+INSERT INTO detalle_inspeccion (inspeccion, componente, observacion) VALUES
+(@insp, @comp, 'No lo reconoce el POST; se marca dañado y se devuelve al proveedor');
+
+
+-- L6 — pasa A y B, se queda abierta en la C
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 6 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L6-CHS', 'Chasis superior',   'LIN001', 'MC028', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L6-TPD', 'Touchpad',          'LIN001', 'MC020', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L6-KBD', 'Teclado',           'LIN001', 'MC018', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L6-SPK', 'Altavoces',         'LIN001', 'MC031', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L6-PWR', 'Conector de carga', 'LIN001', 'MC030', 'LCOMP-002', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Línea A conforme', '2026-07-21', '09:00:00', 6, 2607004, 'LIN001');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 6 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L6-MB',   'Tarjeta madre', 'LIN002', 'MC013', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L6-CPU',  'Procesador',    'LIN002', 'MC003', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L6-RAM1', 'RAM módulo 1',  'LIN002', 'MC006', 'LCOMP-002', 'EDC002', @reg),
+('CMP-L6-RAM2', 'RAM módulo 2',  'LIN002', 'MC007', 'LCOMP-002', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Placa, CPU y RAM conformes', '2026-07-21', '10:15:00', 6, 2607009, 'LIN002');
+
+
+-- L7 — recorre todo y queda aprobada; se embala más abajo
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 7 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L7-CHS', 'Chasis superior',   'LIN001', 'MC028', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-TPD', 'Touchpad',          'LIN001', 'MC021', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-KBD', 'Teclado',           'LIN001', 'MC019', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-SPK', 'Altavoces',         'LIN001', 'MC031', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-PWR', 'Conector de carga', 'LIN001', 'MC030', 'LCOMP-001', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Línea A conforme', '2026-07-20', '08:30:00', 7, 2607004, 'LIN001');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 7 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L7-MB',   'Tarjeta madre', 'LIN002', 'MC012', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-CPU',  'Procesador',    'LIN002', 'MC001', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-RAM1', 'RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-RAM2', 'RAM módulo 2',  'LIN002', 'MC006', 'LCOMP-001', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Placa, CPU y RAM conformes', '2026-07-20', '09:15:00', 7, 2607009, 'LIN002');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 7 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L7-SSD1', 'SSD 1',          'LIN003', 'MC009', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-SSD2', 'SSD 2',          'LIN003', 'MC011', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-WIFI', 'Tarjeta de red', 'LIN003', 'MC025', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-THM',  'Disipador',      'LIN003', 'MC026', 'LCOMP-001', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Almacenamiento, red y térmico conformes', '2026-07-20', '10:00:00', 7, 2607014, 'LIN003');
+
+SET @reg := (SELECT numero FROM registro_ensamblaje WHERE laptop = 7 AND fecha_fin IS NULL);
+INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
+('CMP-L7-PAN', 'Pantalla',        'LIN004', 'MC016', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-CAM', 'Cámara web',      'LIN004', 'MC023', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-BAT', 'Batería',         'LIN004', 'MC017', 'LCOMP-001', 'EDC002', @reg),
+('CMP-L7-BOT', 'Chasis inferior', 'LIN004', 'MC029', 'LCOMP-001', 'EDC002', @reg);
+INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
+(1, 'Cumple especificaciones, aprobada', '2026-07-20', '11:30:00', 7, 2607019, 'LIN004');
+
+
+-- Los cierres y los relevos los sella el trigger con la fecha/hora de HOY, que
+-- no es la del guion. Se realinean: cada registro cerrado toma la fecha de la
+-- inspección que lo cerró, y se le da una duración de 20 minutos. Son 20 y no
+-- más porque entre dos inspecciones seguidas de la misma laptop llega a haber
+-- solo 25 minutos, y con una duración mayor un registro arrancaría antes de que
+-- cerrara el de la línea anterior.
+UPDATE registro_ensamblaje re
+  JOIN inspeccion_calidad ic
+    ON ic.laptop = re.laptop AND ic.linea = re.linea
+   SET re.fecha_inicio = ic.fecha,
+       re.hora_inicio  = SUBTIME(ic.hora, '00:20:00'),
+       re.fecha_fin    = ic.fecha,
+       re.hora_fin     = ic.hora
+ WHERE re.fecha_fin IS NOT NULL;
+
+-- Y los que el relevo dejó abiertos (L3 en B, L6 en C) arrancan el mismo día.
+UPDATE registro_ensamblaje
+   SET fecha_inicio = '2026-07-21', hora_inicio = '10:30:00'
+ WHERE fecha_fin IS NULL
+   AND fecha_inicio = CURDATE();
 
 
 -- ============================================================
---  5. COMPONENTES SUELTOS EN INVENTARIO  (sin ensamblaje asignado; el
+--  4. COMPONENTES SUELTOS EN INVENTARIO  (sin ensamblaje asignado; el
 --     trigger de capacidad NO aplica). Sirven para que los endpoints de
 --     componentes tengan piezas en estados distintos, no solo Disponible.
 --
@@ -171,18 +326,7 @@ INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, reg
 
 
 -- ============================================================
---  6. INSPECCIONES DE CALIDAD  (dispara el cambio de estado de la laptop)
---     L4 -> Aprobada (resultado 1) ; L5 -> Rechazada (resultado 0)
---     L7 -> Aprobada (resultado 1, luego se embala abajo)
--- ============================================================
-INSERT INTO inspeccion_calidad (resultado, observaciones, fecha, hora, laptop, empleado, linea) VALUES
-(1, 'Todo en orden, aprobada',          '2026-07-21', '10:30:00', 4, 2607004, 'LIN001'),
-(0, 'Falla en pantalla, rechazada',     '2026-07-21', '09:45:00', 5, 2607004, 'LIN001'),
-(1, 'Cumple especificaciones, aprobada','2026-07-20', '11:30:00', 7, 2607004, 'LIN001');
-
-
--- ============================================================
---  7. EMBALAJE  (laptop 7, que quedó APROV, se embala)
+--  5. EMBALAJE  (laptop 7, que quedó APROV, se embala)
 --     El trigger la pasa a EMBALA y, como la orden 3 tenía planificada 1
 --     y esta es su única laptop embalada, la orden 3 pasa a COMPLETADA.
 -- ============================================================
@@ -191,7 +335,7 @@ INSERT INTO registro_embalaje (fecha, hora, laptop, tipo) VALUES
 
 
 -- ============================================================
---  8. ÓRDENES DE MATERIAL + SUS RENGLONES (detalle_material, PK compuesta)
+--  6. ÓRDENES DE MATERIAL + SUS RENGLONES (detalle_material, PK compuesta)
 --
 --  Una orden por línea de ensamblaje. Cada una pide EXACTAMENTE los modelos
 --  que instalan sus estaciones: es el mismo reparto que el stock, así que una
@@ -255,7 +399,7 @@ INSERT INTO detalle_material (orden, modelo, cantidad) VALUES
 
 
 -- ============================================================
---  9. PAROS  (abiertos = fecha_fin NULL ; cerrados = con fecha_fin)
+--  7. PAROS  (abiertos = fecha_fin NULL ; cerrados = con fecha_fin)
 -- ============================================================
 INSERT INTO paro (razon, fecha_inicio, fecha_fin, hora_inicio, hora_fin, linea) VALUES
 ('Falla en banda transportadora',      '2026-07-21', NULL,         '09:00:00', NULL,        'LIN001'),

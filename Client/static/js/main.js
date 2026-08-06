@@ -192,3 +192,23 @@ document.addEventListener('keydown', function (event) {
         formFiltro.submit();
     }
 });
+
+// ---------------------------------------------------------------------------
+// ATAJO "R" PARA RECARGAR LOS DATOS DE LA PANTALLA (RNF03 Atajos de teclado)
+// ---------------------------------------------------------------------------
+document.addEventListener('keydown', function (event) {
+    if (event.key !== 'r' && event.key !== 'R') return;
+
+    var activo = document.activeElement;
+    var escribiendo = activo && (activo.tagName === 'INPUT' || activo.tagName === 'TEXTAREA' || activo.tagName === 'SELECT' || activo.isContentEditable);
+    if (escribiendo) return;
+
+    // Con un modal abierto, "r" podría ser parte de lo que se está
+    // escribiendo ahí o simplemente no debe tirar el trabajo a medias.
+    if (document.querySelector('.modal.show')) return;
+
+    event.preventDefault();
+    // Recarga la misma URL (con los filtros que ya estaban aplicados),
+    // así los datos se vuelven a pedir al servidor.
+    location.reload();
+});

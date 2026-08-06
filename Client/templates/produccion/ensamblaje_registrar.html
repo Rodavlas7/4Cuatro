@@ -5,10 +5,10 @@
 
 {% block breadcrumbs %}
     <li class="breadcrumb-item"><a href="{% url 'ordenes-produccion-lista' %}">Producción</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Registro de Ensamblaje</li>
+    <li class="breadcrumb-item active" aria-current="page">Revisión de Ensamblaje</li>
 {% endblock %}
 
-{% block title %}Registrar Ensamblaje{% endblock %}
+{% block title %}Revisión de Ensamblaje{% endblock %}
 
 {% block content %}
 
@@ -30,13 +30,13 @@
 
         <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
             <div>
-                <h4 class="fw-bold text-dark mb-1">Registrar Ensamblaje</h4>
-                <p class="text-muted small mb-0">Asigna componentes desde el stock de la línea a la laptop seleccionada.</p>
+                <h4 class="fw-bold text-dark mb-1">Revisión de Ensamblaje</h4>
+                <p class="text-muted small mb-0">Verifica que las piezas que instala la línea estén puestas, y déjalas registradas contra la laptop.</p>
             </div>
         </div>
 
         <div class="emp-header px-4 py-3 border-bottom bg-light bg-opacity-50">
-            <h6 class="fw-bold mb-0 text-dark text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">Parámetros de Ensamblaje</h6>
+            <h6 class="fw-bold mb-0 text-dark text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">Parámetros de la Revisión</h6>
         </div>
         <div class="card-body p-4">
             <form method="GET" id="formLaptop" class="row g-4 align-items-end">
@@ -55,7 +55,7 @@
                 </div>
 
                 <div class="col-md-7">
-                    <label class="form-label small fw-medium">Laptop a ensamblar <span class="text-danger">*</span></label>
+                    <label class="form-label small fw-medium">Laptop a revisar <span class="text-danger">*</span></label>
                     <select name="laptop" class="form-select" onchange="document.getElementById('formLaptop').submit();">
                         <option value="">— Selecciona una laptop —</option>
                         {% for l in laptops %}
@@ -266,12 +266,12 @@
                     <a href="{% url 'ensamblaje-registrar' %}" class="btn btn-white border shadow-sm">Cancelar</a>
                     
                     <button type="submit" name="accion" value="registrar" class="btn btn-primary shadow-sm" {% if not componentes %}disabled{% endif %}>
-                        <i class="bi bi-check2-circle me-1"></i> Registrar ensamblaje
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Revisión de Ensamblaje
                     </button>
 
                     <!-- Aparece solo cuando la laptop queda con todos sus tipos cubiertos -->
                     <button type="button" class="btn btn-danger shadow-sm d-none" id="btnTerminar" data-bs-toggle="modal" data-bs-target="#modalConfirmarTerminar">
-                        <i class="bi bi-flag-fill me-1"></i> Registrar y Terminar
+                        <i class="bi bi-flag-fill me-1"></i> Guardar y Terminar
                     </button>
                 </div>
             </div>

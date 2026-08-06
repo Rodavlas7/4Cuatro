@@ -1,6 +1,6 @@
 {% extends 'panel_supervisor/base.html' %}
 
-{% block title %}Registrar Ensamblaje{% endblock %}
+{% block title %}Revisión de Ensamblaje{% endblock %}
 
 {% block content %}
 
@@ -13,7 +13,7 @@
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Registrar Ensamblaje</h2>
+    <h2 class="mb-0">Revisión de Ensamblaje</h2>
 </div>
 
 <!-- ...................................................................
@@ -43,7 +43,7 @@
 
         <div class="col-md-7">
             <label class="form-label fw-semibold">
-                Laptop a ensamblar <span class="text-danger">*</span>
+                Laptop a revisar <span class="text-danger">*</span>
             </label>
             <select name="laptop" class="form-select" onchange="document.getElementById('formLaptop').submit();">
                 <option value="">— Selecciona una laptop —</option>
@@ -249,12 +249,12 @@
 
         <button type="submit" name="accion" value="registrar"
                 class="btn btn-primary" {% if not componentes %}disabled{% endif %}>
-            <i class="bi bi-check2-circle me-1"></i> Registrar ensamblaje
+            <i class="bi bi-check2-circle me-1"></i> Guardar Revisión de Ensamblaje
         </button>
 
         <!-- Aparece solo cuando la laptop queda con todos sus tipos cubiertos -->
         <button type="button" id="btnTerminar" class="btn btn-danger d-none">
-            <i class="bi bi-flag-fill me-1"></i> Registrar y Terminar Ensamblaje
+            <i class="bi bi-flag-fill me-1"></i> Guardar y Terminar Ensamblaje
         </button>
     </div>
 

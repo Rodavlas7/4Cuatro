@@ -28,6 +28,18 @@ CREATE TABLE componente (
   PRIMARY KEY (numero)
 );
 
+-- Qué piezas concretas reprobó una inspección. La inspección dice si la laptop
+-- pasa o no; esto dice POR CUÁL componente, que es lo que sirve para reclamar al
+-- proveedor o detectar un lote malo. Sin esta tabla el motivo solo vivía en el
+-- texto libre de `observaciones` y no se podía cruzar con nada.
+DROP TABLE IF EXISTS detalle_inspeccion;
+CREATE TABLE detalle_inspeccion (
+  inspeccion int NOT NULL,
+  componente int NOT NULL,
+  observacion varchar(256) DEFAULT NULL,
+  PRIMARY KEY (inspeccion, componente)
+);
+
 DROP TABLE IF EXISTS detalle_material;
 CREATE TABLE detalle_material (
   orden int NOT NULL,
@@ -326,6 +338,8 @@ ALTER TABLE componente ADD CONSTRAINT FK_componente_lote FOREIGN KEY (lote) REFE
 ALTER TABLE componente ADD CONSTRAINT FK_componente_estado FOREIGN KEY (estado) REFERENCES edo_componente(codigo);
 
 -- Llaves foráneas para la tabla detalle_material
+ALTER TABLE detalle_inspeccion ADD CONSTRAINT FK_detalle_inspeccion_inspeccion FOREIGN KEY (inspeccion) REFERENCES inspeccion_calidad(numero);
+ALTER TABLE detalle_inspeccion ADD CONSTRAINT FK_detalle_inspeccion_componente FOREIGN KEY (componente) REFERENCES componente(numero);
 ALTER TABLE detalle_material ADD CONSTRAINT FK_detalle_material_orden FOREIGN KEY (orden) REFERENCES orden_material(numero);
 ALTER TABLE detalle_material ADD CONSTRAINT FK_detalle_material_modelo FOREIGN KEY (modelo) REFERENCES modelo_componente(codigo);
 

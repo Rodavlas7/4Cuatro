@@ -1,6 +1,35 @@
 from rest_framework import serializers
 
-from .models import InspeccionCalidad, VistaInspeccionCalidad
+from .models import DetalleInspeccion, InspeccionCalidad, VistaInspeccionCalidad
+
+
+# --------------------------------------------------------------------------
+#   D E T A L L E   D E   I N S P E C C I O N   (piezas que reprobaron)
+# --------------------------------------------------------------------------
+
+class CreateDetalleInspeccionSerializer(serializers.ModelSerializer):
+    """Alta de un renglón: qué pieza falló en qué inspección y por qué."""
+
+    class Meta:
+        model = DetalleInspeccion
+        fields = ("inspeccion", "componente", "observacion")
+
+
+class ListDetalleInspeccionSerializer(serializers.ModelSerializer):
+    """Solo lectura, con lo mínimo para pintar la pieza sin otra llamada."""
+
+    componente_numero = serializers.IntegerField(source="componente.numero", read_only=True)
+    componente_serie = serializers.CharField(source="componente.num_serie", read_only=True)
+    componente_modelo = serializers.CharField(source="componente.modelo.nombre", read_only=True)
+    componente_tipo = serializers.CharField(
+        source="componente.modelo.tipo_componente.nombre", read_only=True)
+    componente_estado = serializers.CharField(source="componente.estado.nombre", read_only=True)
+
+    class Meta:
+        model = DetalleInspeccion
+        fields = ("inspeccion", "componente", "observacion",
+                  "componente_numero", "componente_serie",
+                  "componente_modelo", "componente_tipo", "componente_estado")
 
 
 

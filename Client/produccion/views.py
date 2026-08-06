@@ -1,6 +1,7 @@
 import requests
 
 from datetime import datetime, time
+from threading import local
 
 from django.contrib import messages
 from django.shortcuts import render, redirect
@@ -51,16 +52,50 @@ def _json(url, headers, params=None):
 
     Devolver None es suficiente porque todas las funciones de este módulo ya
     revisan el tipo (`isinstance(x, list)`) antes de usar el resultado, y None no
-    pasa esa revisión."""
+    pasa esa revisión.
+
+    Lo que None NO dice es POR QUÉ falló, y esa diferencia importa: una pantalla
+    vacía porque no hay datos se ve igual que una vacía porque la API contestó
+    403 o está apagada. `_motivo_json` guarda el motivo del último fallo para que
+    la vista pueda explicarlo en vez de mentir con un "no hay nada"."""
     respuesta = get(url, headers, params=params)
 
-    if respuesta is None or respuesta.status_code != 200:
+    if respuesta is None:
+        _motivo_json(url, "No se pudo comunicar con la API.")
+        return None
+
+    if respuesta.status_code == 403:
+        _motivo_json(url, "Tu rol no tiene permiso para consultar esos datos.")
+        return None
+
+    if respuesta.status_code != 200:
+        _motivo_json(url, f"La API respondió {respuesta.status_code}.")
         return None
 
     try:
         return respuesta.json()
     except ValueError:
+        _motivo_json(url, "La API respondió algo que no es JSON.")
         return None
+
+
+# Motivo del último fallo de _json, por hilo. No se guarda en la sesión a
+# propósito: es información de ESTA petición y no tiene por qué sobrevivirla.
+_fallos = local()
+
+
+def _motivo_json(url, motivo):
+    _fallos.ultimo = {"url": url, "motivo": motivo}
+
+
+def motivo_ultimo_fallo():
+    """El porqué del último _json que devolvió None en esta petición, o None."""
+    return getattr(_fallos, "ultimo", None)
+
+
+def limpiar_fallos():
+    """Se llama al empezar una vista, para no arrastrar el fallo de otra."""
+    _fallos.ultimo = None
 
 
 def _headers(request):
@@ -196,24 +231,40 @@ def _componentes_libres(comps, linea=None):
     return libres
 
 
-def _registro_abierto(headers, laptop):
-    """El ensamblaje SIN TERMINAR (sin fecha_fin) de esa laptop, si existe.
-    Se reutiliza en vez de abrir uno nuevo en cada registro parcial."""
+def _registros_de_laptop(headers, laptop):
+    """TODOS los registros de ensamblaje de esa laptop.
+
+    Son varios, uno por línea: la laptop cierra el de una línea y abre el de la
+    siguiente conforme avanza. Por eso lo que lleva puesto está repartido entre
+    todos ellos y no solo en el que está abierto."""
     regs = _json(f"{API}/produccion/registros-ensamblaje/", headers)
     if not isinstance(regs, list):
-        return None
-    abiertos = [r for r in regs
-                if str(r.get("laptop")) == str(laptop) and not r.get("fecha_fin")]
+        return []
+    return [r for r in regs if str(r.get("laptop")) == str(laptop)]
+
+
+def _registro_abierto(headers, laptop):
+    """El ensamblaje SIN TERMINAR (sin fecha_fin) de esa laptop, si existe.
+    Es el de la línea en la que va ahora; se reutiliza en vez de abrir otro."""
+    abiertos = [r for r in _registros_de_laptop(headers, laptop)
+                if not r.get("fecha_fin")]
     return abiertos[-1] if abiertos else None
 
 
-def _montado_por_modelo(comps, numero_registro):
-    """Cuántas piezas de cada modelo ya están montadas en ese ensamblaje."""
+def _montado_por_modelo(comps, numeros_registro):
+    """Cuántas piezas de cada modelo lleva PUESTAS la laptop.
+
+    Se cuenta contra todos sus registros, no solo el abierto: la tarjeta madre
+    que montó la línea B quedó pegada al registro de la B, que para cuando la
+    laptop llega a la C ya está cerrado, y aun así sigue puesta. Mirando solo el
+    registro abierto, la línea C vería la laptop vacía y el orden de montaje le
+    bloquearía todo."""
     montado = {}
-    if not numero_registro:
+    numeros = {str(n) for n in (numeros_registro or []) if n is not None}
+    if not numeros:
         return montado
     for c in comps:
-        if str(c.get("registro_ensamblaje")) == str(numero_registro):
+        if str(c.get("registro_ensamblaje")) in numeros:
             modelo = c.get("modelo_codigo")
             montado[modelo] = montado.get(modelo, 0) + 1
     return montado
@@ -280,8 +331,9 @@ def ensamblajeRegistrarView(request):
         cap_tipo = _capacidad_por_tipo(filas_bom)
 
         comps = _todos_los_componentes(headers)
-        registro = _registro_abierto(headers, laptop)
-        ya_montado = _montado_por_modelo(comps, registro.get("numero") if registro else None)
+        registros_laptop = _registros_de_laptop(headers, laptop)
+        registro = next((r for r in reversed(registros_laptop) if not r.get("fecha_fin")), None)
+        ya_montado = _montado_por_modelo(comps, [r.get("numero") for r in registros_laptop])
 
         # Lo que se marcó en el formulario.
         seleccion = {}
@@ -471,8 +523,9 @@ def ensamblajeRegistrarView(request):
             comps = _todos_los_componentes(headers)
             libres = _componentes_libres(comps, linea_sel)
 
-            registro = _registro_abierto(headers, laptop_sel)
-            ya_montado = _montado_por_modelo(comps, registro.get("numero") if registro else None)
+            registros_laptop = _registros_de_laptop(headers, laptop_sel)
+            registro = next((r for r in reversed(registros_laptop) if not r.get("fecha_fin")), None)
+            ya_montado = _montado_por_modelo(comps, [r.get("numero") for r in registros_laptop])
 
             # Cuánto lleva montado cada TIPO en este ensamblaje.
             montado_tipo = {}
