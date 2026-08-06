@@ -97,15 +97,23 @@ INSERT INTO registro_ensamblaje (fecha_inicio, fecha_fin, hora_inicio, hora_fin,
 --  4. COMPONENTES INSTALADOS  (asignados a un registro_ensamblaje).
 --     El trigger tg_Validar_Capacidad_Componente valida que no se
 --     exceda la capacidad por TIPO del BOM (CPU 1, RAM 2, SSD 2, resto 1).
+--
+--     La 'linea' de la pieza es la que la INSTALÓ, según la estación que
+--     monta ese tipo (ver el mapa en la sección de stock, al final). No
+--     tiene por qué coincidir con la del registro_ensamblaje: ese es el de
+--     la línea donde ARRANCÓ la laptop, y el mismo registro va acumulando
+--     piezas conforme la laptop pasa por las demás líneas.
+--       Procesador y RAM -> LIN002 · SSD -> LIN003
+--       Tarjeta madre    -> LIN002 · Batería -> LIN004
 -- ============================================================
 -- L2 (registro 1) — juego completo
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L2-CPU', 'Procesador',    'LIN001', 'MC001', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-RAM1','RAM módulo 1',  'LIN001', 'MC005', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-RAM2','RAM módulo 2',  'LIN001', 'MC006', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-SSD', 'SSD',           'LIN001', 'MC009', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-MB',  'Tarjeta madre', 'LIN001', 'MC012', 'LCOMP-001', 'EDC002', 1),
-('CMP-L2-BAT', 'Batería',       'LIN001', 'MC017', 'LCOMP-001', 'EDC002', 1);
+('CMP-L2-CPU', 'Procesador',    'LIN002', 'MC001', 'LCOMP-001', 'EDC002', 1),
+('CMP-L2-RAM1','RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-001', 'EDC002', 1),
+('CMP-L2-RAM2','RAM módulo 2',  'LIN002', 'MC006', 'LCOMP-001', 'EDC002', 1),
+('CMP-L2-SSD', 'SSD',           'LIN003', 'MC009', 'LCOMP-001', 'EDC002', 1),
+('CMP-L2-MB',  'Tarjeta madre', 'LIN002', 'MC012', 'LCOMP-001', 'EDC002', 1),
+('CMP-L2-BAT', 'Batería',       'LIN004', 'MC017', 'LCOMP-001', 'EDC002', 1);
 
 -- L3 (registro 2) — parcial
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
@@ -114,44 +122,52 @@ INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, reg
 
 -- L4 (registro 3) — juego completo (Intel)
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L4-CPU', 'Procesador',    'LIN001', 'MC002', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-RAM1','RAM módulo 1',  'LIN001', 'MC005', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-RAM2','RAM módulo 2',  'LIN001', 'MC007', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-SSD', 'SSD',           'LIN001', 'MC010', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-MB',  'Tarjeta madre', 'LIN001', 'MC013', 'LCOMP-002', 'EDC002', 3),
-('CMP-L4-BAT', 'Batería',       'LIN001', 'MC017', 'LCOMP-002', 'EDC002', 3);
+('CMP-L4-CPU', 'Procesador',    'LIN002', 'MC002', 'LCOMP-002', 'EDC002', 3),
+('CMP-L4-RAM1','RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-002', 'EDC002', 3),
+('CMP-L4-RAM2','RAM módulo 2',  'LIN002', 'MC007', 'LCOMP-002', 'EDC002', 3),
+('CMP-L4-SSD', 'SSD',           'LIN003', 'MC010', 'LCOMP-002', 'EDC002', 3),
+('CMP-L4-MB',  'Tarjeta madre', 'LIN002', 'MC013', 'LCOMP-002', 'EDC002', 3),
+('CMP-L4-BAT', 'Batería',       'LIN004', 'MC017', 'LCOMP-002', 'EDC002', 3);
 
 -- L5 (registro 4) — parcial
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L5-CPU', 'Procesador', 'LIN001', 'MC001', 'LCOMP-001', 'EDC002', 4),
-('CMP-L5-SSD', 'SSD',        'LIN001', 'MC009', 'LCOMP-001', 'EDC002', 4);
+('CMP-L5-CPU', 'Procesador', 'LIN002', 'MC001', 'LCOMP-001', 'EDC002', 4),
+('CMP-L5-SSD', 'SSD',        'LIN003', 'MC009', 'LCOMP-001', 'EDC002', 4);
 
 -- L6 (registro 5) — parcial
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L6-CPU', 'Procesador',   'LIN003', 'MC003', 'LCOMP-002', 'EDC002', 5),
-('CMP-L6-RAM1','RAM módulo 1', 'LIN003', 'MC006', 'LCOMP-002', 'EDC002', 5);
+('CMP-L6-CPU', 'Procesador',   'LIN002', 'MC003', 'LCOMP-002', 'EDC002', 5),
+('CMP-L6-RAM1','RAM módulo 1', 'LIN002', 'MC006', 'LCOMP-002', 'EDC002', 5);
 
 -- L7 (registro 6) — juego completo
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('CMP-L7-CPU', 'Procesador',    'LIN001', 'MC001', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-RAM1','RAM módulo 1',  'LIN001', 'MC005', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-RAM2','RAM módulo 2',  'LIN001', 'MC006', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-SSD', 'SSD',           'LIN001', 'MC009', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-MB',  'Tarjeta madre', 'LIN001', 'MC012', 'LCOMP-001', 'EDC002', 6),
-('CMP-L7-BAT', 'Batería',       'LIN001', 'MC017', 'LCOMP-001', 'EDC002', 6);
+('CMP-L7-CPU', 'Procesador',    'LIN002', 'MC001', 'LCOMP-001', 'EDC002', 6),
+('CMP-L7-RAM1','RAM módulo 1',  'LIN002', 'MC005', 'LCOMP-001', 'EDC002', 6),
+('CMP-L7-RAM2','RAM módulo 2',  'LIN002', 'MC006', 'LCOMP-001', 'EDC002', 6),
+('CMP-L7-SSD', 'SSD',           'LIN003', 'MC009', 'LCOMP-001', 'EDC002', 6),
+('CMP-L7-MB',  'Tarjeta madre', 'LIN002', 'MC012', 'LCOMP-001', 'EDC002', 6),
+('CMP-L7-BAT', 'Batería',       'LIN004', 'MC017', 'LCOMP-001', 'EDC002', 6);
 
 
 -- ============================================================
---  5. COMPONENTES EN INVENTARIO  (sin ensamblaje asignado; el trigger
---     de capacidad NO aplica). Distintos estados para variedad.
+--  5. COMPONENTES SUELTOS EN INVENTARIO  (sin ensamblaje asignado; el
+--     trigger de capacidad NO aplica). Sirven para que los endpoints de
+--     componentes tengan piezas en estados distintos, no solo Disponible.
+--
+--     Cada una va en la línea que instala su tipo. Antes estaban regadas
+--     (un procesador en LIN001, un teclado en LIN002...) y eso se colaba
+--     como stock fantasma en el checklist de registro de ensamblaje: la
+--     pantalla lista lo que la línea tiene disponible, así que una pieza
+--     en la línea equivocada aparece como si esa línea la instalara.
 -- ============================================================
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('INV-CPU-01', 'Procesador en inventario', 'LIN001', 'MC004', 'LCOMP-002', 'EDC001', NULL),
-('INV-SSD-01', 'SSD en inventario',        'LIN001', 'MC008', 'LCOMP-001', 'EDC001', NULL),
-('INV-PAN-01', 'Pantalla en inventario',   'LIN001', 'MC014', 'LCOMP-001', 'EDC001', NULL),
-('INV-KB-01',  'Teclado en inventario',    'LIN002', 'MC018', 'LCOMP-001', 'EDC001', NULL),
-('INV-WIFI-01','Wi-Fi en inventario',      'LIN002', 'MC024', 'LCOMP-002', 'EDC001', NULL),
-('INV-CAM-01', 'Cámara dañada',            'LIN003', 'MC022', 'LCOMP-001', 'EDC003', NULL);
+('INV-CPU-01', 'Procesador en inventario', 'LIN002', 'MC004', 'LCOMP-002', 'EDC001', NULL),
+('INV-SSD-01', 'SSD en inventario',        'LIN003', 'MC008', 'LCOMP-001', 'EDC001', NULL),
+('INV-PAN-01', 'Pantalla en inventario',   'LIN004', 'MC014', 'LCOMP-001', 'EDC001', NULL),
+('INV-KB-01',  'Teclado en inventario',    'LIN001', 'MC018', 'LCOMP-001', 'EDC001', NULL),
+('INV-WIFI-01','Wi-Fi en inventario',      'LIN003', 'MC024', 'LCOMP-002', 'EDC001', NULL),
+('INV-CAM-01', 'Cámara dañada',            'LIN004', 'MC022', 'LCOMP-001', 'EDC003', NULL),
+('INV-BAT-01', 'Batería mermada',          'LIN004', 'MC017', 'LCOMP-002', 'EDC004', NULL);
 
 
 -- ============================================================
@@ -176,17 +192,66 @@ INSERT INTO registro_embalaje (fecha, hora, laptop, tipo) VALUES
 
 -- ============================================================
 --  8. ÓRDENES DE MATERIAL + SUS RENGLONES (detalle_material, PK compuesta)
+--
+--  Una orden por línea de ensamblaje. Cada una pide EXACTAMENTE los modelos
+--  que instalan sus estaciones: es el mismo reparto que el stock, así que una
+--  línea nunca se surte de algo que no le toca montar.
+--
+--  Las cantidades son para unas 40 laptops, repartidas entre los modelos
+--  compatibles de cada tipo (los de doble ranura —RAM y SSD— llevan más).
+--
+--  La línea E no lleva orden: es de embalaje y detalle_material solo apunta a
+--  modelo_componente, que son piezas de ensamblaje. Cajas y empaque salen de
+--  tipo_embalaje, que es otro catálogo y no cuelga de aquí.
 -- ============================================================
 INSERT INTO orden_material (fecha, hora, linea) VALUES
-('2026-07-21', '07:30:00', 'LIN001'),   -- numero 1
-('2026-07-21', '07:45:00', 'LIN002');   -- numero 2
+('2026-07-21', '07:30:00', 'LIN001'),   -- numero 1 — Línea A
+('2026-07-21', '07:45:00', 'LIN002'),   -- numero 2 — Línea B
+('2026-07-21', '08:00:00', 'LIN003'),   -- numero 3 — Línea C
+('2026-07-21', '08:15:00', 'LIN004');   -- numero 4 — Línea D
 
+-- Orden 1 · Línea A: chasis superior, touchpad, teclado, altavoces, conector
 INSERT INTO detalle_material (orden, modelo, cantidad) VALUES
-(1, 'MC001',  50),
-(1, 'MC005', 100),
-(1, 'MC009',  30),
-(2, 'MC002',  20),
-(2, 'MC006',  40);
+(1, 'MC028', 40),   -- Lenovo Top Cover T14G5 Negro
+(1, 'MC020', 20),   -- Lenovo Touchpad T14G5 NFC
+(1, 'MC021', 20),   -- Lenovo Touchpad T14G5 Std
+(1, 'MC018', 20),   -- Lenovo KB T14G5 ES Retroilum.
+(1, 'MC019', 20),   -- Lenovo KB T14G5 US Retroilum.
+(1, 'MC031', 40),   -- Harman 2x2W Speaker T14G5
+(1, 'MC030', 40);   -- Lenovo USB-C Power Connector
+
+-- Orden 2 · Línea B: tarjeta madre, procesador, memoria RAM
+INSERT INTO detalle_material (orden, modelo, cantidad) VALUES
+(2, 'MC012', 20),   -- Lenovo T14 G5 AMD Mainboard
+(2, 'MC013', 20),   -- Lenovo T14 G5 Intel Mainboard
+(2, 'MC001', 10),   -- AMD Ryzen 5 PRO 7540U
+(2, 'MC002', 10),   -- AMD Ryzen 7 PRO 7840U
+(2, 'MC003', 10),   -- Intel Core Ultra 5 125U
+(2, 'MC004', 10),   -- Intel Core Ultra 7 165U
+(2, 'MC005', 30),   -- Samsung 8GB DDR5-5600 SO-DIMM
+(2, 'MC006', 30),   -- Samsung 16GB DDR5-5600 SO-DIMM
+(2, 'MC007', 30);   -- Micron 32GB DDR5-5600 SO-DIMM
+
+-- Orden 3 · Línea C: SSD, tarjeta de red, disipador
+INSERT INTO detalle_material (orden, modelo, cantidad) VALUES
+(3, 'MC008', 20),   -- Samsung PM9A1 256GB NVMe M.2
+(3, 'MC009', 20),   -- Samsung PM9A1 512GB NVMe M.2
+(3, 'MC010', 20),   -- Samsung PM9A1 1TB NVMe M.2
+(3, 'MC011', 20),   -- Seagate FireCuda 2TB NVMe M.2
+(3, 'MC024', 20),   -- Intel Wi-Fi 6E AX211 M.2
+(3, 'MC025', 20),   -- Qualcomm FastConnect 6900 M.2
+(3, 'MC026', 20),   -- Lenovo Thermal Module T14G5 AMD
+(3, 'MC027', 20);   -- Lenovo Thermal Module T14G5 Int
+
+-- Orden 4 · Línea D: pantalla, cámara web, batería, chasis inferior
+INSERT INTO detalle_material (orden, modelo, cantidad) VALUES
+(4, 'MC014', 15),   -- BOE 14" FHD IPS 400nit
+(4, 'MC015', 15),   -- LG 14" WUXGA IPS Touch 400nit
+(4, 'MC016', 15),   -- BOE 14" 2.8K OLED 400nit
+(4, 'MC022', 20),   -- Chicony 1080p FHD IR+RGB
+(4, 'MC023', 20),   -- Chicony 5MP IR+RGB
+(4, 'MC017', 40),   -- Lenovo 52.5Wh Li-Ion T14G5
+(4, 'MC029', 40);   -- Lenovo Bottom Cover T14G5
 
 
 -- ============================================================
@@ -206,9 +271,8 @@ INSERT INTO paro (razon, fecha_inicio, fecha_fin, hora_inicio, hora_fin, linea) 
 --   LIN001 -> chasis superior, touchpad, teclado, altavoces, conector de carga
 --   LIN002 -> tarjeta madre, procesador, memoria RAM
 --   LIN003 -> SSD, tarjeta de red, disipador
---   LIN004 -> pantalla, cámara web, batería
---   LIN005 -> chasis inferior
---   LIN006 -> (embalaje: no surte componentes de ensamblaje)
+--   LIN004 -> pantalla, cámara web, batería, chasis inferior
+--   LIN005 -> (embalaje: no surte componentes de ensamblaje)
 -- Todas quedan Disponibles (EDC001) y sin ensamblaje asignado.
 -- ============================================================================
 
@@ -398,13 +462,13 @@ INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, reg
 ('STK-MC017-4', 'Lenovo 52.5Wh Li-Ion T14G5', 'LIN004', 'MC017', 'LCOMP-002', 'EDC001', NULL),
 ('STK-MC017-5', 'Lenovo 52.5Wh Li-Ion T14G5', 'LIN004', 'MC017', 'LCOMP-002', 'EDC001', NULL);
 
--- LIN005 · EST-E1 Chasis Inferior
+-- LIN004 · EST-D5 Chasis Inferior
 INSERT INTO componente (num_serie, descripcion, linea, modelo, lote, estado, registro_ensamblaje) VALUES
-('STK-MC029-1', 'Lenovo Bottom Cover T14G5', 'LIN005', 'MC029', 'LCOMP-001', 'EDC001', NULL),
-('STK-MC029-2', 'Lenovo Bottom Cover T14G5', 'LIN005', 'MC029', 'LCOMP-001', 'EDC001', NULL),
-('STK-MC029-3', 'Lenovo Bottom Cover T14G5', 'LIN005', 'MC029', 'LCOMP-001', 'EDC001', NULL),
-('STK-MC029-4', 'Lenovo Bottom Cover T14G5', 'LIN005', 'MC029', 'LCOMP-002', 'EDC001', NULL),
-('STK-MC029-5', 'Lenovo Bottom Cover T14G5', 'LIN005', 'MC029', 'LCOMP-002', 'EDC001', NULL);
+('STK-MC029-1', 'Lenovo Bottom Cover T14G5', 'LIN004', 'MC029', 'LCOMP-001', 'EDC001', NULL),
+('STK-MC029-2', 'Lenovo Bottom Cover T14G5', 'LIN004', 'MC029', 'LCOMP-001', 'EDC001', NULL),
+('STK-MC029-3', 'Lenovo Bottom Cover T14G5', 'LIN004', 'MC029', 'LCOMP-001', 'EDC001', NULL),
+('STK-MC029-4', 'Lenovo Bottom Cover T14G5', 'LIN004', 'MC029', 'LCOMP-002', 'EDC001', NULL),
+('STK-MC029-5', 'Lenovo Bottom Cover T14G5', 'LIN004', 'MC029', 'LCOMP-002', 'EDC001', NULL);
 
 
 -- ============================================================

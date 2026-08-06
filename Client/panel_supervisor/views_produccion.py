@@ -111,6 +111,71 @@ def _capacidad_por_tipo(filas_bom):
     return caps
 
 
+def _necesario_por_tipo(headers):
+    """{tipo: tipo que tiene que estar montado ANTES}, tal cual está en
+    tipo_comp.necesario. None = por ahí se empieza (el chasis)."""
+    tipos = _json(f"{API}/componentes/tipos/", headers)
+    if not isinstance(tipos, list):
+        return {}
+    return {t.get("codigo"): t.get("necesario") for t in tipos}
+
+
+def _orden_de_montaje(necesario_de, tipos_bom):
+    """Traduce tipo_comp.necesario al orden que aplica A ESTE modelo de laptop.
+
+    Devuelve (requisito, profundidad, ciclicos):
+
+      requisito[t]    Tipo que hay que colocar antes que `t`, saltándose los
+                      que el modelo no lleva: si la cámara necesita pantalla y
+                      este modelo no trae pantalla, sube por la cadena hasta el
+                      primero que sí esté. None = con ése se arranca.
+      profundidad[t]  Cuántos pasos hay de `t` hasta el arranque. Sirve para
+                      listar primero lo que se monta primero.
+      ciclicos        Tipos cuya cadena se muerde la cola (p. ej. TC004 → TC007
+                      → TC012 → TC011 → TC001 → TC004, o TC008 apuntándose a sí
+                      mismo). Eso es un error de captura en tipo_comp: no existe
+                      un orden posible. Se tratan como arranque para no dejar la
+                      pantalla trabada, y la vista los reporta para corregirlos.
+    """
+    # 1) Requisito directo, brincándose los tipos que este modelo no lleva.
+    requisito = {}
+    for tipo in tipos_bom:
+        visitados = {tipo}
+        actual = necesario_de.get(tipo)
+        while actual and actual not in visitados and actual not in tipos_bom:
+            visitados.add(actual)
+            actual = necesario_de.get(actual)
+        requisito[tipo] = actual if actual in tipos_bom else None
+
+    # 2) Un tipo está en ciclo si siguiendo la cadena se vuelve a encontrar a sí
+    #    mismo. Solo se rompen los del anillo; lo que cuelga de ellos se acomoda
+    #    solo una vez que el anillo pasa a ser arranque.
+    ciclicos = set()
+    for tipo in requisito:
+        actual = requisito.get(tipo)
+        for _ in range(len(requisito)):
+            if actual is None:
+                break
+            if actual == tipo:
+                ciclicos.add(tipo)
+                break
+            actual = requisito.get(actual)
+    for tipo in ciclicos:
+        requisito[tipo] = None
+
+    # 3) Ya sin ciclos: cuántos saltos faltan para llegar al arranque.
+    profundidad = {}
+    for tipo in requisito:
+        pasos = 0
+        actual = requisito.get(tipo)
+        while actual is not None and pasos <= len(requisito):
+            pasos += 1
+            actual = requisito.get(actual)
+        profundidad[tipo] = pasos
+
+    return requisito, profundidad, ciclicos
+
+
 def _todos_los_componentes(headers):
     comps = _json(f"{API}/componentes/", headers)
     return comps if isinstance(comps, list) else []
@@ -253,6 +318,33 @@ def ensamblajeRegistrarView(request):
             )
             return redirect('panel_supervisor:ensamblaje-registrar')
 
+        # Y que se respete el orden de montaje (tipo_comp.necesario): un tipo solo
+        # entra si el que va antes ya lleva al menos una pieza —montada de antes o
+        # marcada en este mismo envío—. Se revisa aquí y no solo en el navegador
+        # porque el JS se puede saltar con las herramientas de desarrollo.
+        requisito_tipo, _, _ = _orden_de_montaje(
+            _necesario_por_tipo(headers), set(cap_tipo)
+        )
+
+        seleccion_por_tipo = {}
+        for codigo_modelo, cantidad in seleccion.items():
+            tipo = tipo_de.get(codigo_modelo)
+            seleccion_por_tipo[tipo] = seleccion_por_tipo.get(tipo, 0) + cantidad
+
+        fuera_de_orden = [
+            f"{nombre_tipo.get(t) or t} va después de "
+            f"{nombre_tipo.get(requisito_tipo[t]) or requisito_tipo[t]}"
+            for t in seleccion_por_tipo
+            if requisito_tipo.get(t) and usado_por_tipo.get(requisito_tipo[t], 0) < 1
+        ]
+        if fuera_de_orden:
+            messages.error(
+                request,
+                "No se registró: hay que respetar el orden de montaje — "
+                + "; ".join(fuera_de_orden)
+            )
+            return redirect('panel_supervisor:ensamblaje-registrar')
+
         ahora = datetime.now()
         fecha_hoy = ahora.date().isoformat()
         hora_ahora = ahora.strftime("%H:%M:%S")
@@ -350,6 +442,9 @@ def ensamblajeRegistrarView(request):
     laptop_obj = None
     componentes_bom = []
     tipos_info = {}
+    tipos_ciclicos = []
+    # Componentes del modelo que esta línea no instala y por eso no se listan.
+    ocultos_por_linea = 0
     registro = None
 
     # Se necesitan las dos: la laptop define QUÉ componentes acepta (BOM) y
@@ -363,6 +458,16 @@ def ensamblajeRegistrarView(request):
         if laptop_obj and laptop_obj.get("modelo_codigo"):
             filas_bom = _bom(headers, laptop_obj["modelo_codigo"])
             cap_tipo = _capacidad_por_tipo(filas_bom)
+
+            nombre_de_tipo = {f.get("componente_tipo"): f.get("componente_tipo_nombre")
+                              for f in filas_bom}
+
+            # Orden de montaje: qué tipo va antes de cuál y a cuántos pasos está
+            # cada uno del arranque.
+            requisito_tipo, profundidad_tipo, ciclicos = _orden_de_montaje(
+                _necesario_por_tipo(headers), set(cap_tipo)
+            )
+            tipos_ciclicos = sorted(nombre_de_tipo.get(t) or t for t in ciclicos)
 
             comps = _todos_los_componentes(headers)
             libres = _componentes_libres(comps, linea_sel)
@@ -386,6 +491,34 @@ def ensamblajeRegistrarView(request):
                 cap_t = cap_tipo.get(tipo_codigo, capacidad)
                 libres_tipo = cap_t - montado_tipo.get(tipo_codigo, 0)
 
+                # Tipo que va antes que éste. Al cargar la pantalla nada está
+                # marcado todavía, así que lo único que puede cubrirlo es lo que
+                # ya venía montado; de ahí en adelante manda el JS.
+                requiere = requisito_tipo.get(tipo_codigo)
+
+                # tipos_info va con el BOM COMPLETO a propósito: el contador y el
+                # botón de terminar miden la laptop entera, no lo que le toca a
+                # esta línea. Si midieran solo lo de la línea, la primera en
+                # acabar lo suyo cerraría el ensamblaje a media producción.
+                tipos_info.setdefault(tipo_codigo, {
+                    "nombre": fila.get("componente_tipo_nombre") or tipo_codigo,
+                    "capacidad": cap_t,
+                    "montado": montado_tipo.get(tipo_codigo, 0),
+                    # El JS lo usa para habilitar/trabar casillas en vivo.
+                    "requiere": requiere,
+                })
+
+                # La tabla, en cambio, solo lleva lo que ESTA línea puede
+                # instalar. Por ahora eso se deduce del stock: cada línea surte
+                # únicamente los tipos que sus estaciones montan, así que lo que
+                # no tiene existencias aquí es que no le toca.
+                # TODO: cuando exista la relación estación/línea ↔ tipo_comp,
+                # filtrar por ahí. El stock confunde "no me toca" con "me quedé
+                # sin material".
+                if disponibles == 0:
+                    ocultos_por_linea += 1
+                    continue
+
                 componentes_bom.append({
                     "codigo": codigo,
                     "nombre": fila.get("componente_nombre"),
@@ -403,19 +536,19 @@ def ensamblajeRegistrarView(request):
                     "sin_stock": disponibles == 0,
                     # Ese tipo ya quedó lleno con lo montado antes.
                     "tipo_lleno": libres_tipo <= 0,
+                    # Orden de montaje.
+                    "requiere_tipo": requiere or "",
+                    "requiere_nombre": nombre_de_tipo.get(requiere) or requiere or "",
+                    "profundidad": profundidad_tipo.get(tipo_codigo, 0),
+                    "orden_pendiente": bool(requiere) and montado_tipo.get(requiere, 0) < 1,
                 })
 
-                tipos_info.setdefault(tipo_codigo, {
-                    "nombre": fila.get("componente_tipo_nombre") or tipo_codigo,
-                    "capacidad": cap_t,
-                    "montado": montado_tipo.get(tipo_codigo, 0),
-                })
-
-            # Primero los que más stock tienen en la línea (los que sí se pueden
-            # montar quedan arriba y los "sin stock" al final); a igual stock,
-            # en orden alfabético por nombre.
+            # Primero lo que va primero: los que están a menos pasos del arranque
+            # de la cadena de montaje. A igual paso, los que más stock tienen en
+            # la línea (los "sin stock" al final) y luego alfabético por nombre.
             componentes_bom.sort(
-                key=lambda c: (-c["disponibles"], (c["nombre"] or c["codigo"]).lower())
+                key=lambda c: (c["profundidad"], -c["disponibles"],
+                               (c["nombre"] or c["codigo"]).lower())
             )
 
     return render(
@@ -429,6 +562,8 @@ def ensamblajeRegistrarView(request):
             "laptop_obj": laptop_obj,
             "componentes": componentes_bom,
             "tipos_info": tipos_info,
+            "tipos_ciclicos": tipos_ciclicos,
+            "ocultos_por_linea": ocultos_por_linea,
             "registro": registro,
         }
     )
