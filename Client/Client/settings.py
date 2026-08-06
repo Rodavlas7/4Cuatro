@@ -27,6 +27,15 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
 
+# Cuando compartimos el Client por un túnel de Cloudflare, el navegador del
+# compañero entra por https pero el túnel nos entrega la petición por http.
+# Django compara el Origin (https://...) contra el esquema que ve aquí (http)
+# y rechazaría todos los POST con "Origin checking failed". Declarar el dominio
+# del túnel como de confianza resuelve eso; en local no cambia nada.
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.trycloudflare.com',
+]
+
 # Cliente y API corren en el mismo host (127.0.0.1) y las cookies no distinguen
 # puerto, así que con los nombres por defecto cada proyecto le pisaba la sesión
 # al otro. Con nombres propios cada uno conserva la suya.
