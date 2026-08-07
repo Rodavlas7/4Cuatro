@@ -113,7 +113,7 @@ FROM orden_produccion op
 LEFT JOIN modelo_laptop ml ON ml.codigo = op.modelo_laptop
 LEFT JOIN edo_produccion ep ON ep.codigo = op.estado
 LEFT JOIN lote_laptop ll ON ll.codigo = op.lote
-ORDER BY op.fecha DESC, op.hora DESC;
+ORDER BY op.folio DESC, op.fecha DESC, op.hora DESC;
 
 
 -- VISTA: vista_paros
@@ -134,7 +134,7 @@ SELECT
     CASE WHEN p.fecha_fin IS NULL THEN 1 ELSE 0 END   AS abierto
 FROM paro p
 LEFT JOIN linea l ON l.codigo = p.linea
-ORDER BY p.fecha_inicio DESC, p.hora_inicio DESC, p.numero DESC;
+ORDER BY p.numero DESC, p.fecha_inicio DESC, p.hora_inicio DESC;
 
 
 -- VISTA: vista_laptop_linea
@@ -360,7 +360,7 @@ LEFT JOIN empleado e
 LEFT JOIN linea l
     ON l.codigo = ic.linea
 
-ORDER BY ic.fecha DESC, ic.hora DESC, ic.numero DESC;
+ORDER BY ic.numero DESC;
 
 
 
@@ -384,7 +384,7 @@ SELECT
 FROM registro_embalaje re
 LEFT JOIN tipo_embalaje te ON te.codigo = re.tipo
 LEFT JOIN laptop l ON l.numero = re.laptop
-ORDER BY re.fecha DESC, re.hora DESC;
+ORDER BY re.numero Desc, re.fecha DESC, re.hora DESC;
 
 
 
