@@ -112,7 +112,8 @@ SELECT
 FROM orden_produccion op
 LEFT JOIN modelo_laptop ml ON ml.codigo = op.modelo_laptop
 LEFT JOIN edo_produccion ep ON ep.codigo = op.estado
-LEFT JOIN lote_laptop ll ON ll.codigo = op.lote;
+LEFT JOIN lote_laptop ll ON ll.codigo = op.lote
+ORDER BY op.fecha DESC, op.hora DESC;
 
 
 -- VISTA: vista_paros
@@ -132,7 +133,8 @@ SELECT
     l.nombre                                          AS linea_nombre,
     CASE WHEN p.fecha_fin IS NULL THEN 1 ELSE 0 END   AS abierto
 FROM paro p
-LEFT JOIN linea l ON l.codigo = p.linea;
+LEFT JOIN linea l ON l.codigo = p.linea
+ORDER BY p.fecha_inicio DESC, p.hora_inicio DESC, p.numero DESC;
 
 
 -- VISTA: vista_laptop_linea
@@ -193,7 +195,8 @@ SELECT
 FROM laptop lap
 LEFT JOIN modelo_laptop ml ON ml.codigo = lap.modelo
 LEFT JOIN edo_laptop    el ON el.codigo = lap.estado
-LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero;
+LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero
+ORDER BY lap.numero DESC;
 
 
 -- VISTA: vista_componentes
@@ -292,7 +295,9 @@ LEFT JOIN empleado_estacion ee
    AND ee.fecha_fin IS NULL
 
 LEFT JOIN estacion es
-    ON es.codigo = ee.estacion;
+    ON es.codigo = ee.estacion
+
+ORDER BY e.numero DESC;
 
 
 
@@ -314,7 +319,8 @@ SELECT
     END AS estado_usuario
 FROM usuario u
 LEFT JOIN empleado e ON e.numero = u.empleado
-LEFT JOIN rol r ON r.codigo = e.rol;
+LEFT JOIN rol r ON r.codigo = e.rol
+ORDER BY u.numero DESC;
 
 -- VISTA: vista_inspeccion_calidad
 --
@@ -352,7 +358,9 @@ LEFT JOIN laptop lp
 LEFT JOIN empleado e
     ON e.numero = ic.empleado
 LEFT JOIN linea l
-    ON l.codigo = ic.linea;
+    ON l.codigo = ic.linea
+
+ORDER BY ic.fecha DESC, ic.hora DESC, ic.numero DESC;
 
 
 
@@ -375,7 +383,8 @@ SELECT
     te.nombre AS tipo_nombre
 FROM registro_embalaje re
 LEFT JOIN tipo_embalaje te ON te.codigo = re.tipo
-LEFT JOIN laptop l ON l.numero = re.laptop;
+LEFT JOIN laptop l ON l.numero = re.laptop
+ORDER BY re.fecha DESC, re.hora DESC;
 
 
 
