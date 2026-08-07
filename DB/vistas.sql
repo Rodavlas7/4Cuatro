@@ -511,10 +511,6 @@ GROUP BY p.fecha_inicio, p.linea, l.nombre;
 --            serializer de la API lo devuelva como un objeto plano y la
 --            plantilla lo lea con {{ resumen.paros_abiertos }}.
 
-CREATE VIEW vista_dash_resumen_planta AS
-SELECT
-    1 AS clave,
-
     -- OJO con las líneas: `estado` y `activo` son dos cosas distintas y hoy no
     -- concuerdan. `estado` dice cómo está operando (ACTI/INAC/PARO/MANT) y
     -- `activo` es la baja lógica que pone el DELETE de la API (lineas/views.py).
@@ -523,6 +519,10 @@ SELECT
     --
     -- datos.sql inserta las líneas sin la columna `activo`; hoy es DEFAULT
     -- TRUE, así que nacen dadas de alta y sólo las baja el DELETE de la API.
+
+CREATE VIEW vista_dash_resumen_planta AS
+SELECT
+    1 AS clave,
     (SELECT COUNT(*) FROM linea)                                         AS lineas_totales,
     (SELECT COUNT(*) FROM linea WHERE estado = 'ACTI')                   AS lineas_activas,
     (SELECT COUNT(*) FROM linea WHERE estado = 'INAC')                   AS lineas_inactivas,
@@ -603,7 +603,6 @@ GROUP BY mc.codigo, mc.nombre, mc.fabricante, mc.tipo_componente, tc.nombre;
 --            Quien la consulta ordena por fecha y hora y corta con LIMIT.
 
 CREATE VIEW vista_dash_actividad AS
-
     SELECT
         CONCAT('EMB-', re.numero)          AS clave,
         'EMBALAJE'                         AS tipo,
@@ -723,6 +722,9 @@ UNION ALL
 --            la pantalla de trazabilidad se sirve de una sola consulta y no
 --            depende de la vista del CRUD, que es de otro equipo.
 
+    -- Avance en porcentaje. NULLIF evita la división entre cero cuando la
+    -- orden se guardó sin cantidad planificada.
+
 CREATE VIEW vista_traza_orden AS
 SELECT
     op.folio,
@@ -737,8 +739,6 @@ SELECT
     op.lote           AS lote_codigo,
     ll.fecha          AS lote_fecha,
 
-    -- Avance en porcentaje. NULLIF evita la división entre cero cuando la
-    -- orden se guardó sin cantidad planificada.
     IFNULL(ROUND(100 * op.cant_producida / NULLIF(op.cant_planificada, 0)), 0) AS avance,
 
     (SELECT COUNT(*) FROM laptop x WHERE x.orden = op.folio)                          AS laptops_totales,
@@ -788,6 +788,9 @@ LEFT JOIN lote_laptop    ll ON ll.codigo = op.lote;
 --            un JOIN la duplicaría en la tabla de pantalla. Con MIN/MAX el
 --            renglón sigue siendo uno por laptop, que es como se lee.
 
+
+    -- Resultado de la última inspección: 1 aprobada, 0 rechazada, 2 continuar,
+    -- NULL si nunca pasó por calidad.
 CREATE VIEW vista_traza_orden_laptops AS
 SELECT
     lap.numero,
@@ -812,8 +815,6 @@ SELECT
 
     (SELECT COUNT(*) FROM inspeccion_calidad ic WHERE ic.laptop = lap.numero) AS inspecciones,
 
-    -- Resultado de la última inspección: 1 aprobada, 0 rechazada, 2 continuar,
-    -- NULL si nunca pasó por calidad.
     (SELECT ic.resultado
        FROM inspeccion_calidad ic
       WHERE ic.laptop = lap.numero
