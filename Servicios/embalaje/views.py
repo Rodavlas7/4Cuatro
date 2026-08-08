@@ -33,6 +33,10 @@ class LaptopsDisponiblesAPIView(generics.ListAPIView):
             inspeccioncalidad__resultado=0
         ).exclude(
             pk__in=laptops_embaladas # pk o el nombre de tu primary key en Laptop
+        ).exclude(
+            estado='RECHA' 
+        ).exclude(
+            estado='PENSAM' 
         ).distinct()
 
 class TipoEmbalajeListAPIView(generics.ListAPIView):
