@@ -23,13 +23,13 @@ class LaptopsDisponiblesAPIView(generics.ListAPIView):
     modulo = "embalaje"
     serializer_class = serializers.LaptopDisponibleSerializer
 
-def get_queryset(self):
-    laptops_embaladas = RegistroEmbalaje.objects.values_list('laptop', flat=True)
+    def get_queryset(self):
+        laptops_embaladas = RegistroEmbalaje.objects.values_list('laptop', flat=True)
 
-    return (Laptop.objects
-            .filter(estado='APROV')
-            .exclude(pk__in=laptops_embaladas)
-            .order_by('-numero'))
+        return (Laptop.objects
+                .filter(estado='APROV')
+                .exclude(pk__in=laptops_embaladas)
+                .order_by('-numero'))
 
 class TipoEmbalajeListAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, TienePermisoModulo]
