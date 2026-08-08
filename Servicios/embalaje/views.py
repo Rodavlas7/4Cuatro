@@ -23,21 +23,13 @@ class LaptopsDisponiblesAPIView(generics.ListAPIView):
     modulo = "embalaje"
     serializer_class = serializers.LaptopDisponibleSerializer
 
-    def get_queryset(self):
-        # Excluir las que ya están en RegistroEmbalaje
-        laptops_embaladas = RegistroEmbalaje.objects.values_list('laptop', flat=True)
-        
-        return Laptop.objects.filter(
-            inspeccioncalidad__resultado=1
-        ).exclude(
-            inspeccioncalidad__resultado=0
-        ).exclude(
-            pk__in=laptops_embaladas # pk o el nombre de tu primary key en Laptop
-        ).exclude(
-            estado='RECHA' 
-        ).exclude(
-            estado='PENSAM' 
-        ).distinct()
+def get_queryset(self):
+    laptops_embaladas = RegistroEmbalaje.objects.values_list('laptop', flat=True)
+
+    return (Laptop.objects
+            .filter(estado='APROV')
+            .exclude(pk__in=laptops_embaladas)
+            .order_by('-numero'))
 
 class TipoEmbalajeListAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, TienePermisoModulo]
