@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from secrets import token_hex
 
 from django.contrib.auth.hashers import check_password, make_password
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from rest_framework import generics, status
@@ -24,6 +24,14 @@ from django.db.models import Q
 #################################
 # MARLENE MARLENE MARLENE AHORA EN POSTMAN usa "Bearer tu_token", en la parte donde tienes que poner tu token
 ###########################
+
+
+def debe_asignar_linea(rol_codigo):
+    return rol_codigo != "ADMIN"
+
+
+def debe_asignar_estacion(rol_codigo):
+    return rol_codigo not in {"ADMIN", "SUPER"}
 
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
@@ -333,11 +341,50 @@ class UpdateUsuarioAPIView(APIView):
         )
 
         if not serializer.is_valid():
-
             return Response(
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        if request.data.get("contrasena"):
+            admin_password = request.data.get("admin_password")
+
+            if not admin_password:
+                return Response(
+                    {
+                        "admin_password": [
+                            "Se requiere la contraseña del administrador para cambiar la contraseña."
+                        ]
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not request.user or not hasattr(request.user, "empleado") or request.user.empleado is None:
+                return Response(
+                    {
+                        "mensaje": "No se pudo verificar el administrador."
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if request.user.empleado.rol_id != "ADMIN":
+                return Response(
+                    {
+                        "mensaje": "Solo un administrador puede autorizar el cambio de contraseña."
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if not check_password(admin_password, request.user.contrasena):
+                return Response(
+                    {
+                        "admin_password": [
+                            "Contraseña de administrador incorrecta."
+                        ]
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         serializer.save()
 
         return Response(
@@ -453,54 +500,64 @@ class RegistroEmpleadoAPIView(APIView):
     @transaction.atomic
     def post(self, request):
         
+        rol_id = request.data.get("rol")
         linea_id = request.data.get("linea")
         estacion_id = request.data.get("estacion")
-        
-        if not linea_id or not estacion_id:
-            return Response(
-                {
-                    "mensaje": "Debe seleccionar una línea y una estación"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        try:
-            linea = Linea.objects.get(
-                pk=linea_id
-            )
 
+        es_admin = rol_id == "ADMIN"
+        debe_linea = debe_asignar_linea(rol_id)
+        debe_estacion = debe_asignar_estacion(rol_id)
 
-            estacion = Estacion.objects.get(
-                pk=estacion_id
-            )
+        if es_admin:
+            linea = None
+            estacion = None
+        else:
+            if not linea_id:
+                return Response(
+                    {
+                        "mensaje": "Debe seleccionar una línea"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
+            try:
+                linea = Linea.objects.get(pk=linea_id)
+            except Linea.DoesNotExist:
+                return Response(
+                    {
+                        "mensaje": "La línea seleccionada no existe"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
-        except Linea.DoesNotExist:
+            if debe_estacion:
+                if not estacion_id:
+                    return Response(
+                        {
+                            "mensaje": "Debe seleccionar una estación"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-            return Response(
-                {
-                    "mensaje": "La línea seleccionada no existe"
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
+                try:
+                    estacion = Estacion.objects.get(pk=estacion_id)
+                except Estacion.DoesNotExist:
+                    return Response(
+                        {
+                            "mensaje": "La estación seleccionada no existe"
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
 
-
-        except Estacion.DoesNotExist:
-
-            return Response(
-                {
-                    "mensaje": "La estación seleccionada no existe"
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if estacion.linea_id != linea.codigo:
-
-            return Response(
-                {
-                    "mensaje": "La estación no pertenece a la línea seleccionada"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+                if estacion.linea_id != linea.codigo:
+                    return Response(
+                        {
+                            "mensaje": "La estación no pertenece a la línea seleccionada"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            else:
+                estacion = None
 
 #registrar empleado
 
@@ -519,63 +576,94 @@ class RegistroEmpleadoAPIView(APIView):
 
         empleado = empleado_serializer.save()
 
-#asignar linea
-        linea_data = {
 
-            "empleado": empleado.numero,
-
-            "linea": linea.codigo,
-
-            "fecha_inicio": date.today()
-
-        }
-
-
-        linea_serializer = serializers.CreateEmpleadoLineaSerializer(
-            data=linea_data
-        )
-
-
-        if not linea_serializer.is_valid():
-
+        # Si es Admin, no se asigna línea ni estación: se guarda el empleado y se termina aquí.
+        if es_admin:
             return Response(
-                linea_serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "mensaje": "Empleado registrado correctamente",
+                    "empleado": empleado.numero,
+                    "linea": None,
+                    "estacion": None
+                },
+                status=status.HTTP_201_CREATED
             )
 
-        linea_serializer.save()
-        
-#asignar estacion  
-        estacion_data = {
 
-            "empleado": empleado.numero,
+        if debe_linea:
+            linea_data = {
+                "empleado": empleado.numero,
+                "linea": linea.codigo,
+                "fecha_inicio": date.today()
+            }
 
-            "estacion": estacion.codigo,
+            try:
+                EmpleadoLinea.objects.get(
+                    empleado=empleado,
+                    linea_id=linea.codigo,
+                    fecha_inicio=date.today()
+                )
+            except EmpleadoLinea.DoesNotExist:
+                linea_serializer = serializers.CreateEmpleadoLineaSerializer(
+                    data=linea_data
+                )
 
-            "fecha_inicio": date.today()
+                if not linea_serializer.is_valid():
+                    return Response(
+                        linea_serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-        }
-        
-        estacion_serializer = serializers.CreateEmpleadoEstacionSerializer(
-            data=estacion_data
-        )
+                try:
+                    linea_serializer.save()
+                except IntegrityError:
+                    return Response(
+                        {
+                            "mensaje": "Ya existe una asignación de línea activa para este empleado con la misma fecha."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
+        if debe_estacion and estacion is not None:
+            estacion_data = {
+                "empleado": empleado.numero,
+                "estacion": estacion.codigo,
+                "fecha_inicio": date.today()
+            }
 
-        if not estacion_serializer.is_valid():
+            try:
+                EmpleadoEstacion.objects.get(
+                    empleado=empleado,
+                    estacion_id=estacion.codigo,
+                    fecha_inicio=date.today()
+                )
+            except EmpleadoEstacion.DoesNotExist:
+                estacion_serializer = serializers.CreateEmpleadoEstacionSerializer(
+                    data=estacion_data
+                )
 
-            return Response(
-                estacion_serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+                if not estacion_serializer.is_valid():
+                    return Response(
+                        estacion_serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-        estacion_serializer.save()
+                try:
+                    estacion_serializer.save()
+                except IntegrityError:
+                    return Response(
+                        {
+                            "mensaje": "Ya existe una asignación de estación activa para este empleado con la misma fecha."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
         return Response(
             {
                 "mensaje": "Empleado registrado correctamente",
                 "empleado": empleado.numero,
-                "linea": linea.nombre,
-                "estacion": estacion.nombre
+                "linea": linea.nombre if linea else None,
+                "estacion": estacion.nombre if estacion else None
             },
             status=status.HTTP_201_CREATED
         )
@@ -692,45 +780,16 @@ class UpdateEmpleadoAPIView(APIView):
         empleado = serializer.save()
 
 
+        # Si el rol resultante es Administrador, no debe tener línea ni estación:
+        # cerramos cualquier asignación activa y no procesamos cambios nuevos.
+        if empleado.rol_id == "ADMIN":
 
-        # ===============================
-        # CAMBIO DE LINEA
-        # ===============================
-
-        linea = request.data.get("linea")
-
-
-        if linea:
-
-            # Cerrar línea actual
             EmpleadoLinea.objects.filter(
                 empleado=empleado,
                 fecha_fin__isnull=True
             ).update(
                 fecha_fin=timezone.now().date()
             )
-
-
-            # Crear nueva asignación
-
-            EmpleadoLinea.objects.create(
-                empleado=empleado,
-                linea_id=linea,
-                fecha_inicio=timezone.now().date()
-            )
-
-
-
-        # ===============================
-        # CAMBIO DE ESTACION
-        # ===============================
-
-        estacion = request.data.get("estacion")
-
-
-        if estacion:
-
-            # Cerrar estación actual
 
             EmpleadoEstacion.objects.filter(
                 empleado=empleado,
@@ -739,14 +798,72 @@ class UpdateEmpleadoAPIView(APIView):
                 fecha_fin=timezone.now().date()
             )
 
-
-            # Crear nueva asignación
-
-            EmpleadoEstacion.objects.create(
-                empleado=empleado,
-                estacion_id=estacion,
-                fecha_inicio=timezone.now().date()
+            return Response(
+                {
+                    "mensaje": "Empleado actualizado correctamente"
+                },
+                status=status.HTTP_200_OK
             )
+
+        if empleado.rol_id == "SUPER":
+            EmpleadoEstacion.objects.filter(
+                empleado=empleado,
+                fecha_fin__isnull=True
+            ).update(
+                fecha_fin=timezone.now().date()
+            )
+
+        # ===============================
+        # CAMBIO DE LINEA
+        # ===============================
+
+        linea = request.data.get("linea")
+
+        if linea and debe_asignar_linea(empleado.rol_id):
+            asignacion_activa = EmpleadoLinea.objects.filter(
+                empleado=empleado,
+                fecha_fin__isnull=True
+            ).first()
+
+            if asignacion_activa is None or asignacion_activa.linea_id != linea:
+                EmpleadoLinea.objects.filter(
+                    empleado=empleado,
+                    fecha_fin__isnull=True
+                ).update(
+                    fecha_fin=timezone.now().date()
+                )
+
+                EmpleadoLinea.objects.create(
+                    empleado=empleado,
+                    linea_id=linea,
+                    fecha_inicio=timezone.now().date()
+                )
+
+        # ===============================
+        # CAMBIO DE ESTACION
+        # ===============================
+
+        estacion = request.data.get("estacion")
+
+        if estacion and debe_asignar_estacion(empleado.rol_id):
+            asignacion_activa = EmpleadoEstacion.objects.filter(
+                empleado=empleado,
+                fecha_fin__isnull=True
+            ).first()
+
+            if asignacion_activa is None or asignacion_activa.estacion_id != estacion:
+                EmpleadoEstacion.objects.filter(
+                    empleado=empleado,
+                    fecha_fin__isnull=True
+                ).update(
+                    fecha_fin=timezone.now().date()
+                )
+
+                EmpleadoEstacion.objects.create(
+                    empleado=empleado,
+                    estacion_id=estacion,
+                    fecha_inicio=timezone.now().date()
+                )
 
 
         return Response(

@@ -8,12 +8,30 @@ los otros dos.
 
 from django.urls import path
 
-from . import views, views_inspecciones
+from . import views, views_flujo, views_inspecciones
 
 app_name = 'panel_calidad'
 
 urlpatterns = [
     path('', views.Dashboard.as_view(), name='dashboard'),
+
+    # Flujo guiado: laptop -> ensamblaje -> inspección. La línea no se elige,
+    # sale del empleado que inició sesión.
+    path(
+        'flujo/',
+        views_flujo.SeleccionarLaptop.as_view(),
+        name='flujo-laptops',
+    ),
+    path(
+        'flujo/<int:laptop>/ensamblaje/',
+        views_flujo.RegistrarEnsamblaje.as_view(),
+        name='flujo-ensamblaje',
+    ),
+    path(
+        'flujo/<int:laptop>/inspeccion/',
+        views_flujo.Inspeccionar.as_view(),
+        name='flujo-inspeccion',
+    ),
 
     # Inspecciones de calidad
     path(

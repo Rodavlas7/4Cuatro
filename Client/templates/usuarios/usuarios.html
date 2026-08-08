@@ -195,7 +195,7 @@
 <!-- MODAL: CREAR -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{% url 'usuario-crear' %}" class="needs-validation w-100" novalidate>
+        <form id="formCrearUsuario" method="POST" action="{% url 'usuario-crear' %}" class="needs-validation w-100" novalidate>
             {% csrf_token %}
             <div class="modal-content border-0 shadow">
                 <div class="modal-header border-bottom-0 pb-0">
@@ -205,8 +205,8 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Nombre de usuario</label>
-                        <input type="text" name="usuario" class="form-control" required>
-                        <div class="invalid-feedback">Este campo es obligatorio.</div>
+                        <input type="text" name="usuario" id="usuario_autogenerado" class="form-control" placeholder="Dejar vacío para generar automáticamente">
+                        <div class="form-text text-muted">Se autocompletará en formato 4 dígitos + 3 iniciales del empleado (nombre y apellidos).</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Contraseña</label>
@@ -215,7 +215,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Asignar a Empleado</label>
-                        <select name="empleado" class="form-select" required>
+                        <select name="empleado" id="select_empleado_usuario" class="form-select" required>
                             <option value="">Seleccione un empleado</option>
                             {% for e in empleados %}
                             <option value="{{ e.numero }}">{{ e.numero }} - {{ e.nombre_completo }} ({{ e.rol_nombre }})</option>
@@ -224,6 +224,8 @@
                             {% endfor %}
                         </select>
                         <div class="invalid-feedback">Selecciona un empleado.</div>
+                        <div class="form-text text-muted">Solo se muestran empleados con rol Administrador, Supervisor o Inspector de calidad.</div>
+                        <div id="empleado_confirmacion" class="form-text text-muted mt-1">Selecciona un empleado para confirmar su nombre.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 bg-light">
@@ -276,7 +278,7 @@
 <!-- MODAL: EDITAR -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate>
+        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate data-confirm="¿Guardar cambios?">
             {% csrf_token %}
             <div class="modal-content border-0 shadow">
                 <div class="modal-header border-bottom-0 pb-0">
@@ -298,13 +300,37 @@
                         <input type="password" name="contrasena" id="edit_contrasena" class="form-control" minlength="8">
                         <small class="text-muted" style="font-size: 11px;">Dejar vacío para conservar la contraseña actual.</small>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Contraseña de administrador</label>
+                        <input type="password" name="admin_password" id="edit_admin_password" class="form-control">
+                        <small class="form-text text-muted">Requerida sólo si cambias la contraseña.</small>
+                    </div>
                 </div>
                 <div class="modal-footer border-top-0 bg-light">
                     <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-accent shadow-sm">Guardar cambios</button>
+                    <button type="button" class="btn btn-accent shadow-sm" data-bs-toggle="modal" data-bs-target="#modalConfirmarEditarUsuario">Guardar cambios</button>
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- MODAL: CONFIRMAR EDITAR -->
+<div class="modal fade" id="modalConfirmarEditarUsuario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body text-center p-4">
+                <div class="text-warning mb-3">
+                    <i class="bi bi-question-circle" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="fw-bold">¿Confirmar cambios?</h5>
+                <p class="text-muted small mb-4">Si confirmas, se guardarán los cambios en el usuario.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-white border shadow-sm w-50" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btnConfirmarEditarUsuario" class="btn btn-accent shadow-sm w-50">Confirmar</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -368,6 +394,56 @@
   })
 })()
 
+const empleadoSeleccionado = document.getElementById('select_empleado_usuario');
+const confirmacionEmpleado = document.getElementById('empleado_confirmacion');
+const usuarioAutogenerado = document.getElementById('usuario_autogenerado');
+
+if (empleadoSeleccionado) {
+    empleadoSeleccionado.addEventListener('change', function () {
+        const opcion = empleadoSeleccionado.options[empleadoSeleccionado.selectedIndex];
+        const texto = opcion.textContent || '';
+        const match = texto.match(/^(\d+)\s*-\s*(.+?)\s*\(/);
+
+        if (match) {
+            const numeroEmpleado = match[1];
+            const nombreEmpleado = match[2];
+            confirmacionEmpleado.textContent = `Empleado seleccionado: ${nombreEmpleado.trim()} (No. ${numeroEmpleado})`;
+            if (usuarioAutogenerado && !usuarioAutogenerado.dataset.touched) {
+                const palabras = nombreEmpleado.trim().split(/\s+/);
+                const nombre = palabras[0] || '';
+                const primerApellido = palabras[1] || '';
+                const segundoApellido = palabras[2] || '';
+
+                const inicialNombre = nombre.charAt(0) || 'X';
+                const inicialPrimerApellido = primerApellido.charAt(0) || 'X';
+                let inicialSegundoApellido = 'X';
+
+                if (segundoApellido) {
+                    inicialSegundoApellido = segundoApellido.charAt(0);
+                } else if (primerApellido.length > 1) {
+                    inicialSegundoApellido = primerApellido.charAt(1);
+                } else if (nombre.length > 1) {
+                    inicialSegundoApellido = nombre.charAt(1);
+                }
+
+                const iniciales = [inicialNombre, inicialPrimerApellido, inicialSegundoApellido]
+                    .map((c) => c.toUpperCase())
+                    .join('');
+
+                usuarioAutogenerado.value = `${numeroEmpleado.slice(-4).padStart(4, '0')}${iniciales}`;
+            }
+        } else {
+            confirmacionEmpleado.textContent = 'Selecciona un empleado para confirmar su nombre.';
+        }
+    });
+}
+
+if (usuarioAutogenerado) {
+    usuarioAutogenerado.addEventListener('input', function () {
+        usuarioAutogenerado.dataset.touched = 'true';
+    });
+}
+
 // MODAL: Detalle
 document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
@@ -391,6 +467,10 @@ document.getElementById('modalEditar').addEventListener('show.bs.modal', functio
     document.getElementById('edit_numero').value = btn.dataset.numero;
     document.getElementById('edit_usuario').value = btn.dataset.usuario;
     document.getElementById('edit_contrasena').value = "";
+});
+
+document.getElementById('btnConfirmarEditarUsuario').addEventListener('click', function () {
+    document.getElementById('formEditar').submit();
 });
 
 // MODAL: Desactivar

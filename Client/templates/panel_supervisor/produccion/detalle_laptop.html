@@ -202,14 +202,10 @@
 
                 <div class="col-md-6">
                     <label class="form-label">Línea</label>
-                    <select name="linea" class="form-select">
-                        <option value="">— Sin línea —</option>
-                        {% for l in lineas %}
-                        <option value="{{ l.codigo }}" {% if laptop.linea_codigo == l.codigo %}selected{% endif %}>
-                            {{ l.codigo }} — {{ l.nombre }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <!-- Sin name y deshabilitado: la laptop no guarda línea. La que
+                         se ve es la de su último registro de ensamblaje. -->
+                    <input type="text" class="form-control"
+                           value="{{ laptop.linea_nombre|default:'— Sin línea —' }}" disabled>
                 </div>
 
                 <div class="col-md-6">
@@ -303,7 +299,15 @@
 <div class="card bg-white mb-3">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <strong>Componentes montados</strong>
-        <span class="text-muted small">{{ componentes|length }} pieza{{ componentes|length|pluralize:"s" }}</span>
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small">{{ componentes|length }} pieza{{ componentes|length|pluralize:"s" }}</span>
+            {% if desarmable and not finalizada %}
+            <button type="button" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
+                    data-bs-toggle="modal" data-bs-target="#modalDesarmar">
+                <i class="bi bi-tools"></i> Desarmar
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     {% if componentes %}
@@ -350,7 +354,7 @@
                         <form method="POST"
                               action="{% url 'panel_supervisor:laptop-componente-liberar' laptop.numero c.numero %}"
                               class="d-flex gap-1 justify-content-end"
-                              onsubmit="return confirm('¿Quitar {{ c.modelo_nombre|default:c.modelo_codigo|escapejs }} (#{{ c.numero }}) de esta laptop?');">
+                              data-confirm="¿Quitar {{ c.modelo_nombre|default:c.modelo_codigo|escapejs }} (#{{ c.numero }}) de esta laptop?">
                             {% csrf_token %}
                             <select name="estado" class="form-select form-select-sm" style="width:auto;">
                                 {% for e in estados_componente %}
@@ -527,5 +531,51 @@
         </table>
     </div>
 </div>
+
+<!-- MODAL: DESARMAR LA LAPTOP COMPLETA -->
+{% if desarmable and not finalizada %}
+<div class="modal fade" id="modalDesarmar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'panel_supervisor:laptop-desarmar' laptop.numero %}" class="w-100">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Desarmar la laptop completa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Se sueltan de un golpe los <strong class="text-dark">{{ componentes|length }}</strong>
+                        componente{{ componentes|length|pluralize:"s" }} montado{{ componentes|length|pluralize:"s" }}
+                        y se cierra el registro de ensamblaje.
+                    </p>
+
+                    <label class="form-label small fw-medium">¿A qué estado regresan los componentes?</label>
+                    <select name="estado" class="form-select mb-3">
+                        {% for e in estados_componente %}
+                        <option value="{{ e.codigo }}" {% if e.codigo == estado_disponible %}selected{% endif %}>
+                            {{ e.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="alert alert-warning small d-flex gap-2 align-items-start mb-0">
+                        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                        <div>
+                            Al cerrar el ensamblaje <strong>esta laptop ya no se puede volver a armar</strong>:
+                            la base impide abrirle uno nuevo. Los componentes Mermados se quedan como están,
+                            para no perder el rastro de dónde se perdieron.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sí, desarmar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}

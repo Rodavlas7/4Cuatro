@@ -1,181 +1,228 @@
 {% extends 'panel_admin/base.html' %}
-
+{% load formato %}
 
 {% block topbar_titulo %}Trazabilidad{% endblock %}
 
 {% block breadcrumbs %}
-    <li class="breadcrumb-item active" aria-current="page">Seguimiento de Ensamblaje</li>
+    <li class="breadcrumb-item active" aria-current="page">Trazabilidad</li>
 {% endblock %}
 
-{% block title %}Seguimiento de Ensamblaje{% endblock %}
+{% block title %}Trazabilidad de Ensamblaje{% endblock %}
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Seguimiento de Ensamblaje</h2>
-    <a href="{% url 'ensamblaje-registrar' %}" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i> Registrar ensamblaje
-    </a>
-</div>
+<div class="wrap">
 
-<!-- ...................................................................
-     R E S U M E N
-...................................................................... -->
-<div class="row g-3 mb-3">
-
-    <div class="col-md-4">
-        <a href="?situacion=abierto" class="text-decoration-none">
-            <div class="card p-3 bg-white h-100">
-                <span class="text-muted small">En proceso ahora</span>
-                <span class="fs-3 fw-semibold text-warning">{{ abiertos }}</span>
-                <span class="text-muted small">ensamblajes sin cerrar</span>
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO, RESUMEN Y FILTROS
+         ========================================== -->
+    <div class="emp-card mb-4">
+        
+        <!-- ENCABEZADO -->
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Seguimiento de Ensamblaje</h4>
+                <p class="text-muted small mb-0">Control y trazabilidad de los procesos de ensamblaje en línea.</p>
             </div>
-        </a>
-    </div>
-
-    <div class="col-md-4">
-        <a href="?situacion=terminado" class="text-decoration-none">
-            <div class="card p-3 bg-white h-100">
-                <span class="text-muted small">Terminados</span>
-                <span class="fs-3 fw-semibold text-success">{{ terminados }}</span>
-                <span class="text-muted small">de {{ total }} registrados</span>
+             <div>
+                <!-- Asegúrate de cambiar el href por la ruta o etiqueta de Django correcta -->
+                <a href="/reportes/" class="btn btn-primary px-4 py-2 d-inline-flex align-items-center gap-2 rounded-3 shadow-sm fw-medium">
+                    <i class="bi bi-file-earmark-arrow-down"></i> Descargar reportes
+                </a>
             </div>
-        </a>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card p-3 bg-white h-100">
-            <span class="text-muted small">Duración promedio</span>
-            <span class="fs-3 fw-semibold">{{ promedio|default:"—" }}</span>
-            <span class="text-muted small">solo los ya cerrados</span>
         </div>
     </div>
 
-</div>
-
-<!-- ...................................................................
-     F I L T R O S
-...................................................................... -->
-<form method="GET" class="card p-3 mb-3 bg-white">
-    <div class="row g-3">
-
-        <div class="col-md-5">
-            <label class="form-label fw-semibold">Buscar</label>
-            <input type="text" name="q" class="form-control"
-                   value="{{ filtros.q }}"
-                   placeholder="Núm. de ensamblaje, núm. de laptop o serie">
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Línea</label>
-            <select name="linea" class="form-select">
-                <option value="">— Todas —</option>
-                {% for l in lineas %}
-                <option value="{{ l.codigo }}" {% if filtros.linea == l.codigo %}selected{% endif %}>
-                    {{ l.codigo }} — {{ l.nombre }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="col-md-3">
-            <label class="form-label fw-semibold">Situación</label>
-            <select name="situacion" class="form-select">
-                <option value="">— Todas —</option>
-                <option value="abierto" {% if filtros.situacion == 'abierto' %}selected{% endif %}>Abierto</option>
-                <option value="terminado" {% if filtros.situacion == 'terminado' %}selected{% endif %}>Terminado</option>
-            </select>
-        </div>
-
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <span class="text-muted small">
-            {% if hay_filtros %}
-                Mostrando <strong>{{ mostrados }}</strong> de {{ total }} ensamblajes.
-            {% else %}
-                {{ total }} ensamblaje{{ total|pluralize:"s" }} registrado{{ total|pluralize:"s" }}.
-            {% endif %}
-        </span>
-        <div class="d-flex gap-2">
-            {% if hay_filtros %}
-            <a href="{% url 'ensamblaje-seguimiento' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-x-lg me-1"></i> Limpiar
+    <div class="row g-3 mb-4">
+        <!-- KPI 1: En proceso -->
+        <div class="col-md-6 col-xl-4">
+            <a href="?situacion=abierto" class="text-decoration-none">
+                <div class="emp-card h-100 p-3 d-flex flex-column justify-content-center">
+                    <span class="text-muted small fw-bold text-uppercase mb-1"> En proceso ahora</span>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <h3 class="fw-bold mb-0 text-dark">{{ abiertos }}</h3>
+                        <span class="text-warning small fw-medium"><i class="bi bi-exclamation-circle"></i> sin cerrar</span>
+                    </div>
+                </div>
             </a>
-            {% endif %}
-            <button type="submit" class="btn btn-outline-primary">
-                <i class="bi bi-funnel me-1"></i> Filtrar
-            </button>
+        </div>
+
+        <!-- KPI 2: Terminados -->
+        <div class="col-md-6 col-xl-4">
+            <a href="?situacion=terminado" class="text-decoration-none">
+                <div class="emp-card h-100 p-3 d-flex flex-column justify-content-center">
+                    <span class="text-muted small fw-bold text-uppercase mb-1">Terminados</span>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <h3 class="fw-bold mb-0 text-dark">{{ terminados }}</h3>
+                        <span class="text-success small fw-medium"><i class="bi bi-check-circle"></i> de {{ total }} registrados</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- KPI 3: Duración promedio -->
+        <div class="col-md-12 col-xl-4">
+            <div class="emp-card h-100 p-3 d-flex flex-column justify-content-center">
+                <span class="text-muted small fw-bold text-uppercase mb-1"><i class="bi bi-stopwatch me-1"></i> Duración promedio</span>
+                <h3 class="fw-bold mb-0 text-dark">{{ promedio|default:"—" }}</h3>
+                <span class="text-secondary small mt-1" style="font-size: 11px;">Solo ensamblajes cerrados</span>
+            </div>
+        </div>
+        </div>
+
+        <!-- FILTROS -->
+        <div class="emp-card mb-4">
+            <div class="emp-toolbar px-4 py-3">
+                <form method="GET">
+                    <div class="row g-3 align-items-end">
+
+                        <!-- Buscar (4 cols en lg) -->
+                        <div class="col-12 col-md-12 col-lg-4">
+                            <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" placeholder="Núm. de ensamblaje, laptop o serie..." value="{{ filtros.q }}">
+                            </div>
+                        </div>
+
+                        <!-- Select: Línea (3 cols en lg) -->
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <label class="form-label text-muted small fw-bold mb-1">Línea</label>
+                            <select name="linea" class="form-select form-select-sm py-2 text-secondary">
+                                <option value="">Todas</option>
+                                {% for l in lineas %}
+                                    <option value="{{ l.codigo }}" {% if filtros.linea == l.codigo %}selected{% endif %}>{{ l.codigo }} — {{ l.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Select: Situación (3 cols en lg) -->
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <label class="form-label text-muted small fw-bold mb-1">Situación</label>
+                            <select name="situacion" class="form-select form-select-sm py-2 text-secondary">
+                                <option value="">Todas</option>
+                                <option value="abierto" {% if filtros.situacion == 'abierto' %}selected{% endif %}>Abierto</option>
+                                <option value="terminado" {% if filtros.situacion == 'terminado' %}selected{% endif %}>Terminado</option>
+                            </select>
+                        </div>
+
+                        <!-- Botones de Acción (2 cols en lg) -->
+                        <div class="col-12 col-md-4 col-lg-2 d-flex gap-2">
+                            <button class="btn btn-dark btn-sm py-2 w-100 fw-medium d-flex align-items-center justify-content-center gap-2" type="submit" title="Filtrar">
+                                <i class="bi bi-funnel"></i> Filtrar
+                            </button>
+                            {% if hay_filtros %}
+                                <a href="{% url 'ensamblaje-seguimiento' %}" class="btn btn-outline-danger btn-sm py-2 px-3 d-flex align-items-center justify-content-center" title="Limpiar filtros">
+                                    <i class="bi bi-x-lg"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</form>
 
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Num.</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Laptop</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Línea</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Inicio / Fin</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Duración</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Piezas</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Orden</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in registros %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="badge-id text-primary">{{ r.numero }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div>
+                                    <a href="{% url 'laptop-detalle' r.laptop %}" class="fw-bold text-dark text-decoration-none hover-primary">
+                                        {{ r.laptop_serie|default:"Sin serie" }}
+                                    </a>
+                                    <div class="text-muted small" style="font-size: 11px;">
+                                        <span class="font-monospace text-secondary">Laptop Num. {{ r.laptop }}</span>
+                                        {% if r.laptop_estado %} <span class="mx-1">•</span> {{ r.laptop_estado }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">{{ r.linea_nombre|default:"—" }}</div>
+                        </td>
+                        <td>
+                            <div class="text-dark small">{{ r.fecha_inicio|fecha_hora:r.hora_inicio|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">
+                                <i class="bi bi-arrow-return-right me-1"></i>{{ r.fecha_fin|fecha_hora:r.hora_fin|default:"—" }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">{{ r.duracion|default:"—" }}</div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-2 py-1 {% if r.piezas %}bg-primary-subtle text-primary border border-primary-subtle{% else %}bg-light text-secondary border border-secondary-subtle{% endif %}">
+                                {{ r.piezas }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if r.abierto %}
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold bg-warning-subtle text-warning border border-warning-subtle">
+                                <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Abierto
+                            </span>
+                            {% else %}
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold bg-success-subtle text-success border border-success-subtle">
+                                <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Terminado
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <a href="{% url 'laptop-detalle' r.laptop %}" class="btn text-primary" title="Ver Expediente">
+                                    <i class="bi bi-list-ul"></i>
+                                </a>
+                                <!-- COMO AHORA ES TRAZABILIDAD ESTO NO NO SIRVE, YA QUE TRAZABILIDAD ES PARA LECTURA
+                                {% if r.abierto %}
+                                <a href="{% url 'ensamblaje-registrar' %}?laptop={{ r.laptop }}&amp;linea={{ r.linea }}"
+                                   class="btn text-secondary" title="Continuar este ensamblaje">
+                                    <i class="bi bi-tools"></i>
+                                </a>
+                                {% endif %}-->
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-motherboard text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            {% if hay_filtros %}
+                                Ningún ensamblaje coincide con los filtros de búsqueda.
+                            {% else %}
+                                No hay ensamblajes registrados.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>#</th>
-                <th>Laptop</th>
-                <th>Línea</th>
-                <th>Inicio</th>
-                <th>Fin</th>
-                <th>Duración</th>
-                <th class="text-center">Piezas</th>
-                <th>Situación</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in registros %}
-            <tr class="{% if r.abierto %}table-warning{% endif %}">
-                <td>{{ r.numero }}</td>
-                <td>
-                    <a href="{% url 'laptop-detalle' r.laptop %}">#{{ r.laptop }}</a>
-                    <span class="text-muted small d-block">
-                        <span class="font-monospace">{{ r.laptop_serie|default:"sin serie" }}</span>
-                        {% if r.laptop_estado %} · {{ r.laptop_estado }}{% endif %}
-                    </span>
-                </td>
-                <td>{{ r.linea_nombre|default:"—" }}</td>
-                <td>{{ r.fecha_inicio|default:"—" }} {{ r.hora_inicio|default:"" }}</td>
-                <td>{{ r.fecha_fin|default:"—" }} {{ r.hora_fin|default:"" }}</td>
-                <td>{{ r.duracion|default:"—" }}</td>
-                <td class="text-center">
-                    <span class="badge {% if r.piezas %}text-bg-primary{% else %}text-bg-light{% endif %}">
-                        {{ r.piezas }}
-                    </span>
-                </td>
-                <td>
-                    {% if r.abierto %}
-                    <span class="badge text-bg-warning">Abierto</span>
-                    {% else %}
-                    <span class="badge text-bg-success">Terminado</span>
-                    {% endif %}
-                </td>
-                <td class="text-end">
-                    <a href="{% url 'laptop-detalle' r.laptop %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-list-ul"></i> Expediente
-                    </a>
-                    {% if r.abierto %}
-                    <a href="{% url 'ensamblaje-registrar' %}?laptop={{ r.laptop }}&amp;linea={{ r.linea }}"
-                       class="btn btn-sm btn-outline-secondary" title="Continuar este ensamblaje">
-                        <i class="bi bi-tools"></i>
-                    </a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="9" class="text-center text-muted py-4">
-                {% if hay_filtros %}
-                    Ningún ensamblaje coincide con los filtros.
-                {% else %}
-                    No hay ensamblajes registrados.
-                {% endif %}
-            </td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
 </div>
 
 {% endblock %}

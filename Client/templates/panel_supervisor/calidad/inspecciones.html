@@ -279,7 +279,7 @@
 <!-- MODAL: EDITAR -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog">
-        <form method="POST" id="formEditar" action="" class="needs-validation" novalidate>
+        <form method="POST" id="formEditar" action="" class="needs-validation" novalidate data-confirm="¿Guardar cambios?">
             {% csrf_token %}
             <div class="modal-content">
                 <div class="modal-header">

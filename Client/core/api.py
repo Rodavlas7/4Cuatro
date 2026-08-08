@@ -119,6 +119,27 @@ def fallo(respuesta):
     return respuesta is None or respuesta.status_code != 200
 
 
+# Claves cuyo valor ya es el mensaje completo: se muestran solas, sin anteponer
+# el nombre del campo. "mensaje" lo usan las vistas propias de la API, "detail"
+# lo usa DRF y "non_field_errors" son las validaciones que no cuelgan de un
+# campo en particular (por ejemplo un renglón repetido en una orden).
+CLAVES_DE_MENSAJE = ('mensaje', 'detail', 'non_field_errors')
+
+
+def _texto(valor):
+    """Aplana el valor de un error de DRF a una sola línea.
+
+    DRF entrega los errores de cada campo como lista, y un str() crudo deja a la
+    vista el repr de Python: ["Este campo es requerido."] corchetes incluidos."""
+    if isinstance(valor, (list, tuple)):
+        return ' '.join(_texto(v) for v in valor)
+
+    if isinstance(valor, dict):
+        return ' '.join(f'{c}: {_texto(v)}' for c, v in valor.items())
+
+    return str(valor)
+
+
 def mensaje_error(respuesta):
     """Texto que explica por qué falló la respuesta, para mostrarlo al usuario."""
     if respuesta is None:
@@ -127,14 +148,15 @@ def mensaje_error(respuesta):
     try:
         datos = respuesta.json()
     except ValueError:
+        # Sin JSON no hay nada que leer: pasa cuando la API devuelve la página de
+        # depuración de Django, o sea cuando truena de verdad.
         return f'La API respondió {respuesta.status_code}.'
 
     if isinstance(datos, dict):
-        # DRF usa "detail"; esta API usa "mensaje" en sus vistas propias.
-        for campo in ('mensaje', 'detail'):
+        for campo in CLAVES_DE_MENSAJE:
             if campo in datos:
-                return str(datos[campo])
+                return _texto(datos[campo])
 
-        return ' | '.join(f'{c}: {v}' for c, v in datos.items())
+        return ' | '.join(f'{c}: {_texto(v)}' for c, v in datos.items())
 
     return f'La API respondió {respuesta.status_code}.'

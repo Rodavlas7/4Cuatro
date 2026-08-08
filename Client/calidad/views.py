@@ -25,7 +25,9 @@ def normalizar_listar(item):
         "numero": item.get("numero"),
         "resultado": item.get("resultado_nombre"),
         "fecha": item.get("fecha"),
+        "hora": item.get("hora"),
         "laptop": item.get("laptop_numero"),
+        "num_serie": item.get("laptop_num_serie"),
         "empleado": item.get("empleado_nombre"),
         "linea": item.get("linea_nombre"),
     }
@@ -107,7 +109,12 @@ class CrearInspeccion(generic.View):
         )
 
         if response.status_code == 201:
-            messages.success(request, "Inspección registrada correctamente.")
+            datos = response.json()
+            numero = datos.get("numero") or datos.get("id") or datos.get("inspeccion")
+            if numero:
+                messages.success(request, f"Inspección registrada correctamente. Número: {numero}")
+            else:
+                messages.success(request, "Inspección registrada correctamente.")
         else:
             error_data = response.json()
             mensaje = error_data.get("mensaje") or str(error_data)

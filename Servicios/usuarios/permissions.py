@@ -8,7 +8,7 @@ from rest_framework.permissions import BasePermission
 PERMISOS_ROL = {
 
     "ADMIN": [
-        "usuarios",
+        "usuarios", 
         "empleados",
         "lineas",
         "estaciones",
@@ -38,9 +38,17 @@ PERMISOS_ROL = {
     ],
 
 
+    # El operador de calidad no solo inspecciona: en su línea también registra el
+    # ensamblaje y marca las piezas que fallan (panel de calidad, flujo guiado).
+    # Para eso necesita leer los registros de ensamblaje de su línea, la laptop y
+    # su BOM, y montar o desmontar componentes. Sin estos tres módulos esas
+    # llamadas responden 403 y el flujo se queda sin datos.
     "OPCALI": [
         "calidad",
-        "consultas"
+        "consultas",
+        "ensamblaje",
+        "laptops",
+        "componentes"
     ]
 
 }

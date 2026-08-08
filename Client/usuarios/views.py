@@ -108,7 +108,7 @@ class ListaEmpleados(generic.View):
 
             "empleados": empleados,
 
-            "lineas": get_choices_lineas(token),
+            "lineas": get_choices_lineas(token, rol),
             "estaciones": get_choices_estaciones(token),
             "roles": get_choices_roles(token),
             "turnos": get_choices_turnos(token),
@@ -135,15 +135,29 @@ class CrearEmpleado(generic.View):
 
     def post(self, request):
         token = request.session.get("token")
+
+        rol = request.POST.get("rol")
+
         data = {
             "nombrepila": request.POST.get("nombrepila"),
             "primerapell": request.POST.get("primerapell"),
             "segundoapell": request.POST.get("segundoapell"),
-            "rol": request.POST.get("rol"),
+            "rol": rol,
             "turno": request.POST.get("turno"),
-            "linea": request.POST.get("linea"),
-            "estacion": request.POST.get("estacion"),
         }
+        
+        if rol == "ADMIN":
+            pass
+        else:
+            linea = request.POST.get("linea")
+            if linea:
+                data["linea"] = linea
+
+            if rol != "SUPER":
+                estacion = request.POST.get("estacion")
+                if estacion:
+                    data["estacion"] = estacion
+
 
         response = requests.post(
             self.url_api,
@@ -152,19 +166,21 @@ class CrearEmpleado(generic.View):
         )
 
         if response.status_code == 201:
-            empleado = response.json()
+            resultado = response.json()
 
             messages.success(
                 request,
-                f"Empleado registrado correctamente. Número de empleado: {empleado.get('numero')}"
+                f"Empleado registrado correctamente. Número de empleado: {resultado.get('empleado')}"
             )
         else:
             error_data = response.json()
-            mensaje = error_data.get("mensaje", "No se pudo registrar el empleado.")
+            mensaje = error_data.get(
+                "mensaje",
+                "No se pudo registrar el empleado."
+            )
             messages.error(request, mensaje)
 
         return redirect("lista_empleados")
-
 
 # ===============================
 # DETALLE (READ individual, opcional)
@@ -182,10 +198,6 @@ class DetalleEmpleado(generic.View):
         messages.error(request, "No se pudo obtener el detalle del empleado.")
         return redirect("lista_empleados")
 
-
-# ===============================
-# EDITAR (UPDATE)
-# ===============================
 # ===============================
 # EDITAR (UPDATE)
 # ===============================
@@ -195,17 +207,25 @@ class EditarEmpleado(generic.View):
         token = request.session.get("token")
         headers = {"Authorization": f"Bearer {token}"}
 
+        rol = request.POST.get("rol")
+
         data = {
             "nombrepila": request.POST.get("nombrepila"),
             "primerapell": request.POST.get("primerapell"),
             "segundoapell": request.POST.get("segundoapell"),
-            "rol": request.POST.get("rol"),
+            "rol": rol,
             "turno": request.POST.get("turno"),
         }
-        if request.POST.get("linea"):
+
+        if rol == "SUPER":
             data["linea"] = request.POST.get("linea")
-        if request.POST.get("estacion"):
-            data["estacion"] = request.POST.get("estacion")
+            data["estacion"] = None
+
+        if rol != "ADMIN" and rol != "SUPER":
+            if request.POST.get("linea"):
+                data["linea"] = request.POST.get("linea")
+            if request.POST.get("estacion"):
+                data["estacion"] = request.POST.get("estacion")
 
         response = requests.put(
             API_EMPLEADO + f"Actualizar/{numero}/",
@@ -219,11 +239,10 @@ class EditarEmpleado(generic.View):
                 f"Empleado No. {numero} actualizado correctamente."
             )
         else:
-            error_data = response.json()
             messages.error(
                 request,
                 f"No se pudo actualizar el empleado No. {numero}. "
-                + error_data.get("mensaje", "")
+                + mensaje_error(response)
             )
 
         return redirect("lista_empleados")
@@ -289,7 +308,8 @@ class ReactivarEmpleado(generic.View):
 class EstacionesPorLinea(generic.View):
     def get(self, request, linea_id):
         token = request.session.get("token")
-        estaciones = get_choices_estaciones(token, linea_id)
+        rol_nombre = request.GET.get("rol", "")
+        estaciones = get_choices_estaciones(token, linea_id, rol_nombre)
         return JsonResponse([{"codigo": c, "nombre": n} for c, n in estaciones], safe=False)
     
     
@@ -356,16 +376,22 @@ class ListaUsuarios(generic.View):
 
         empleados_lista = lista(empleados_resp)
 
+        allowed_employee_roles = {"ADMIN", "SUPER", "OPCALI"}
+
         empleados = [
             e for e in empleados_lista
-            if not e.get("usuario")
+            if not e.get("usuario") and e.get("rol_codigo") in allowed_employee_roles
         ]
 
+        roles = [
+            r for r in get_choices_roles(token)
+            if r[0] in allowed_employee_roles
+        ]
 
         context = {
             "usuarios": usuarios,
             "empleados": empleados,
-            "roles": get_choices_roles(token),
+            "roles": roles,
             "buscar": buscar,
             "rol": rol,
             "estado": estado,
@@ -487,26 +513,23 @@ class EditarUsuario(generic.View):
 
         token = request.session.get("token")
 
-
         data = {
-
             "usuario": request.POST.get("usuario"),
-            "contrasena": request.POST.get("contrasena"),
-            "empleado": request.POST.get("empleado"),
-
         }
 
+        contrasena = request.POST.get("contrasena")
+        if contrasena:
+            data["contrasena"] = contrasena
+            admin_password = request.POST.get("admin_password")
+            if admin_password:
+                data["admin_password"] = admin_password
 
         response = requests.put(
-
             API_USUARIO + f"Actualizar/{numero}/",
-
             headers={
                 "Authorization": f"Bearer {token}"
             },
-
             data=data
-
         )
 
 

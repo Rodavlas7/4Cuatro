@@ -1,11 +1,19 @@
 {% extends 'panel_supervisor/base.html' %}
 
-{% block title %}Registrar Ensamblaje{% endblock %}
+{% block title %}Revisión de Ensamblaje{% endblock %}
 
 {% block content %}
 
+<style>
+    /* Pieza que ya sostiene a otras: no se puede quitar sin quitar primero lo
+       que va montado encima, así que se marca distinta. */
+    .chk-comp.chk-trabada { accent-color: #fd7e14; cursor: not-allowed; }
+    .table tr.fila-trabada > td { background-color: rgba(253, 126, 20, .07); }
+    .table tr.fila-trabada > td:first-child { box-shadow: inset 3px 0 0 #fd7e14; }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Registrar Ensamblaje</h2>
+    <h2 class="mb-0">Revisión de Ensamblaje</h2>
 </div>
 
 <!-- ...................................................................
@@ -35,7 +43,7 @@
 
         <div class="col-md-7">
             <label class="form-label fw-semibold">
-                Laptop a ensamblar <span class="text-danger">*</span>
+                Laptop a revisar <span class="text-danger">*</span>
             </label>
             <select name="laptop" class="form-select" onchange="document.getElementById('formLaptop').submit();">
                 <option value="">— Selecciona una laptop —</option>
@@ -60,6 +68,16 @@
 </div>
 {% endif %}
 
+
+{% if tipos_ciclicos %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+    El orden de montaje de estos tipos se muerde la cola en
+    <code>tipo_comp.necesario</code>: <strong>{{ tipos_ciclicos|join:", " }}</strong>.
+    Mientras se corrige en la base, se tratan como inicio de la cadena y no
+    bloquean nada.
+</div>
+{% endif %}
 
 {% if laptop_obj %}
 <!-- ...................................................................
@@ -98,7 +116,12 @@
 
     <div class="card bg-white mb-3">
         <div class="card-header bg-white">
-            <strong>Componentes compatibles</strong>
+            <strong>Componentes de esta línea</strong>
+            {% if ocultos_por_linea %}
+            <div class="text-muted small">
+                {{ ocultos_por_linea }} componente{{ ocultos_por_linea|pluralize:"s" }} del modelo no se muestra{{ ocultos_por_linea|pluralize:"n" }}: no se instala{{ ocultos_por_linea|pluralize:"n" }} en {{ linea_sel }}.
+            </div>
+            {% endif %}
         </div>
 
         {% if componentes %}
@@ -117,7 +140,7 @@
                 </thead>
                 <tbody>
                     {% for c in componentes %}
-                    <tr class="{% if c.sin_stock or c.tipo_lleno %}table-secondary{% endif %}">
+                    <tr class="{% if c.sin_stock or c.tipo_lleno or c.orden_pendiente %}table-secondary{% endif %}">
 
                         <td class="text-center">
                             <input
@@ -128,17 +151,27 @@
                                 data-codigo="{{ c.codigo }}"
                                 data-tipo="{{ c.tipo_codigo }}"
                                 data-cap-tipo="{{ c.capacidad_tipo }}"
-                                {% if c.sin_stock or c.tipo_lleno %}disabled{% endif %}>
+                                data-requiere="{{ c.requiere_tipo }}"
+                                data-sin-stock="{% if c.sin_stock or c.tipo_lleno %}1{% else %}0{% endif %}"
+                                {% if c.sin_stock or c.tipo_lleno or c.orden_pendiente %}disabled{% endif %}>
                         </td>
 
                         <td>
                             <label class="form-check-label" for="chk_{{ c.codigo }}">
+                                <i class="bi bi-lock-fill icono-trabada d-none" style="color:#fd7e14;"></i>
                                 <strong>{{ c.nombre|default:c.codigo }}</strong>
                                 <span class="text-muted small d-block">{{ c.codigo }}</span>
                             </label>
                         </td>
 
-                        <td><span class="badge text-bg-light">{{ c.tipo|default:"—" }}</span></td>
+                        <td>
+                            <span class="badge text-bg-light">{{ c.tipo|default:"—" }}</span>
+                            {% if c.requiere_nombre %}
+                            <div class="aviso-orden text-warning-emphasis small mt-1 {% if not c.orden_pendiente %}d-none{% endif %}">
+                                <i class="bi bi-arrow-return-right"></i> Falta {{ c.requiere_nombre }}
+                            </div>
+                            {% endif %}
+                        </td>
 
                         <td class="text-center">
                             <span class="badge text-bg-primary">{{ c.capacidad }}</span>
@@ -191,8 +224,13 @@
         {% else %}
         <div class="card-body">
             <div class="alert alert-warning mb-0">
+                {% if ocultos_por_linea %}
+                En <strong>{{ linea_sel }}</strong> no hay stock de ningún componente de este
+                modelo. Revisa que sea la línea correcta o surte material a sus estaciones.
+                {% else %}
                 Este modelo de laptop no tiene componentes registrados en
                 <code>modelo_laptop_componente</code>.
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -201,25 +239,62 @@
     {{ tipos_info|json_script:"tiposData" }}
 
     <div class="d-flex justify-content-end align-items-center gap-2">
-        <span id="avanceTipos" class="text-muted small me-auto"></span>
+        <div class="me-auto">
+            <span id="avanceTipos" class="text-muted small"></span>
+            <!-- Motivo, cuando se intenta quitar una pieza que sostiene a otras -->
+            <span id="avisoOrden" class="small d-none d-block" style="color:#fd7e14;"></span>
+        </div>
 
         <a href="{% url 'panel_supervisor:ensamblaje-registrar' %}" class="btn btn-outline-secondary">Cancelar</a>
 
         <button type="submit" name="accion" value="registrar"
                 class="btn btn-primary" {% if not componentes %}disabled{% endif %}>
-            <i class="bi bi-check2-circle me-1"></i> Registrar ensamblaje
+            <i class="bi bi-check2-circle me-1"></i> Guardar Revisión de Ensamblaje
         </button>
 
         <!-- Aparece solo cuando la laptop queda con todos sus tipos cubiertos -->
-        <button type="submit" name="accion" value="terminar"
-                id="btnTerminar" class="btn btn-danger d-none">
-            <i class="bi bi-flag-fill me-1"></i> Registrar y Terminar Ensamblaje
+        <button type="button" id="btnTerminar" class="btn btn-danger d-none">
+            <i class="bi bi-flag-fill me-1"></i> Guardar y Terminar Ensamblaje
         </button>
     </div>
 
 </form>
 {% endif %}
 
+
+<!-- ==========================================
+     MODAL DE CONFIRMACIÓN: TERMINAR ENSAMBLAJE
+     ========================================== -->
+<div class="modal fade" id="modalConfirmarTerminar" tabindex="-1" aria-labelledby="modalConfirmarTerminarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 mt-2 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center" id="modalConfirmarTerminarLabel">
+                    <i class="bi bi-exclamation-triangle text-warning fs-4 me-2" id="modalIconWarning" style="display: none;"></i>
+                    <i class="bi bi-check-circle-fill text-success fs-4 me-2" id="modalIconSuccess" style="display: none;"></i>
+                    <span id="modalTerminarTitulo">Confirmar cierre</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-3 px-4">
+                <p id="modalTerminarMensaje" class="mb-0 text-dark fw-medium"></p>
+                <div id="contenedorFaltantes" class="bg-danger-subtle border border-danger-subtle rounded-3 p-3 mt-3" style="display: none;">
+                    <ul id="modalTerminarListaFaltantes" class="text-danger small mb-0 ps-3" style="list-style-type: square;"></ul>
+                </div>
+                <div class="alert bg-light border-0 text-muted small mt-3 mb-0 d-flex gap-2 align-items-center py-2">
+                    <i class="bi bi-info-circle fs-6"></i>
+                    Al continuar, se guardará la fecha y hora exacta de fin del ensamblaje.
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 pb-3 px-4">
+                <button type="button" class="btn btn-white border shadow-sm fw-medium" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger shadow-sm fw-medium" id="btnConfirmarTerminarSubmit">
+                    <i class="bi bi-flag-fill me-1"></i> Terminar ensamblaje
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 // ---------------------------------------------------------------------------
@@ -235,8 +310,8 @@ var TIPOS = datosTipos ? JSON.parse(datosTipos.textContent) : {};
 var porTipo = {};
 
 document.querySelectorAll('.chk-comp').forEach(function (chk) {
-    // Los que ya venían deshabilitados (sin stock o tipo lleno) no se re-habilitan.
-    chk.dataset.sinStock = chk.disabled ? '1' : '0';
+    // data-sin-stock lo pone la plantilla: los que no tienen stock o cuyo tipo
+    // ya está lleno no se re-habilitan nunca.
     (porTipo[chk.dataset.tipo] = porTipo[chk.dataset.tipo] || []).push(chk);
 });
 
@@ -285,16 +360,122 @@ function refrescarTipo(tipo) {
     });
 }
 
+// ---------------------------------------------------------------------------
+// ORDEN DE MONTAJE (tipo_comp.necesario)
+//
+// Un tipo solo se habilita cuando el que va ANTES ya lleva al menos una pieza
+// —montada de antes o marcada aquí mismo—: la RAM no se puede palomear hasta
+// que esté la tarjeta madre. Y al revés: una pieza que ya está sosteniendo a
+// otras se traba, para que no se pueda quitar sin quitar primero lo de encima.
+// ---------------------------------------------------------------------------
+
+// { tipo: [tipos que dependen de él] }
+var dependientesDe = {};
+Object.keys(TIPOS).forEach(function (t) {
+    var req = TIPOS[t].requiere;
+    if (req) (dependientesDe[req] = dependientesDe[req] || []).push(t);
+});
+
+// Piezas de ese tipo que hay en la laptop ahora mismo: las ya montadas más las
+// que están marcadas en la pantalla.
+function totalTipo(tipo) {
+    return (porTipo[tipo] || []).reduce(function (s, chk) {
+        return s + cantidadDe(chk);
+    }, montadoDe(tipo));
+}
+
+function requisitoCubierto(tipo) {
+    var req = TIPOS[tipo] && TIPOS[tipo].requiere;
+    return !req || totalTipo(req) >= 1;
+}
+
+// Tipos que ya están montados encima de éste (los que lo trabarían).
+function dependientesPuestos(tipo) {
+    return (dependientesDe[tipo] || []).filter(function (d) {
+        return totalTipo(d) > 0;
+    });
+}
+
+// Trabada = quitarla dejaría su tipo en cero habiendo ya algo montado encima.
+// Si quedan otras piezas del mismo tipo, se puede quitar sin problema.
+function estaTrabada(chk) {
+    if (!chk.checked) return false;
+    var tipo = chk.dataset.tipo;
+    if (totalTipo(tipo) - cantidadDe(chk) >= 1) return false;
+    return dependientesPuestos(tipo).length > 0;
+}
+
+function nombresDe(tipos) {
+    return tipos.map(function (t) { return TIPOS[t].nombre; }).join(', ');
+}
+
+function refrescarOrden() {
+    document.querySelectorAll('.chk-comp').forEach(function (chk) {
+        var tipo = chk.dataset.tipo;
+        var fila = chk.closest('tr');
+        var cubierto = requisitoCubierto(tipo);
+        var trabada = estaTrabada(chk);
+
+        chk.dataset.trabada = trabada ? '1' : '0';
+        chk.classList.toggle('chk-trabada', trabada);
+        chk.title = trabada ? 'Primero quita ' + nombresDe(dependientesPuestos(tipo)) : '';
+
+        if (fila) {
+            fila.classList.toggle('fila-trabada', trabada);
+            var candado = fila.querySelector('.icono-trabada');
+            if (candado) candado.classList.toggle('d-none', !trabada);
+            var aviso = fila.querySelector('.aviso-orden');
+            if (aviso) aviso.classList.toggle('d-none', cubierto);
+        }
+
+        // El orden se suma a los motivos que ya bloqueaban (stock / tipo lleno).
+        // Nunca se deshabilita una casilla MARCADA: una casilla disabled no se
+        // envía en el POST y se perdería la selección.
+        if (!chk.checked && !cubierto) {
+            chk.disabled = true;
+            if (fila) fila.classList.add('opacity-50');
+        }
+    });
+}
+
+// Al intentar desmarcar una pieza trabada se revierte el click y se explica.
+var avisoTimer = null;
+function avisarTrabada(chk) {
+    var caja = document.getElementById('avisoOrden');
+    if (!caja) return;
+    caja.innerHTML = '<i class="bi bi-lock-fill"></i> Para quitar ' +
+        (TIPOS[chk.dataset.tipo] || {}).nombre + ' hay que quitar primero: ' +
+        nombresDe(dependientesPuestos(chk.dataset.tipo)) + '.';
+    caja.classList.remove('d-none');
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(function () { caja.classList.add('d-none'); }, 5000);
+}
+
+// Un solo recálculo para todo: primero los topes por tipo (que re-habilitan lo
+// que tenga ranura libre) y encima las reglas de orden.
+function refrescarTodo() {
+    Object.keys(porTipo).forEach(refrescarTipo);
+    refrescarOrden();
+    refrescarCierre();
+}
+
 // Marcar / desmarcar
 document.querySelectorAll('.chk-comp').forEach(function (chk) {
+    // 'click' corre con la casilla ya cambiada: preventDefault la regresa.
+    chk.addEventListener('click', function (ev) {
+        if (!chk.checked && chk.dataset.trabada === '1') {
+            ev.preventDefault();
+            avisarTrabada(chk);
+        }
+    });
+
     chk.addEventListener('change', function () {
         var caja = document.getElementById('cant_' + chk.dataset.codigo);
         if (caja) {
             caja.disabled = !chk.checked;
             if (chk.checked && !caja.value) caja.value = 1;
         }
-        refrescarTipo(chk.dataset.tipo);
-        refrescarCierre();
+        refrescarTodo();
     });
 });
 
@@ -309,8 +490,7 @@ document.querySelectorAll('.cant-comp').forEach(function (caja) {
             if (val > max) caja.value = max;
             if (val < min) caja.value = min;
         }
-        refrescarTipo(caja.dataset.tipo);
-        refrescarCierre();
+        refrescarTodo();
     });
 });
 
@@ -361,29 +541,64 @@ function refrescarCierre() {
 }
 
 if (btnTerminar) {
-    btnTerminar.addEventListener('click', function (e) {
+    var modalTerminarEl = document.getElementById('modalConfirmarTerminar');
+    var modalTerminar = new bootstrap.Modal(modalTerminarEl);
+    var btnConfirmarTerminarSubmit = document.getElementById('btnConfirmarTerminarSubmit');
+
+    btnTerminar.addEventListener('click', function () {
+        modalTerminar.show();
+    });
+
+    modalTerminarEl.addEventListener('show.bs.modal', function () {
         var faltantes = JSON.parse(btnTerminar.dataset.faltantes || '[]');
-        var msg;
+        var tituloEl = document.getElementById('modalTerminarTitulo');
+        var mensajeEl = document.getElementById('modalTerminarMensaje');
+        var listaEl = document.getElementById('modalTerminarListaFaltantes');
+        var contenedorFaltantes = document.getElementById('contenedorFaltantes');
+        var iconWarning = document.getElementById('modalIconWarning');
+        var iconSuccess = document.getElementById('modalIconSuccess');
+
+        listaEl.innerHTML = '';
 
         if (faltantes.length) {
-            msg = 'Vas a TERMINAR el ensamblaje, pero quedan ranuras sin llenar:\n\n';
-            faltantes.forEach(function (f) {
-                msg += '   • ' + f.nombre + ': falta ' + f.falta +
-                       '  (lleva ' + f.total + ' de ' + f.cap + ')\n';
-            });
-            msg += '\n¿Terminar de todos modos? Se guardará la fecha y hora de fin.';
-        } else {
-            msg = 'Todo quedó ensamblado.\n\n¿Terminar el ensamblaje? ' +
-                  'Se guardará la fecha y hora de fin.';
-        }
+            tituloEl.textContent = 'Ensamblaje incompleto';
+            mensajeEl.textContent = 'Vas a terminar el ensamblaje, pero quedan ranuras sin llenar:';
 
-        if (!confirm(msg)) e.preventDefault();
+            faltantes.forEach(function (f) {
+                var li = document.createElement('li');
+                li.innerHTML = '<strong>' + f.nombre + '</strong>: falta ' + f.falta + ' <span class="opacity-75">(lleva ' + f.total + ' de ' + f.cap + ')</span>';
+                listaEl.appendChild(li);
+            });
+
+            contenedorFaltantes.style.display = 'block';
+            iconWarning.style.display = 'inline-block';
+            iconSuccess.style.display = 'none';
+            btnConfirmarTerminarSubmit.className = 'btn btn-danger shadow-sm fw-medium';
+        } else {
+            tituloEl.textContent = 'Ensamblaje completo';
+            mensajeEl.textContent = 'Todo ha quedado correctamente ensamblado en esta laptop. ¿Deseas cerrar el registro?';
+
+            contenedorFaltantes.style.display = 'none';
+            iconWarning.style.display = 'none';
+            iconSuccess.style.display = 'inline-block';
+            btnConfirmarTerminarSubmit.className = 'btn btn-primary shadow-sm fw-medium';
+        }
+    });
+
+    btnConfirmarTerminarSubmit.addEventListener('click', function () {
+        var form = document.querySelector('form[method="POST"]');
+        var inputAccion = document.createElement('input');
+        inputAccion.type = 'hidden';
+        inputAccion.name = 'accion';
+        inputAccion.value = 'terminar';
+        form.appendChild(inputAccion);
+        modalTerminar.hide();
+        form.submit();
     });
 }
 
-// Estado inicial: aplica los topes por tipo contando lo que ya venía montado.
-Object.keys(porTipo).forEach(refrescarTipo);
-refrescarCierre();
+// Estado inicial: topes por tipo contando lo ya montado, y orden de montaje.
+refrescarTodo();
 </script>
 
 {% endblock %}

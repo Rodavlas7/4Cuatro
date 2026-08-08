@@ -288,11 +288,6 @@ class Laptop(models.Model):
         on_delete=models.CASCADE
     )
 
-    linea = models.ForeignKey(
-        Linea,
-        on_delete=models.CASCADE
-    )
-
     lote = models.ForeignKey(
         LoteLaptop,
         on_delete=models.CASCADE

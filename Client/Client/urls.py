@@ -37,4 +37,6 @@ urlpatterns = [
     path('lineas/', include('lineas.urls')),
     path('usuarios/', include('usuarios.urls')),
     path('calidad/', include('calidad.urls')),
+    path('embalaje/', include('embalaje.urls')),
+    path('trazabilidad/', include('trazabilidad.urls')),
 ]

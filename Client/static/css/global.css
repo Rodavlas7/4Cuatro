@@ -15,8 +15,8 @@
     --bs-secondary: #2F3A46;
     --bs-secondary-rgb: 47, 58, 70;
 
-    --bs-success: #422e7d;
-    --bs-success-rgb: 66, 46, 125;
+    --bs-success: #198754;
+    --bs-success-rgb: 25, 135, 84; 
 
     --bs-warning: #D97706;
     --bs-warning-rgb: 217, 119, 6;
@@ -61,8 +61,8 @@
     --cui-secondary: #2F3A46;
     --cui-secondary-rgb: 47, 58, 70;
 
-    --cui-success: #422e7d;
-    --cui-success-rgb: 66, 46, 125;
+    --cui-success: #198754;      
+    --cui-success-rgb: 25, 135, 84; 
 
     --cui-warning: #D97706;
     --cui-warning-rgb: 217, 119, 6;
@@ -90,7 +90,7 @@
     --color-accent: #1D4ED8;
     --color-white: #FFFFFF;
 
-    --color-success: #422e7d;
+    --color-success: #198754;
     --color-warning: #D97706;
     --color-danger: #B91C1C;
     --color-info: #0369A1;
@@ -276,9 +276,9 @@ html {
 }
 
 .status-pill.active {
-    background-color: rgba(66, 46, 125, 0.1);
+    background-color: rgba(25, 135, 84, 0.1); 
     color: var(--color-success);
-    border: 1px solid rgba(66, 46, 125, 0.2);
+    border: 1px solid rgba(25, 135, 84, 0.2); 
 }
 
 .status-pill.inactive {
@@ -316,6 +316,12 @@ html {
 /* ====================================================================
    BLOQUEO DE SCROLL CON MODALES ACTIVOS
 ==================================================================== */
+
+
+/* Sobrescribimos la inyección en línea de Bootstrap para proteger el 'sticky' */
+body.modal-open {
+    overflow: clip !important;
+}
 
 /* 1. Apoyamos el bloqueo nativo de Bootstrap y evitamos el "efecto rebote" */
 html.modal-open,

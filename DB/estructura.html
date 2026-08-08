@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; min-height: 100vh; }
+  h1, h2, h3, p, pre { margin: 0; }
+  pre { font-family: inherit; white-space: pre; }
+  img, svg { max-width: 100%; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+<title>TRACEX — estructura de la base de datos</title>
+<style>
+  :root {
+    --bg: #E9EBE7;
+    --sheet: #F7F8F5;
+    --card: #F2F4F0;
+    --text: #191D1B;
+    --text-2: #58605B;
+    --text-3: #838B85;
+    --rule: #CFD4CD;
+    --rule-2: #B9C0B8;
+    --accent: #C1541A;
+    --d-planta: #2C6E92;
+    --d-personal: #8F4A67;
+    --d-material: #55549A;
+    --d-produccion: #0E7062;
+    --d-calidad: #64741F;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141715; --card: #1E221F; --text: #E7EAE5; --text-2: #9AA29B;
+      --text-3: #767E78; --rule: #303632; --rule-2: #414841; --accent: #E2854A;
+      --d-planta: #6BA8C9; --d-personal: #C98BA4; --d-material: #9695D6;
+      --d-produccion: #4BB6A4; --d-calidad: #AEBE5D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141715; --card: #1E221F; --text: #E7EAE5; --text-2: #9AA29B;
+    --text-3: #767E78; --rule: #303632; --rule-2: #414841; --accent: #E2854A;
+    --d-planta: #6BA8C9; --d-personal: #C98BA4; --d-material: #9695D6;
+    --d-produccion: #4BB6A4; --d-calidad: #AEBE5D;
+  }
+  :root[data-theme="light"] {
+    --bg: #E9EBE7; --card: #F2F4F0; --text: #191D1B; --text-2: #58605B;
+    --text-3: #838B85; --rule: #CFD4CD; --rule-2: #B9C0B8; --accent: #C1541A;
+    --d-planta: #2C6E92; --d-personal: #8F4A67; --d-material: #55549A;
+    --d-produccion: #0E7062; --d-calidad: #64741F;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 4rem 1.5rem 6rem; display: flex; flex-direction: column; gap: 4rem; }
+
+  .eyebrow { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+  .masthead { display: flex; flex-direction: column; gap: 1rem; }
+  .masthead h1 { font-family: var(--mono); font-size: clamp(1.9rem, 5vw, 3rem); font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; text-wrap: balance; margin: 0; }
+  .masthead p { max-width: 62ch; color: var(--text-2); margin: 0; }
+  .rule-heavy { height: 2px; background: var(--text); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .stat { background: var(--bg); padding: 0.9rem 1rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .stat b { font-family: var(--mono); font-size: 1.5rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stat span { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); }
+
+  section { display: flex; flex-direction: column; gap: 1.25rem; }
+  .head { display: flex; flex-direction: column; gap: 0.4rem; border-top: 1px solid var(--rule-2); padding-top: 0.9rem; }
+  .head h2 { font-family: var(--mono); font-size: 1.15rem; font-weight: 500; letter-spacing: -0.01em; margin: 0; }
+  .head p { color: var(--text-2); max-width: 68ch; font-size: 0.94rem; margin: 0; }
+
+  .sheet { background: #F7F8F5; border: 1px solid #C3C9C1; position: relative; }
+  .sheet-scroll { overflow-x: auto; padding: 2rem 1.5rem 1.5rem; }
+  .sheet-block { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #C3C9C1; padding: 0.5rem 0.9rem; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.09em; text-transform: uppercase; color: #6C736B; }
+  .sheet .mermaid { display: flex; justify-content: center; min-width: min-content; }
+  .sheet .mermaid svg { max-width: none; height: auto; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-family: var(--mono); font-size: 0.74rem; color: var(--text-2); }
+  .legend i { font-style: normal; display: inline-flex; align-items: center; gap: 0.45rem; }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+
+  .domain { display: flex; flex-direction: column; gap: 1rem; }
+  .domain-head { display: flex; align-items: baseline; gap: 0.8rem; border-top: 2px solid var(--hue); padding-top: 0.55rem; }
+  .domain-head h3 { font-family: var(--mono); font-size: 0.98rem; font-weight: 500; color: var(--hue); margin: 0; }
+  .domain-head span { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-left: auto; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 1rem; align-items: start; }
+  .tbl { background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--hue); padding: 0.85rem 0.95rem; display: flex; flex-direction: column; gap: 0.55rem; }
+  .tbl > b { font-family: var(--mono); font-size: 0.9rem; font-weight: 500; }
+  .tbl > em { font-style: normal; font-size: 0.8rem; color: var(--text-2); line-height: 1.45; }
+  .cols { display: flex; flex-direction: column; gap: 0.1rem; font-family: var(--mono); font-size: 0.76rem; }
+  .col { display: flex; align-items: baseline; gap: 0.4rem; padding: 0.12rem 0; border-top: 1px solid var(--rule); }
+  .col:first-child { border-top: 0; }
+  .col > span { color: var(--text); }
+  .col > i { font-style: normal; color: var(--text-3); font-size: 0.7rem; margin-left: auto; white-space: nowrap; }
+  .k { font-size: 0.62rem; letter-spacing: 0.06em; padding: 0.05rem 0.28rem; border: 1px solid currentColor; border-radius: 2px; flex: none; }
+  .k-pk { color: var(--accent); }
+  .k-fk { color: var(--hue); }
+  .k-uk { color: var(--text-3); }
+
+  .notes { display: flex; flex-direction: column; gap: 0.65rem; }
+  .note { display: grid; grid-template-columns: auto 1fr; gap: 0.9rem; align-items: baseline; border-top: 1px solid var(--rule); padding-top: 0.65rem; font-size: 0.92rem; color: var(--text-2); }
+  .note b { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+  .note code { font-family: var(--mono); font-size: 0.86em; color: var(--text); }
+
+  footer { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); border-top: 1px solid var(--rule-2); padding-top: 0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="rule-heavy"></div>
+    <div class="eyebrow">MySQL · base de datos cuatro · utf8mb4_unicode_ci</div>
+    <h1>TRACEX — estructura</h1>
+    <p>Trazabilidad de ensamblaje de laptops: de la orden de producción a la unidad embalada, pasando por línea, estación, componente e inspección. Este es el mapa de <code>DB/estructura.sql</code>.</p>
+    <div class="stats">
+      <div class="stat"><b>30</b><span>tablas</span></div>
+      <div class="stat"><b>39</b><span>llaves foráneas</span></div>
+      <div class="stat"><b>14</b><span>índices únicos</span></div>
+      <div class="stat"><b>5</b><span>dominios</span></div>
+      <div class="stat"><b>3</b><span>tablas puente</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="head">
+      <h2>La espina dorsal</h2>
+      <p>El camino que recorre una unidad. Una orden de producción genera laptops; cada laptop acumula un registro de ensamblaje que consume componentes, una o varias inspecciones de calidad y, al final, un registro de embalaje. Los componentes llegan por orden de material.</p>
+    </div>
+    <div class="sheet">
+      <div class="sheet-scroll">
+<pre class="mermaid">
+%%{init: {"theme":"base","htmlLabels":false,"er":{"entityPadding":18,"minEntityWidth":140,"useMaxWidth":false},"themeVariables":{"fontFamily":"system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, sans-serif","fontSize":"13px","primaryColor":"#FFFFFF","primaryTextColor":"#191D1B","primaryBorderColor":"#8E968D","lineColor":"#6E766D","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F0F2EE"}}}%%
+erDiagram
+  orden_produccion {
+    int folio PK
+    varchar modelo_laptop FK
+    int cant_planificada
+    int cant_producida
+    varchar estado FK
+  }
+  laptop {
+    int numero PK
+    varchar num_serie UK
+    int orden FK
+    varchar modelo FK
+    varchar estado FK
+  }
+  registro_ensamblaje {
+    int numero PK
+    int laptop FK
+    varchar linea FK
+    date fecha_inicio
+    date fecha_fin
+  }
+  componente {
+    int numero PK
+    varchar num_serie
+    int registro_ensamblaje FK
+    int orden_material FK
+    varchar modelo FK
+    varchar estado FK
+  }
+  orden_material {
+    int numero PK
+    varchar linea FK
+    date fecha
+  }
+  inspeccion_calidad {
+    int numero PK
+    int laptop FK
+    int empleado FK
+    tinyint resultado
+  }
+  registro_embalaje {
+    int numero PK
+    int laptop FK
+    varchar tipo FK
+  }
+  orden_produccion ||--o{ laptop : "orden"
+  laptop ||--o{ registro_ensamblaje : "laptop"
+  registro_ensamblaje ||--o{ componente : "monta"
+  orden_material ||--o{ componente : "surte"
+  laptop ||--o{ inspeccion_calidad : "laptop"
+  laptop ||--o{ registro_embalaje : "laptop"
+</pre>
+      </div>
+      <div class="sheet-block"><span>Hoja 01 — flujo de unidad</span><span>estructura.sql</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Mapa completo</h2>
+      <p>Las 30 tablas y sus 39 llaves foráneas. <code>linea</code> es el eje de la planta: ocho tablas apuntan a ella, y una es ella misma — <code>siguiente</code> encadena el recorrido de la unidad. <code>tipo_comp</code> hace lo mismo con <code>necesario</code>: qué pieza tiene que estar puesta antes.</p>
+    </div>
+    <div class="sheet">
+      <div class="sheet-scroll">
+<pre class="mermaid">
+%%{init: {"theme":"base","htmlLabels":false,"er":{"entityPadding":18,"minEntityWidth":130,"useMaxWidth":false},"themeVariables":{"fontFamily":"system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, sans-serif","fontSize":"13px","primaryColor":"#FFFFFF","primaryTextColor":"#191D1B","primaryBorderColor":"#8E968D","lineColor":"#788077"}}}%%
+erDiagram
+  linea ||--o{ estacion : ""
+  linea ||--o{ paro : ""
+  linea ||--o{ orden_material : ""
+  linea ||--o{ componente : ""
+  linea ||--o{ registro_ensamblaje : ""
+  linea ||--o{ inspeccion_calidad : ""
+  linea ||--o{ empleado_linea : ""
+  linea ||--o| linea : "siguiente"
+  edo_linea ||--o{ linea : ""
+  tipo_linea ||--o{ linea : ""
+  rol ||--o{ empleado : ""
+  turno ||--o{ empleado : ""
+  empleado ||--o{ empleado_linea : ""
+  empleado ||--o{ empleado_estacion : ""
+  estacion ||--o{ empleado_estacion : ""
+  empleado ||--o| usuario : ""
+  usuario ||--o{ sesion : ""
+  empleado ||--o{ inspeccion_calidad : ""
+  tipo_comp ||--o{ modelo_componente : ""
+  tipo_comp ||--o| tipo_comp : "necesario"
+  modelo_componente ||--o{ componente : ""
+  modelo_componente ||--o{ detalle_material : ""
+  modelo_componente ||--o{ modelo_laptop_componente : ""
+  lote_comp ||--o{ componente : ""
+  edo_componente ||--o{ componente : ""
+  orden_material ||--o{ detalle_material : ""
+  orden_material ||--o{ componente : ""
+  modelo_laptop ||--o{ orden_produccion : ""
+  modelo_laptop ||--o{ laptop : ""
+  modelo_laptop ||--o{ modelo_laptop_componente : ""
+  edo_produccion ||--o{ orden_produccion : ""
+  lote_laptop ||--o{ orden_produccion : ""
+  lote_laptop ||--o{ laptop : ""
+  orden_produccion ||--o{ laptop : ""
+  edo_laptop ||--o{ laptop : ""
+  laptop ||--o{ registro_ensamblaje : ""
+  laptop ||--o{ registro_embalaje : ""
+  laptop ||--o{ inspeccion_calidad : ""
+  registro_ensamblaje ||--o{ componente : ""
+  tipo_embalaje ||--o{ registro_embalaje : ""
+</pre>
+      </div>
+      <div class="sheet-block"><span>Hoja 02 — 30 tablas / 39 FK</span><span>estructura.sql</span></div>
+    </div>
+    <div class="legend">
+      <i><span class="swatch" style="background: var(--d-planta)"></span>Planta y líneas</i>
+      <i><span class="swatch" style="background: var(--d-personal)"></span>Personal y acceso</i>
+      <i><span class="swatch" style="background: var(--d-material)"></span>Materiales</i>
+      <i><span class="swatch" style="background: var(--d-produccion)"></span>Producción</i>
+      <i><span class="swatch" style="background: var(--d-calidad)"></span>Calidad y salida</i>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Referencia por dominio</h2>
+      <p>Cada tabla con sus columnas, llave primaria, llaves foráneas y restricciones únicas.</p>
+    </div>
+
+    <div class="domain" style="--hue: var(--d-planta)">
+      <div class="domain-head"><h3>Planta y líneas</h3><span>5 tablas</span></div>
+      <div class="grid">
+        <div class="tbl">
+          <b>linea</b>
+          <em>Línea de producción. El eje de todo el esquema.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(128)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>tipo</span><i>tipo_linea</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>estado</span><i>edo_linea</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>siguiente</span><i>linea</i></div>
+            <div class="col"><span>activo</span><i>bool · true</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>estacion</b>
+          <em>Puesto de trabajo dentro de una línea.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(128)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
+            <div class="col"><span>activo</span><i>bool · false</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>paro</b>
+          <em>Interrupción de una línea, con razón y ventana de tiempo.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span>razon</span><i>varchar(256)</i></div>
+            <div class="col"><span>fecha_inicio · fecha_fin</span><i>date</i></div>
+            <div class="col"><span>hora_inicio · hora_fin</span><i>time</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>tipo_linea</b>
+          <em>Para qué sirve la línea: ensamblaje o embalaje. Decide dónde se puede registrar ensamblaje.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(64)</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>edo_linea</b>
+          <em>Cómo está la línea: activa, en paro, etc.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(64)</i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="domain" style="--hue: var(--d-personal)">
+      <div class="domain-head"><h3>Personal y acceso</h3><span>7 tablas</span></div>
+      <div class="grid">
+        <div class="tbl">
+          <b>empleado</b>
+          <em>Persona en planta, con rol y turno asignados.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span>nombrePila</span><i>varchar(50)</i></div>
+            <div class="col"><span>primerApell · segundoApell</span><i>varchar(32)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>rol</span><i>rol</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>turno</span><i>turno</i></div>
+            <div class="col"><span>activo</span><i>bool · false</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>empleado_linea</b>
+          <em>Puente con historia: a qué línea estuvo asignado alguien y desde cuándo.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>empleado</span><i>empleado</i></div>
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
+            <div class="col"><span class="k k-pk">PK</span><span>fecha_inicio</span><i>date</i></div>
+            <div class="col"><span>fecha_fin</span><i>date · null</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>empleado_estacion</b>
+          <em>Igual que el anterior, pero a nivel de estación.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>empleado</span><i>empleado</i></div>
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>estacion</span><i>estacion</i></div>
+            <div class="col"><span class="k k-pk">PK</span><span>fecha_inicio</span><i>date</i></div>
+            <div class="col"><span>fecha_fin</span><i>date · null</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>usuario</b>
+          <em>Credenciales. Uno a uno con empleado, por índice único.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>usuario</span><i>varchar(32)</i></div>
+            <div class="col"><span>contrasena</span><i>varchar(256)</i></div>
+            <div class="col"><span>estado</span><i>tinyint · 1</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span class="k k-uk">UK</span><span>empleado</span><i>empleado</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>sesion</b>
+          <em>Tokens de sesión. Única FK del esquema con ON DELETE CASCADE.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>id</span><i>int AI</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>usuario</span><i>usuario · cascade</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>token</span><i>char(64)</i></div>
+            <div class="col"><span>fecha_inicio</span><i>datetime · now</i></div>
+            <div class="col"><span>fecha_expiracion</span><i>datetime</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>rol</b>
+          <em>Catálogo de roles.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(130)</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>turno</b>
+          <em>Catálogo de turnos con horario de entrada y salida.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span>hora_entrada · hora_salida</span><i>time</i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="domain" style="--hue: var(--d-material)">
+      <div class="domain-head"><h3>Materiales</h3><span>7 tablas</span></div>
+      <div class="grid">
+        <div class="tbl">
+          <b>componente</b>
+          <em>Pieza física individual. La tabla con más llaves foráneas: seis.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span>num_serie</span><i>varchar(18)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(256)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>orden_material</span><i>orden_material</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>registro_ensamblaje</span><i>registro_ensamblaje</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>modelo</span><i>modelo_componente</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>lote</span><i>lote_comp</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>estado</span><i>edo_componente</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>modelo_componente</b>
+          <em>Catálogo de piezas: qué es y quién la fabrica.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span>nombre</span><i>varchar(256)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>tipo_componente</span><i>tipo_comp</i></div>
+            <div class="col"><span>fabricante</span><i>varchar(64)</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>orden_material</b>
+          <em>Solicitud de material a una línea.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span>fecha</span><i>date</i></div>
+            <div class="col"><span>hora</span><i>time</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>detalle_material</b>
+          <em>Renglones de la orden: cuántas piezas de cada modelo.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>orden</span><i>orden_material</i></div>
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>modelo</span><i>modelo_componente</i></div>
+            <div class="col"><span>cantidad</span><i>int</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>lote_comp</b>
+          <em>Lote de componentes recibido.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(12)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(64)</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>tipo_comp</b>
+          <em>Familia de componente: procesador, RAM, etc. <code>necesario</code> apunta al tipo que tiene que estar montado antes que éste.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>necesario</span><i>tipo_comp</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>edo_componente</b>
+          <em>Estado de la pieza: en almacén, montada, defectuosa…</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(64)</i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="domain" style="--hue: var(--d-produccion)">
+      <div class="domain-head"><h3>Producción</h3><span>7 tablas</span></div>
+      <div class="grid">
+        <div class="tbl">
+          <b>orden_produccion</b>
+          <em>Cuántas unidades de un modelo hay que hacer, y cuántas van.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>folio</span><i>int AI</i></div>
+            <div class="col"><span>fecha</span><i>date</i></div>
+            <div class="col"><span>hora</span><i>time</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>modelo_laptop</span><i>modelo_laptop</i></div>
+            <div class="col"><span>cant_planificada</span><i>int · 0</i></div>
+            <div class="col"><span>cant_producida</span><i>int · 0</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>estado</span><i>edo_produccion</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>lote</span><i>lote_laptop</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>laptop</b>
+          <em>La unidad trazada. Su número de serie es único en toda la base.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>num_serie</span><i>varchar(50) · not null</i></div>
+            <div class="col"><span>descripcion</span><i>varchar(256)</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>orden</span><i>orden_produccion.folio</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>modelo</span><i>modelo_laptop</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>estado</span><i>edo_laptop</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>lote</span><i>lote_laptop</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>modelo_laptop</b>
+          <em>Catálogo de modelos fabricables.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>modelo_laptop_componente</b>
+          <em>La lista de materiales: qué piezas lleva un modelo y cuántas de cada una.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>modelo_laptop</span><i>modelo_laptop</i></div>
+            <div class="col"><span class="k k-pk">PK</span><span class="k k-fk">FK</span><span>modelo_componente</span><i>modelo_componente</i></div>
+            <div class="col"><span>capacidad</span><i>int · 1</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>lote_laptop</b>
+          <em>Lote de salida, con su fecha.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span>fecha</span><i>date</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>edo_produccion</b>
+          <em>Estado de la orden: abierta, cerrada, cancelada…</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>edo_laptop</b>
+          <em>Estado de la unidad a lo largo del proceso.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="domain" style="--hue: var(--d-calidad)">
+      <div class="domain-head"><h3>Calidad y salida</h3><span>4 tablas</span></div>
+      <div class="grid">
+        <div class="tbl">
+          <b>registro_ensamblaje</b>
+          <em>Sesión de ensamblaje de una laptop en una línea. Los componentes montados apuntan aquí.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span>fecha_inicio · fecha_fin</span><i>date</i></div>
+            <div class="col"><span>hora_inicio · hora_fin</span><i>time</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>laptop</span><i>laptop</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>inspeccion_calidad</b>
+          <em>Veredicto de una persona sobre una unidad, en una línea.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span>resultado</span><i>tinyint(1)</i></div>
+            <div class="col"><span>observaciones</span><i>varchar(256)</i></div>
+            <div class="col"><span>fecha · hora</span><i>date · time</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>laptop</span><i>laptop</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>empleado</span><i>empleado</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>linea</span><i>linea</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>registro_embalaje</b>
+          <em>Cierre del proceso: la unidad queda empacada.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>numero</span><i>int AI</i></div>
+            <div class="col"><span>fecha · hora</span><i>date · time</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>laptop</span><i>laptop</i></div>
+            <div class="col"><span class="k k-fk">FK</span><span>tipo</span><i>tipo_embalaje</i></div>
+          </div>
+        </div>
+        <div class="tbl">
+          <b>tipo_embalaje</b>
+          <em>Catálogo de presentaciones de empaque.</em>
+          <div class="cols">
+            <div class="col"><span class="k k-pk">PK</span><span>codigo</span><i>varchar(8)</i></div>
+            <div class="col"><span class="k k-uk">UK</span><span>nombre</span><i>varchar(32)</i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Notas de estructura</h2>
+    </div>
+    <div class="notes">
+      <div class="note"><b>Eje</b><div><code>linea</code> recibe 8 llaves foráneas — más que ninguna otra tabla. Después vienen <code>laptop</code> con 3 y <code>empleado</code>, <code>modelo_componente</code>, <code>modelo_laptop</code> y <code>orden_material</code> con 2 cada una.</div></div>
+      <div class="note"><b>Borrado</b><div>Ninguna llave foránea declara <code>ON DELETE</code> ni <code>ON UPDATE</code>, salvo <code>sesion.usuario</code>, que va en cascada. Todo lo demás queda en <code>RESTRICT</code> por defecto.</div></div>
+      <div class="note"><b>Nulos</b><div>Casi todas las columnas de llave foránea son <code>NULL</code>: una laptop puede existir sin orden, sin modelo y sin línea. Las únicas obligatorias son las que forman parte de una llave primaria compuesta y <code>sesion.usuario</code>.</div></div>
+      <div class="note"><b>Puentes</b><div>Tres tablas de unión: <code>modelo_laptop_componente</code> (lista de materiales), <code>empleado_linea</code> y <code>empleado_estacion</code> (asignaciones con historia, porque la fecha entra en la PK).</div></div>
+      <div class="note"><b>Serie</b><div><code>laptop.num_serie</code> es único y obligatorio; <code>componente.num_serie</code> no tiene ninguna de las dos restricciones y admite 18 caracteres.</div></div>
+    </div>
+  </section>
+
+  <footer>DB/estructura.sql · versión 2026-07-15 · rama Main-de-Pruebas</footer>
+
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, securityLevel: "loose" });
+</script>
+</body>
+</html>

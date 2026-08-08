@@ -47,6 +47,86 @@
                 </li>
             </ul>
         </div>
+
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <form method="GET">
+                <div class="row g-3">
+
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" value="{{ filtros.q }}" placeholder="Núm. de serie, descripción o #...">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Modelo</label>
+                        <select name="modelo" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for m in modelos %}
+                            <option value="{{ m.codigo }}" {% if filtros.modelo == m.codigo %}selected{% endif %}>{{ m.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Lote</label>
+                        <select name="lote" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for l in lotes %}
+                            <option value="{{ l.codigo }}" {% if filtros.lote == l.codigo %}selected{% endif %}>{{ l.codigo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Línea</label>
+                        <select name="linea" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todas —</option>
+                            {% for ln in lineas %}
+                            <option value="{{ ln.codigo }}" {% if filtros.linea == ln.codigo %}selected{% endif %}>{{ ln.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Estado</label>
+                        <select name="estado" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for e in estados %}
+                            <option value="{{ e.codigo }}" {% if filtros.estado == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- Resumen y botones -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 pt-3 border-top gap-3">
+                    <span class="text-muted small">
+                        {% if hay_filtros %}
+                            <i class="bi bi-funnel-fill text-primary me-1"></i> Mostrando <strong class="text-dark">{{ mostrados }}</strong> de {{ total }} componentes.
+                        {% else %}
+                            <i class="bi bi-cpu text-secondary me-1"></i> {{ total }} componente{{ total|pluralize:"s" }} registrado{{ total|pluralize:"s" }}.
+                        {% endif %}
+                    </span>
+                    <div class="d-flex gap-2">
+                        {% if hay_filtros %}
+                        <a href="{% url 'componentes-lista' %}" class="btn btn-white border btn-sm py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-x-lg text-danger"></i> Limpiar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
+                             <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- ==========================================
@@ -57,7 +137,7 @@
             <table class="table table-hover align-middle mb-0 w-100">
                 <thead class="table-light">
                     <tr>
-                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">#</th>
+                        <!--<th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">#</th> -->
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Num. Serie</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Descripción</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo</th>
@@ -70,15 +150,29 @@
                 <tbody>
                     {% for c in componentes %}
                     <tr>
-                        <td class="ps-4"><span class="badge-id text-primary">#{{ c.numero }}</span></td>
+                        <!--<td class="ps-4"><span class="badge-id text-primary">#{{ c.numero }}</span></td>-->
                         <td>
-                            <span class="font-monospace fw-bold text-dark">{{ c.num_serie|default:"—" }}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="font-monospace fw-bold text-dark">{{ c.num_serie|default:"—" }}</span>
+                            </div>
                         </td>
                         <td>
-                            <div class="text-dark small fw-medium">{{ c.descripcion|default:"—" }}</div>
+                            <div class="text-dark small fw-medium text-truncate" style="max-width: 220px;" title="{{ c.descripcion|default:'' }}">
+                                {{ c.descripcion|default:"—" }}
+                            </div>
+                            <div class="text-secondary small" style="font-size: 11px;">
+                                {% if c.orden_material %}
+                                    <a href="{% url 'orden-detalle' c.orden_material %}" class="text-decoration-none text-muted">
+                                        <i class="bi bi-link-45deg"></i> Orden #{{ c.orden_material }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Sin orden de material</span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td>
-                            <div class="text-dark small fw-medium">{{ c.modelo_nombre|default:"—" }}</div>
+                            <div class="fw-semibold text-dark">{{ c.modelo_nombre|default:"—" }}</div>
+                            <!--<div class="text-secondary small" style="font-size: 11px;">{{ c.modelo_fabricante|default:"Sin fabricante" }}</div>-->
                         </td>
                         <td>
                             <span class="badge bg-light text-dark border font-monospace">{{ c.lote_codigo|default:"—" }}</span>
@@ -87,15 +181,14 @@
                             <div class="text-dark small fw-medium">{{ c.linea_nombre|default:"—" }}</div>
                         </td>
                         <td class="text-center">
-                            {% if c.estado_codigo == 'EDC004' %}
-                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1 fw-semibold">
-                                    <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ c.estado_nombre|default:"Mermado" }}
-                                </span>
-                            {% else %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-semibold">
-                                    <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ c.estado_nombre|default:"Disponible" }}
-                                </span>
-                            {% endif %}
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold
+                                {% if c.estado_codigo == 'EDC001' %}bg-success-subtle text-success border border-success-subtle
+                                {% elif c.estado_codigo == 'EDC002' %}bg-primary-subtle text-primary border border-primary-subtle
+                                {% elif c.estado_codigo == 'EDC003' %}bg-danger-subtle text-danger border border-danger-subtle
+                                {% elif c.estado_codigo == 'EDC004' %}bg-secondary-subtle text-secondary border border-secondary-subtle
+                                {% else %}bg-light text-secondary border border-secondary-subtle{% endif %}">
+                                <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ c.estado_nombre|default:"—" }}
+                            </span>
                         </td>
                         <td class="pe-4 text-end">
                             <div class="emp-actions d-inline-flex gap-1 align-items-center">
@@ -119,12 +212,18 @@
                                 </button>
 
                                 <!-- BAJA / MERMA -->
-                                <form method="POST" action="{% url 'componente-baja' c.numero %}" class="d-inline" onsubmit="return confirm('¿Marcar este componente como Mermado?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn text-danger" title="Dar de baja / Merma">
+                                {% if c.estado_codigo == 'EDC004' %}
+                                    <button type="button" class="btn text-muted" disabled title="Ya está mermado">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
-                                </form>
+                                {% else %}
+                                    <form method="POST" action="{% url 'componente-baja' c.numero %}" class="d-inline" data-confirm="¿Marcar este componente como Mermado?">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn text-danger" title="Dar de baja / Merma">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -132,7 +231,11 @@
                     <tr>
                         <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-box-seam text-light d-block mb-2" style="font-size: 2.5rem;"></i>
-                            No hay componentes registrados.
+                            {% if hay_filtros %}
+                                Ningún componente coincide con los filtros de búsqueda.
+                            {% else %}
+                                No hay componentes registrados.
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -236,7 +339,7 @@
      ========================================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate>
+        <form method="POST" id="formEditar" action="" class="needs-validation w-100" novalidate data-confirm="¿Guardar cambios?">
             {% csrf_token %}
             <div class="modal-content border-0 shadow">
                 <div class="modal-header border-bottom-0 pb-0">

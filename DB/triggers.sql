@@ -15,9 +15,12 @@ DROP TRIGGER IF EXISTS tg_Actualizar_Estado_Laptop_Inspeccion_Calidad;
 DROP TRIGGER IF EXISTS tg_Control_Componentes_Duplicados;
 DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente;
 DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Registrar_Laptop;
+DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Mover_Laptop;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Alta;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Cambio;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Baja;
+DROP TRIGGER IF EXISTS tg_Validar_Linea_Ensamblaje;
+DROP TRIGGER IF EXISTS tg_Validar_Linea_Ensamblaje_Cambio;
 
 DELIMITER $$
 
@@ -133,12 +136,11 @@ BEFORE UPDATE ON laptop
 FOR EACH ROW
 BEGIN
     -- Solo actúa cuando el estado cambia específicamente a Aprobada
-    -- y la laptop aún no tiene número de serie asignado
+    -- y la laptop todavía tiene el número de serie temporal (o no tiene ninguno)
     IF NEW.estado = 'APROV'
        AND (OLD.estado IS NULL OR OLD.estado <> 'APROV')
-       AND (NEW.num_serie IS NULL OR NEW.num_serie = '')
+       AND (NEW.num_serie IS NULL OR NEW.num_serie = '' OR NEW.num_serie LIKE 'TMP-%')
     THEN
-        -- Formato: TP-AAAAMMDD-000000
         SET NEW.num_serie = CONCAT(
             'TP-',
             DATE_FORMAT(CURDATE(), '%Y%m%d'),
@@ -256,44 +258,103 @@ END$$
 --     de asignar el número de serie automáticamente.
 
 
+-- REESCRITO. Antes cada línea tenía UNA inspección y cualquier 'Aprobada'
+-- terminaba el proceso: la laptop pasaba a APROV y toda inspección posterior se
+-- rechazaba con "la laptop ya finalizó".
+--
+-- Con el recorrido por líneas eso ya no alcanza: cada línea de ensamblaje cierra
+-- con su estación de calidad, así que una laptop pasa por CUATRO inspecciones y
+-- aprobar en la línea A no significa que esté terminada, solo que puede pasar a
+-- la B. Aprobar en la última sí es la aprobación final.
+--
+-- El inspector no elige entre "pasa de línea" y "aprobada final": marca Aprobada
+-- o Rechazada y aquí se deduce cuál de las dos es, mirando si la línea donde se
+-- inspeccionó tiene una siguiente de ensamblaje.
+--
+-- Este trigger concentra los tres efectos de una inspección porque es el único
+-- lugar donde MySQL deja hacerlos juntos: corre sobre inspeccion_calidad, así
+-- que puede tocar laptop y registro_ensamblaje sin chocar con el error 1442.
+-- Poner el relevo en un AFTER UPDATE de registro_ensamblaje NO es posible: ese
+-- trigger tendría que insertar en su propia tabla.
+--
+--   Aprobada, con línea siguiente  -> cierra el registro de esta línea y abre el
+--                                     de la siguiente. La laptop sigue PENSAM.
+--   Aprobada, última línea         -> cierra el registro. La laptop pasa a APROV.
+--   Rechazada                      -> cierra el registro y la laptop pasa a
+--                                     RECHA. No se abre nada más: sale de línea.
+--   Continuar ensamblaje (2)       -> no cierra nada. Es la salida para cuando
+--                                     la inspección no concluye y la laptop se
+--                                     queda en la misma línea.
 CREATE TRIGGER tg_Actualizar_Estado_Laptop_Inspeccion_Calidad
 AFTER INSERT ON inspeccion_calidad
 FOR EACH ROW
 BEGIN
     DECLARE estado_laptop VARCHAR(8);
+    DECLARE v_siguiente VARCHAR(8) DEFAULT NULL;
+    DECLARE v_abierto INT DEFAULT 0;
 
     SELECT estado
-    INTO estado_laptop
-    FROM laptop
-    WHERE numero = NEW.laptop;
+      INTO estado_laptop
+      FROM laptop
+     WHERE numero = NEW.laptop;
 
     IF estado_laptop = 'PENSAM' THEN
 
-        -- Resultado: Aprobada
-        IF NEW.resultado = 1 THEN
-
-            UPDATE laptop
-            SET estado = 'APROV'
-            WHERE numero = NEW.laptop;
-
-        -- Resultado: Rechazada
-        ELSEIF NEW.resultado = 0 THEN
-
-            UPDATE laptop
-            SET estado = 'RECHA'
-            WHERE numero = NEW.laptop;
-
-        -- Resultado: Continúa en ensamblaje
-        ELSEIF NEW.resultado = 2 THEN
-
-            UPDATE laptop
-            SET estado = 'PENSAM'
-            WHERE numero = NEW.laptop;
-
-        ELSE
-
+        IF NEW.resultado NOT IN (0, 1, 2) THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Inspeccion_Calidad: resultado de inspección no válido';
+        END IF;
+
+        IF NEW.resultado IN (0, 1) THEN
+
+            -- Tiene que haber un ensamblaje abierto DE ESA LÍNEA. Si no lo hay,
+            -- la inspección se está capturando donde no toca y cerrarla en falso
+            -- dejaría a la laptop atorada sin registro ni relevo.
+            SELECT COUNT(*)
+              INTO v_abierto
+              FROM registro_ensamblaje
+             WHERE laptop    = NEW.laptop
+               AND linea     = NEW.linea
+               AND fecha_fin IS NULL;
+
+            IF v_abierto = 0 THEN
+                SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Error tg_Inspeccion_Calidad: la laptop no tiene un ensamblaje abierto en esa línea';
+            END IF;
+
+            -- Sella el fin del ensamblaje de esta línea.
+            UPDATE registro_ensamblaje
+               SET fecha_fin = CURDATE(),
+                   hora_fin  = CURTIME()
+             WHERE laptop    = NEW.laptop
+               AND linea     = NEW.linea
+               AND fecha_fin IS NULL;
+
+        END IF;
+
+        IF NEW.resultado = 0 THEN
+
+            UPDATE laptop SET estado = 'RECHA' WHERE numero = NEW.laptop;
+
+        ELSEIF NEW.resultado = 1 THEN
+
+            -- La siguiente línea solo cuenta si es de ensamblaje: la cadena
+            -- termina donde empieza el embalaje.
+            SELECT l.siguiente
+              INTO v_siguiente
+              FROM linea l
+             WHERE l.codigo = NEW.linea
+               AND EXISTS (SELECT 1 FROM linea s
+                            WHERE s.codigo = l.siguiente AND s.tipo = 'ENSA');
+
+            IF v_siguiente IS NOT NULL THEN
+                -- Relevo: la laptop sigue en ensamblaje, ahora en la que sigue.
+                INSERT INTO registro_ensamblaje (fecha_inicio, hora_inicio, laptop, linea)
+                VALUES (CURDATE(), CURTIME(), NEW.laptop, v_siguiente);
+            ELSE
+                -- Era la última línea: aprobación final.
+                UPDATE laptop SET estado = 'APROV' WHERE numero = NEW.laptop;
+            END IF;
 
         END IF;
 
@@ -340,23 +401,61 @@ END$$
 --   Este trigger es la segunda línea de defensa a nivel BD.
 
 
+-- REESCRITO. Antes contaba los registros CERRADOS de la laptop y bloqueaba si
+-- había aunque fuera uno, bajo la idea de que una laptop se arma una sola vez.
+--
+-- Eso dejó de ser cierto: ahora la laptop recorre las líneas de ensamblaje y
+-- cada una lleva su propio registro, así que acumula un cerrado por línea. Con
+-- la regla vieja el relevo se moría en el primer paso de la línea A a la B.
+--
+-- La regla nueva cuida las dos cosas que sí siguen importando:
+--   1. Una laptop no puede tener dos registros ABIERTOS a la vez. Estaría en dos
+--      líneas al mismo tiempo, y el checklist no sabría a cuál sumarle piezas.
+--   2. Una laptop que ya cerró el registro de la ÚLTIMA línea de ensamblaje ya
+--      terminó de armarse: no se le abre otro. Eso es lo que antes cubría el
+--      conteo de cerrados.
 CREATE TRIGGER tg_Control_Componentes_Duplicados
 BEFORE INSERT ON registro_ensamblaje
 FOR EACH ROW
 BEGIN
-    DECLARE registros_cerrados INT;
+    DECLARE v_abiertos INT DEFAULT 0;
+    DECLARE v_ultima VARCHAR(8) DEFAULT NULL;
+    DECLARE v_termino INT DEFAULT 0;
 
-    -- Verificar si la laptop ya tiene un registro de ensamblaje
-    -- cerrado (con fecha_fin definida = proceso completado)
     SELECT COUNT(*)
-      INTO registros_cerrados
+      INTO v_abiertos
       FROM registro_ensamblaje
-     WHERE laptop     = NEW.laptop
-       AND fecha_fin  IS NOT NULL;
+     WHERE laptop    = NEW.laptop
+       AND fecha_fin IS NULL;
 
-    IF registros_cerrados > 0 THEN
+    IF v_abiertos > 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error tg_Control_Componentes_Duplicados: la laptop ya tiene un ensamblaje registrado y cerrado, no se puede abrir uno nuevo';
+            SET MESSAGE_TEXT = 'Error tg_Control_Componentes_Duplicados: la laptop ya tiene un ensamblaje abierto; ciérralo antes de abrir el de la siguiente línea';
+    END IF;
+
+    -- La última línea de ensamblaje es la que no tiene siguiente, o cuya
+    -- siguiente ya es de embalaje. Se deduce de la cadena, igual que la primera.
+    SELECT l.codigo
+      INTO v_ultima
+      FROM linea l
+     WHERE l.tipo = 'ENSA'
+       AND NOT EXISTS (SELECT 1 FROM linea s
+                        WHERE s.codigo = l.siguiente AND s.tipo = 'ENSA')
+     ORDER BY l.codigo DESC
+     LIMIT 1;
+
+    IF v_ultima IS NOT NULL THEN
+        SELECT COUNT(*)
+          INTO v_termino
+          FROM registro_ensamblaje
+         WHERE laptop    = NEW.laptop
+           AND linea     = v_ultima
+           AND fecha_fin IS NOT NULL;
+
+        IF v_termino > 0 THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Control_Componentes_Duplicados: la laptop ya recorrió todas las líneas de ensamblaje, no se puede abrir otro registro';
+        END IF;
     END IF;
 END$$
 
@@ -510,6 +609,41 @@ BEGIN
 END$$
 
 
+
+
+-- TRIGGER 12: tg_Iniciar_Orden_Al_Mover_Laptop
+--
+-- Evento   : AFTER UPDATE en laptop
+-- Objetivo : El mismo arranque que el TRIGGER 11, pero para la otra forma de
+--            agregarle una laptop a una orden: reasignar una que ya existía.
+--
+-- Hace falta porque el TRIGGER 11 sólo se dispara en INSERT. La pantalla de
+-- edición de laptop deja cambiar la orden, y por ahí una orden 'Pendiente'
+-- recibía su primera laptop sin arrancar.
+--
+-- Sólo actúa cuando la orden REALMENTE cambia: un UPDATE que toque cualquier
+-- otro campo (estado, línea, descripción) no tiene por qué mover la orden. El
+-- operador <=> compara tolerando nulos, cosa que '=' no hace: con '=' una
+-- laptop que pasa de NULL a una orden no se detectaría.
+--
+-- La orden que PIERDE la laptop se queda como estaba. Regresarla a 'Pendiente'
+-- sería adivinar: pudo avanzar a 'En Proceso' por otras razones, y una orden
+-- que retrocede sola confunde más de lo que ayuda.
+
+
+CREATE TRIGGER tg_Iniciar_Orden_Al_Mover_Laptop
+AFTER UPDATE ON laptop
+FOR EACH ROW
+BEGIN
+    IF NOT (NEW.orden <=> OLD.orden) AND NEW.orden IS NOT NULL THEN
+        UPDATE orden_produccion
+           SET estado = 'PROC'
+         WHERE folio  = NEW.orden
+           AND estado = 'PEND';
+    END IF;
+END$$
+
+
 CREATE TRIGGER tg_Sincronizar_Cant_Producida_Alta
 AFTER INSERT ON laptop
 FOR EACH ROW
@@ -582,6 +716,155 @@ BEGIN
     END IF;
 END$$
 
+
+-- ELIMINADO: tg_actualizar_edo_laptop_al_ensamblar
+--
+-- Era AFTER INSERT en registro_ensamblaje y hacía UPDATE sobre laptop, para
+-- pasarla de REGIS a PENSAM en cuanto se le abría un ensamblaje.
+--
+-- Dejó de poder existir cuando el alta de la laptop pasó a abrir sola su primer
+-- registro (los dos triggers de abajo). Ese camino queda así:
+--
+--     INSERT laptop -> trigger inserta en registro_ensamblaje
+--                   -> este trigger intentaba UPDATE laptop
+--
+-- y MySQL lo prohíbe: error 1442, "Can't update table 'laptop' ... because it is
+-- already used by statement which invoked this stored function/trigger". Un
+-- trigger no puede tocar la tabla sobre la que corre la sentencia que lo
+-- disparó. Comprobado que lo levanta incluso cuando el UPDATE no coincide con
+-- ninguna fila, así que tampoco servía condicionarlo.
+--
+-- Su trabajo lo hace ahora tg_Arrancar_Laptop_En_Ensamblaje, que fija el estado
+-- en el BEFORE INSERT de la propia laptop y no rebota a ningún lado.
+--
+-- Consecuencia a tener presente: REGIS deja de ser un estado en el que una
+-- laptop se quede. Toda laptop nace ya en ensamblaje.
+
+
+-- TRIGGERS 15 y 16: tg_Arrancar_Laptop_En_Ensamblaje / tg_Abrir_Ensamblaje_Primera_Linea
+--
+-- Evento   : BEFORE INSERT y AFTER INSERT en laptop
+-- Objetivo : Que el reloj del ensamblaje empiece a correr en el momento en que
+--            la laptop se registra, en la primera línea.
+--
+-- El resto de las líneas no necesitan esto: su registro lo abre el relevo, al
+-- aprobar la inspección de la línea anterior (ver tg_Actualizar_Estado_Laptop_
+-- Inspeccion_Calidad). La primera no tiene línea anterior que la releve, así que
+-- el disparo es el alta misma de la laptop.
+--
+-- Cuál es "la primera línea" no se escribe a mano: es la línea de ensamblaje a
+-- la que ninguna otra apunta con `siguiente`. Si mañana se reordena la cadena,
+-- esto sigue solo.
+
+CREATE TRIGGER tg_Arrancar_Laptop_En_Ensamblaje
+BEFORE INSERT ON laptop
+FOR EACH ROW
+BEGIN
+    IF NEW.estado IS NULL OR NEW.estado = 'REGIS' THEN
+        SET NEW.estado = 'PENSAM';
+    END IF;
+END$$
+
+
+CREATE TRIGGER tg_Abrir_Ensamblaje_Primera_Linea
+AFTER INSERT ON laptop
+FOR EACH ROW
+BEGIN
+    DECLARE v_primera VARCHAR(8) DEFAULT NULL;
+
+    -- Solo a la que nace para producirse. Una carga de datos que dé de alta una
+    -- laptop ya aprobada o embalada no tiene por qué estrenar ensamblaje.
+    IF NEW.estado = 'PENSAM' THEN
+
+        SELECT l.codigo
+          INTO v_primera
+          FROM linea l
+         WHERE l.tipo = 'ENSA'
+           AND NOT EXISTS (SELECT 1 FROM linea p WHERE p.siguiente = l.codigo)
+         ORDER BY l.codigo
+         LIMIT 1;
+
+        IF v_primera IS NOT NULL THEN
+            INSERT INTO registro_ensamblaje (fecha_inicio, hora_inicio, laptop, linea)
+            VALUES (CURDATE(), CURTIME(), NEW.numero, v_primera);
+        END IF;
+
+    END IF;
+END$$
+
+
+
+
+-- TRIGGERS 13 y 14: tg_Validar_Linea_Ensamblaje / _Cambio
+--
+-- Evento   : BEFORE INSERT y BEFORE UPDATE en registro_ensamblaje
+-- Objetivo : Que solo se pueda ensamblar en líneas de ensamblaje.
+--
+-- La línea trae un tipo (tipo_linea): ENSA se arma, EMBA se empaca. Un
+-- registro de ensamblaje contra una línea de embalaje no es un descuido de
+-- captura, es una laptop que quedaría trazada en un proceso que no existe ahí,
+-- surtiéndose de un stock que no le toca.
+--
+-- La API y el cliente ya filtran las líneas antes de llegar aquí, pero esta es
+-- la única barrera que también cubre a quien escriba por SQL o por otro cliente.
+--
+-- El de UPDATE solo revisa cuando la línea de verdad cambia (<=> es la
+-- comparación que trata NULL como un valor más): cerrar un ensamblaje pone
+-- fecha_fin/hora_fin y no tiene por qué volver a validar la línea.
+
+
+CREATE TRIGGER tg_Validar_Linea_Ensamblaje
+BEFORE INSERT ON registro_ensamblaje
+FOR EACH ROW
+BEGIN
+    DECLARE v_tipo VARCHAR(8) DEFAULT NULL;
+
+    IF NEW.linea IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: el registro de ensamblaje necesita una línea';
+    END IF;
+
+    SELECT tipo INTO v_tipo FROM linea WHERE codigo = NEW.linea;
+
+    IF v_tipo IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: esa línea no tiene tipo asignado, no se puede ensamblar en ella';
+    END IF;
+
+    IF v_tipo <> 'ENSA' THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: solo se puede registrar ensamblaje en líneas de tipo Ensamblaje';
+    END IF;
+END$$
+
+
+CREATE TRIGGER tg_Validar_Linea_Ensamblaje_Cambio
+BEFORE UPDATE ON registro_ensamblaje
+FOR EACH ROW
+BEGIN
+    DECLARE v_tipo VARCHAR(8) DEFAULT NULL;
+
+    IF NOT (NEW.linea <=> OLD.linea) THEN
+
+        IF NEW.linea IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: el registro de ensamblaje necesita una línea';
+        END IF;
+
+        SELECT tipo INTO v_tipo FROM linea WHERE codigo = NEW.linea;
+
+        IF v_tipo IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: esa línea no tiene tipo asignado, no se puede ensamblar en ella';
+        END IF;
+
+        IF v_tipo <> 'ENSA' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Ensamblaje: solo se puede registrar ensamblaje en líneas de tipo Ensamblaje';
+        END IF;
+
+    END IF;
+END$$
 DELIMITER ;
 
 
@@ -631,6 +914,23 @@ UPDATE orden_produccion op
 --   2. tg_Finalizar_Proceso_Embalaje        → UPDATE laptop a 'EMBALA'
 --   3. tg_Sincronizar_Cant_Producida_Cambio → recuenta (la laptop ya
 --        contaba desde 'APROV', así que el número no se mueve)
+--
+-- OJO con esas dos cadenas: los UPDATE de laptop que hacen los triggers 5 y 3
+-- también pasan por tg_Iniciar_Orden_Al_Mover_Laptop, pero ahí NO cambia la
+-- columna `orden`, así que su condición no se cumple y no hace nada. Sólo
+-- reacciona cuando la laptop de verdad se cambia de orden.
+--
+--
+-- LAS DOS FORMAS DE ARRANCAR UNA ORDEN
+--
+-- Una orden 'Pendiente' pasa a 'En Proceso' en cuanto recibe su primera laptop,
+-- y eso puede ocurrir por dos caminos distintos:
+--
+--   tg_Iniciar_Orden_Al_Registrar_Laptop  (INSERT)  laptop nueva en la orden
+--   tg_Iniciar_Orden_Al_Mover_Laptop      (UPDATE)  laptop existente reasignada
+--
+-- Los dos hacen lo mismo y los dos filtran por estado = 'PEND', así que una
+-- orden Cancelada o Completada no se reabre por ninguno de los dos caminos.
 
 
 

@@ -9,15 +9,13 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import generics
 from django.utils import timezone
 
-from .models import InspeccionCalidad, VistaInspeccionCalidad
+from .models import DetalleInspeccion, InspeccionCalidad, VistaInspeccionCalidad
 from . import serializers
 
 from usuarios.permissions import TienePermisoModulo
 from usuarios.models import EmpleadoLinea
 from django.db import OperationalError
-
-
-
+from produccion.models import Laptop, EdoLaptop
 
 from django.db.models import Q
 
@@ -301,6 +299,13 @@ class DetailInspeccionCalidadAPIView(APIView):
 # UPDATE INSPECCION DE CALIDAD
 # ==========================================
 
+RESULTADO_ESTADO_MAP = {
+    1: 'APROV',
+    0: 'RECHA',
+    2: 'PENSAM',
+}
+
+
 class UpdateInspeccionCalidadAPIView(generics.UpdateAPIView):
 
     permission_classes = [
@@ -317,7 +322,13 @@ class UpdateInspeccionCalidadAPIView(generics.UpdateAPIView):
 
     lookup_field = "numero"
 
+    def perform_update(self, serializer):
+        inspeccion = serializer.save()
+        resultado = inspeccion.resultado
+        estado_codigo = RESULTADO_ESTADO_MAP.get(resultado)
 
+        if estado_codigo and inspeccion.laptop_id:
+            Laptop.objects.filter(pk=inspeccion.laptop_id).update(estado_id=estado_codigo)
 
 
 # . . . . . .  . DELETE
@@ -408,3 +419,65 @@ class BuscarInspeccionCalidadView(generics.ListAPIView):
 
 
         return queryset.order_by("-fecha", "-hora")
+
+#----------------------------------------------------------------------------------------------
+#           D E T A L L E   D E   I N S P E C C I O N     V I E W S
+#
+#   Qué piezas reprobaron una inspección. Se registran DESPUÉS de crear la
+#   inspección, porque el renglón la referencia por llave foránea.
+#----------------------------------------------------------------------------------------------
+
+
+class RegistroDetalleInspeccionAPIView(APIView):
+    """Alta de los renglones de una inspección.
+
+    Acepta un objeto o una lista: el inspector puede marcar varias piezas de un
+    golpe y no tiene sentido obligar al cliente a una llamada por pieza.
+    """
+
+    permission_classes = [AllowAny]
+    modulo = "calidad"
+
+    def post(self, request):
+        muchos = isinstance(request.data, list)
+
+        serializer = serializers.CreateDetalleInspeccionSerializer(
+            data=request.data, many=muchos
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # La pieza tiene que ser de la laptop que se inspeccionó. Si no, se
+        # estaría culpando a un componente de otra unidad.
+        renglones = serializer.validated_data if muchos else [serializer.validated_data]
+        for renglon in renglones:
+            inspeccion = renglon["inspeccion"]
+            componente = renglon["componente"]
+            registro = componente.registro_ensamblaje
+
+            if registro is None or registro.laptop_id != inspeccion.laptop_id:
+                return Response(
+                    {"mensaje": (
+                        f"El componente {componente.numero} no está montado en la "
+                        f"laptop {inspeccion.laptop_id}, no puede reprobar su inspección."
+                    )},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ListaDetalleInspeccionAPIView(generics.ListAPIView):
+    """Renglones de una inspección: qué piezas la reprobaron."""
+
+    permission_classes = [AllowAny]
+    modulo = "calidad"
+    serializer_class = serializers.ListDetalleInspeccionSerializer
+
+    def get_queryset(self):
+        queryset = DetalleInspeccion.objects.all()
+        inspeccion = self.kwargs.get("inspeccion")
+        if inspeccion is not None:
+            queryset = queryset.filter(inspeccion=inspeccion)
+        return queryset

@@ -1,97 +1,501 @@
 {% extends 'panel_admin/base.html' %}
+{% load formato %}
+
+{% comment %}
+   D A S H B O A R D   D E L   A D M I N I S T R A D O R
+
+   Esta pantalla es del equipo del panel admin. Los estilos propios viven en
+   css/panel_admin.css (.kpi-card, .dash-chart, .dash-rank, .dash-timeline) y
+   se apoyan en las variables de global.css; lo demás son clases de Bootstrap y
+   las tarjetas .emp-card que ya usan las otras pantallas.
+
+   Aquí NO se calcula nada. Los conteos vienen de las vistas SQL vista_dash_*
+   (DB/vistas.sql) y los porcentajes de alto y ancho de las barras los arma
+   panel_admin/views_dashboard.py, porque el lenguaje de plantillas no divide.
+
+   Antes esta pantalla eran seis tarjetas que nada más llevaban a los módulos.
+   Se quitaron: el sidebar ya lleva a esos mismos seis lugares, y ocupaban el
+   espacio de arriba, que es el que de verdad se lee.
+{% endcomment %}
 
 {% block titulo_pagina %}Dashboard{% endblock %}
 {% block topbar_titulo %}Panel de Administración{% endblock %}
 
 {% block content %}
 
-<div class="mb-4">
-    <h2 class="mb-1">Panel de Administración</h2>
-    <p class="text-muted mb-0">
-        Bienvenido{% if sesion_nombre %}, {{ sesion_nombre }}{% endif %}. Tienes acceso a todos los módulos del sistema.
-    </p>
+<!-- ==========================================
+     ENCABEZADO Y SELECTOR DE RANGO
+     ========================================== -->
+<div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+
+    <div>
+        <h2 class="mb-1">Panel de Administración</h2>
+        <p class="text-muted mb-0">
+            Bienvenido{% if sesion_nombre %}, {{ sesion_nombre }}{% endif %}.
+            Estás viendo <strong>{{ rango_etiqueta|lower }}</strong>{% if rango_desde %} ({{ rango_desde|fecha }} al {{ rango_hasta|fecha }}){% endif %}.
+        </p>
+    </div>
+
+    <!-- Un GET simple: cada rango es un enlace, sin JavaScript de por medio.
+         Así el rango elegido queda en la URL y se puede compartir. -->
+    <div class="btn-group btn-group-sm flex-shrink-0" role="group" aria-label="Rango de fechas">
+        {% for r in rangos %}
+            <a href="?rango={{ r.clave }}"
+               class="btn {% if rango == r.clave %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+                {{ r.etiqueta }}
+            </a>
+        {% endfor %}
+    </div>
+
 </div>
 
-<div class="row g-3">
+{% if sin_api %}
+    <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+        <i class="bi bi-plug"></i>
+        <div>
+            No se pudo consultar la API de servicios, así que los números de abajo
+            están vacíos. Revisa que <code>Servicios</code> esté corriendo.
+        </div>
+    </div>
+{% endif %}
 
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-gear-wide-connected me-2"></i>
-                    Producción
-                </h5>
-                <p class="card-text text-muted small">Órdenes de producción, laptops y ensamblaje.</p>
-                <a href="{% url 'ordenes-produccion-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+
+<!-- ==========================================
+     TARJETAS DE KPI
+     ========================================== -->
+<div class="row g-3 mb-4">
+
+    <!-- Producidas en el rango -->
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card kpi-ok">
+            <div class="kpi-label"><i class="bi bi-box-seam"></i> Producidas</div>
+            <div>
+                <span class="kpi-valor">{{ producidas }}</span>
+                <span class="kpi-unidad">laptop{{ producidas|pluralize }}</span>
+            </div>
+            <div class="kpi-pie">Embalada{{ producidas|pluralize }} en el periodo</div>
+        </div>
+    </div>
+
+    <!-- Aprobación de calidad -->
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card {% if aprobacion == None %}kpi-neutro{% elif aprobacion >= 90 %}kpi-ok{% elif aprobacion >= 70 %}kpi-alerta{% else %}kpi-mal{% endif %}">
+            <div class="kpi-label"><i class="bi bi-check2-circle"></i> Aprobación</div>
+            <div>
+                {% if aprobacion == None %}
+                    {# None y 0% no son lo mismo: aquí no hubo ni una inspección. #}
+                    <span class="kpi-valor">—</span>
+                {% else %}
+                    <span class="kpi-valor">{{ aprobacion }}</span><span class="kpi-unidad">%</span>
+                {% endif %}
+            </div>
+            <div class="kpi-pie">
+                {% if inspecciones %}
+                    {# "inspección/inspecciones" es irregular, por eso los dos sufijos. #}
+                    {{ aprobadas }} de {{ inspecciones }} inspecci{{ inspecciones|pluralize:"ón,ones" }}
+                {% else %}
+                    Sin inspecciones en el periodo
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-check2-circle me-2"></i>
-                    Calidad
-                </h5>
-                <p class="card-text text-muted small">Inspecciones de calidad registradas.</p>
-                <a href="{% url 'lista_inspeccion_calidad' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+    <!-- Paros abiertos (foto de ahora, no del rango) -->
+    <div class="col-6 col-lg-3">
+        <a href="{% url 'lista_paros' %}"
+           class="kpi-card text-decoration-none {% if resumen.paros_abiertos %}kpi-mal{% else %}kpi-ok{% endif %}">
+            <div class="kpi-label"><i class="bi bi-exclamation-triangle"></i> Paros abiertos</div>
+            <div>
+                <span class="kpi-valor">{{ resumen.paros_abiertos|default:0 }}</span>
+                <span class="kpi-unidad">ahora</span>
+            </div>
+            <div class="kpi-pie">
+                {{ paros_total }} en el periodo · {{ paros_horas }} h perdidas
+            </div>
+        </a>
+    </div>
+
+    <!-- Órdenes en proceso -->
+    <div class="col-6 col-lg-3">
+        <a href="{% url 'ordenes-produccion-lista' %}" class="kpi-card kpi-info text-decoration-none">
+            <div class="kpi-label"><i class="bi bi-gear-wide-connected"></i> Órdenes activas</div>
+            <div>
+                <span class="kpi-valor">{{ resumen.ordenes_proceso|default:0 }}</span>
+                <span class="kpi-unidad">en proceso</span>
+            </div>
+            <div class="kpi-pie">
+                {{ resumen.ordenes_pendientes|default:0 }} pendiente{{ resumen.ordenes_pendientes|pluralize }} ·
+                {{ resumen.ordenes_completadas|default:0 }} completada{{ resumen.ordenes_completadas|pluralize }}
+            </div>
+        </a>
+    </div>
+
+    <!-- Líneas -->
+    <div class="col-6 col-lg-3">
+        <a href="{% url 'lineas-lista' %}" class="kpi-card kpi-neutro text-decoration-none">
+            <div class="kpi-label"><i class="bi bi-diagram-3"></i> Líneas activas</div>
+            <div>
+                <span class="kpi-valor">{{ resumen.lineas_activas|default:0 }}</span>
+                <span class="kpi-unidad">de {{ resumen.lineas_totales|default:0 }}</span>
+            </div>
+            <div class="kpi-pie">
+                {{ resumen.lineas_en_paro|default:0 }} en paro ·
+                {{ resumen.lineas_en_mantenimiento|default:0 }} en mantenimiento
+            </div>
+        </a>
+    </div>
+
+    <!-- Laptops en piso -->
+    <div class="col-6 col-lg-3">
+        <a href="{% url 'laptops-lista' %}" class="kpi-card kpi-info text-decoration-none">
+            <div class="kpi-label"><i class="bi bi-laptop"></i> En ensamblaje</div>
+            <div>
+                <span class="kpi-valor">{{ resumen.laptops_en_ensamblaje|default:0 }}</span>
+                <span class="kpi-unidad">laptop{{ resumen.laptops_en_ensamblaje|pluralize }}</span>
+            </div>
+            <div class="kpi-pie">
+                {{ resumen.laptops_aprobadas|default:0 }} aprobada{{ resumen.laptops_aprobadas|pluralize }} ·
+                {{ resumen.laptops_rechazadas|default:0 }} rechazada{{ resumen.laptops_rechazadas|pluralize }}
+            </div>
+        </a>
+    </div>
+
+    <!-- Material -->
+    <div class="col-6 col-lg-3">
+        <a href="{% url 'componentes-lista' %}"
+           class="kpi-card text-decoration-none {% if stock_bajo %}kpi-alerta{% else %}kpi-ok{% endif %}">
+            <div class="kpi-label"><i class="bi bi-boxes"></i> Componentes</div>
+            <div>
+                <span class="kpi-valor">{{ resumen.comp_disponibles|default:0 }}</span>
+                <span class="kpi-unidad">disponibles</span>
+            </div>
+            <div class="kpi-pie">
+                {{ resumen.comp_en_uso|default:0 }} en uso ·
+                {{ resumen.comp_danados|default:0 }} dañado{{ resumen.comp_danados|pluralize }}
+            </div>
+        </a>
+    </div>
+
+    <!-- Personal -->
+    <div class="col-6 col-lg-3">
+        <a href="{% url 'lista_empleados' %}" class="kpi-card kpi-neutro text-decoration-none">
+            <div class="kpi-label"><i class="bi bi-people"></i> Personal</div>
+            <div>
+                <span class="kpi-valor">{{ resumen.empleados_activos|default:0 }}</span>
+                <span class="kpi-unidad">empleados</span>
+            </div>
+            <div class="kpi-pie">{{ resumen.usuarios_activos|default:0 }} usuarios activos</div>
+        </a>
+    </div>
+
+</div>
+
+
+<!-- ==========================================
+     GRÁFICAS
+     ========================================== -->
+<div class="row g-3 mb-4">
+
+    <!-- Producción por día -->
+    <div class="col-12 col-xl-7">
+        <div class="emp-card h-100">
+            <div class="emp-header py-3">
+                <div class="emp-eyebrow"><span class="dot"></span> Tendencia</div>
+                <h5 class="fw-bold text-dark mb-0">Producción por día</h5>
+                <p class="text-muted small mb-0">Laptops embaladas · {{ rango_etiqueta|lower }}</p>
+            </div>
+
+            <div class="p-4">
+                {% if serie_produccion %}
+                    <div class="dash-chart">
+                        {% for punto in serie_produccion %}
+                            <div class="dash-col {% if not punto.total %}vacio{% endif %}"
+                                 data-tip="{{ punto.fecha|fecha }} · {{ punto.total }}">
+                                <div class="dash-bar" style="--valor: {{ punto.altura }}%"></div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {% comment %}
+                        El eje sólo rotula uno de cada cinco días: con 30 barras,
+                        escribir las 30 fechas no se lee.
+
+                        OJO con los comentarios de este archivo: la forma corta
+                        de Django es de UNA sola línea. Si la partes en dos,
+                        deja de ser comentario y el texto sale impreso en la
+                        pantalla. Para varias líneas, siempre esta forma larga.
+                    {% endcomment %}
+                    <div class="dash-eje">
+                        {% for punto in serie_produccion %}
+                            <span>
+                                {% if forloop.first or forloop.last or forloop.counter0|divisibleby:5 %}
+                                    {{ punto.fecha|date:"d/m" }}
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-bar-chart d-block fs-2 mb-2 opacity-50"></i>
+                        <div class="small">No hubo producción registrada en este periodo.</div>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    Incidencias
-                </h5>
-                <p class="card-text text-muted small">Paros de línea abiertos y cerrados.</p>
-                <a href="{% url 'lista_paros' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+    <!-- Rankings por línea -->
+    <div class="col-12 col-xl-5">
+        <div class="emp-card h-100">
+            <div class="emp-header py-3">
+                <div class="emp-eyebrow"><span class="dot"></span> Por línea</div>
+                <h5 class="fw-bold text-dark mb-0">Dónde se está atorando</h5>
+                <p class="text-muted small mb-0">Rechazos de calidad y paros del periodo</p>
+            </div>
+
+            <div class="p-4">
+
+                <div class="text-muted small fw-bold text-uppercase mb-2">Rechazos de calidad</div>
+                {% if rechazos_por_linea %}
+                    <div class="dash-rank mb-4">
+                        {% for barra in rechazos_por_linea %}
+                            <div class="rank-fila">
+                                <span class="rank-nombre">{{ barra.nombre }}</span>
+                                <span class="rank-valor">{{ barra.valor }}</span>
+                                <span class="rank-riel">
+                                    <span class="rank-barra mal" style="--valor: {{ barra.ancho }}%"></span>
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-4">Ninguna línea tuvo rechazos.</p>
+                {% endif %}
+
+                <div class="text-muted small fw-bold text-uppercase mb-2">Paros registrados</div>
+                {% if paros_por_linea %}
+                    <div class="dash-rank">
+                        {% for barra in paros_por_linea %}
+                            <div class="rank-fila">
+                                <span class="rank-nombre">{{ barra.nombre }}</span>
+                                <span class="rank-valor">{{ barra.valor }}</span>
+                                <span class="rank-riel">
+                                    <span class="rank-barra alerta" style="--valor: {{ barra.ancho }}%"></span>
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">Ninguna línea tuvo paros.</p>
+                {% endif %}
+
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-boxes me-2"></i>
-                    Materiales
-                </h5>
-                <p class="card-text text-muted small">Componentes, modelos, lotes y órdenes de material.</p>
-                <a href="{% url 'componentes-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+</div>
+
+
+<!-- ==========================================
+     TRAZABILIDAD: BUSCADOR
+     ========================================== -->
+<div class="emp-card mb-4">
+    <div class="emp-header py-3">
+        <div class="emp-eyebrow"><span class="dot"></span> Trazabilidad</div>
+        <h5 class="fw-bold text-dark mb-0">Consultar una orden de producción</h5>
+        <p class="text-muted small mb-0">
+            Todo lo que le pasó a un folio: sus laptops, el material que consumió,
+            sus inspecciones y los paros que le pegaron.
+        </p>
+    </div>
+
+    <div class="emp-toolbar px-4 py-3">
+        <form method="GET" action="{% url 'panel_admin:trazabilidad' %}">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="number" name="folio" min="1"
+                               class="form-control border-start-0 ps-1 py-2"
+                               placeholder="Folio de la orden..." required>
+                        <button class="btn btn-dark px-3" type="submit">Consultar</button>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-8">
+                    <a href="{% url 'panel_admin:trazabilidad' %}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-list-ul me-1"></i> Ver todas las órdenes
+                    </a>
+                </div>
             </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- ==========================================
+     ALERTAS
+     ========================================== -->
+<div class="row g-3 mb-4">
+
+    <!-- Paros sin cerrar -->
+    <div class="col-12 col-lg-4">
+        <div class="emp-card h-100">
+            <div class="emp-header py-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-exclamation-triangle text-danger me-1"></i> Paros sin cerrar
+                    </h6>
+                    <span class="text-muted small">El más viejo primero</span>
+                </div>
+                <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">
+                    {{ paros_abiertos|length }}
+                </span>
+            </div>
+
+            <ul class="list-group list-group-flush">
+                {% for p in paros_abiertos %}
+                    <li class="list-group-item px-4 py-3">
+                        <div class="fw-semibold text-dark small">{{ p.razon|default:"Sin razón registrada" }}</div>
+                        <div class="text-muted" style="font-size: 11px;">
+                            {{ p.linea_nombre|default:"Sin línea" }} ·
+                            desde {{ p.fecha_inicio|fecha_hora:p.hora_inicio }}
+                        </div>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item px-4 py-4 text-center text-muted small">
+                        <i class="bi bi-check2-circle d-block fs-4 mb-1 text-success opacity-75"></i>
+                        Ninguna línea está detenida.
+                    </li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-diagram-3 me-2"></i>
-                    Planta
-                </h5>
-                <p class="card-text text-muted small">Líneas de ensamblaje y estaciones de trabajo.</p>
-                <a href="{% url 'lineas-lista' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+    <!-- Rechazos de calidad -->
+    <div class="col-12 col-lg-4">
+        <div class="emp-card h-100">
+            <div class="emp-header py-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-x-octagon text-danger me-1"></i> Rechazos de calidad
+                    </h6>
+                    <span class="text-muted small">{{ rango_etiqueta }}</span>
+                </div>
+                <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">
+                    {{ rechazos|length }}
+                </span>
             </div>
+
+            <ul class="list-group list-group-flush">
+                {% for r in rechazos %}
+                    <li class="list-group-item px-4 py-3">
+                        <div class="fw-semibold text-dark small font-monospace">
+                            {{ r.laptop_num_serie|default:"Sin serie" }}
+                        </div>
+                        <div class="text-muted" style="font-size: 11px;">
+                            {{ r.linea_nombre|default:"Sin línea" }} ·
+                            {{ r.fecha|fecha }} ·
+                            {{ r.empleado_nombre|default:"Sin inspector" }}
+                        </div>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item px-4 py-4 text-center text-muted small">
+                        <i class="bi bi-check2-circle d-block fs-4 mb-1 text-success opacity-75"></i>
+                        Sin rechazos en el periodo.
+                    </li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-people me-2"></i>
-                    Personal
-                </h5>
-                <p class="card-text text-muted small">Usuarios del sistema y empleados de planta.</p>
-                <a href="{% url 'lista_usuarios' %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+    <!-- Material bajo -->
+    <div class="col-12 col-lg-4">
+        <div class="emp-card h-100">
+            <div class="emp-header py-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-boxes text-warning me-1"></i> Material bajo
+                    </h6>
+                    <span class="text-muted small">{{ umbral_stock }} piezas o menos</span>
+                </div>
+                <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">
+                    {{ stock_bajo|length }}
+                </span>
             </div>
+
+            <ul class="list-group list-group-flush">
+                {% for s in stock_bajo|slice:":6" %}
+                    <li class="list-group-item px-4 py-3 d-flex align-items-center justify-content-between gap-2">
+                        <div class="min-w-0">
+                            <div class="fw-semibold text-dark small text-truncate">{{ s.modelo_nombre }}</div>
+                            <div class="text-muted" style="font-size: 11px;">
+                                {{ s.tipo_nombre|default:"Sin tipo" }}
+                                {% if s.danados %} · {{ s.danados }} dañados{% endif %}
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill flex-shrink-0
+                                     {% if s.disponibles %}bg-warning-subtle text-warning border border-warning-subtle
+                                     {% else %}bg-danger-subtle text-danger border border-danger-subtle{% endif %}">
+                            {{ s.disponibles }}
+                        </span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item px-4 py-4 text-center text-muted small">
+                        <i class="bi bi-check2-circle d-block fs-4 mb-1 text-success opacity-75"></i>
+                        Todos los modelos tienen material.
+                    </li>
+                {% endfor %}
+
+                {% if stock_bajo|length > 6 %}
+                    <li class="list-group-item px-4 py-2 text-center">
+                        <a href="{% url 'componentes-lista' %}" class="small text-decoration-none">
+                            Ver los {{ stock_bajo|length }} modelos
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
         </div>
     </div>
 
+</div>
+
+
+<!-- ==========================================
+     ACTIVIDAD RECIENTE
+     ========================================== -->
+<div class="emp-card">
+    <div class="emp-header py-3">
+        <div class="emp-eyebrow"><span class="dot"></span> Bitácora</div>
+        <h5 class="fw-bold text-dark mb-0">Actividad reciente</h5>
+        <p class="text-muted small mb-0">
+            Lo último que pasó en la planta, de todos los módulos.
+        </p>
+    </div>
+
+    <div class="p-4">
+        {% if actividad %}
+            <ul class="dash-timeline">
+                {% for e in actividad %}
+                    <li class="ev-{{ e.tipo }}">
+                        <div class="ev-titulo">{{ e.titulo }}</div>
+                        <div class="ev-detalle">{{ e.detalle }}</div>
+                        <div class="ev-meta">
+                            <i class="bi bi-clock me-1"></i>{{ e.fecha|fecha_hora:e.hora }}
+                            {% if e.linea_nombre %} · {{ e.linea_nombre }}{% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-clock-history d-block fs-2 mb-2 opacity-50"></i>
+                <div class="small">No hay movimientos registrados todavía.</div>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
 {% endblock %}

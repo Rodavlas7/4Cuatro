@@ -46,7 +46,7 @@
             <div class="collapse submenu" id="produccion">
                 <a href="{% url 'ordenes-produccion-lista' %}" class="nav-link"><span class="nav-label">Órdenes de Producción</span></a>
                 <a href="{% url 'laptops-lista' %}" class="nav-link"><span class="nav-label">Laptops</span></a>
-                <a href="{% url 'ensamblaje-registrar' %}" class="nav-link"><span class="nav-label">Registrar Ensamblaje</span></a>
+                <a href="{% url 'ensamblaje-registrar' %}" class="nav-link"><span class="nav-label">Revisión de Ensamblaje</span></a>
             </div>
         </li>
  
@@ -66,33 +66,42 @@
  
         <!-- Embalaje -->
         <li class="nav-item mb-2">
-            <a href="#" class="nav-link">
+            <a href="{% url 'embalaje-lista' %}" class="nav-link">
                 <i class="bi bi-box-seam me-2"></i><span class="nav-label">Embalaje</span>
             </a>
         </li>
  
-        <!-- Trazabilidad -->
-        <li class="nav-item mb-2">
-            <a href="{% url 'ensamblaje-seguimiento' %}" class="nav-link">
-                <i class="bi bi-search me-2"></i><span class="nav-label">Trazabilidad</span>
-            </a>
-        </li>
- 
-        <!-- Planta -->
+        <!-- Trazabilidad
+             Son dos consultas distintas y por eso son dos pantallas: una sigue
+             el ensamblaje (por laptop) y la otra la orden de producción
+             completa. La de orden es del panel admin; la de ensamblaje ya
+             existía y la comparten otras pantallas. 
         <li class="nav-item mb-2">
             <a class="nav-link d-flex nav-link-content align-items-center" data-bs-toggle="collapse"
-               href="#planta" role="button" aria-expanded="false">
+               href="#trazabilidad" role="button" aria-expanded="false">
                 <span>
-                    <i class="bi bi-diagram-3 me-2"></i><span class="nav-label">Planta</span>
+                    <i class="bi bi-search me-2"></i><span class="nav-label">Trazabilidad</span>
                 </span>
                 <i class="bi bi-chevron-down chevron"></i>
             </a>
+
+        </li>-->
  
-            <div class="collapse submenu" id="planta">
-                <a href="{% url 'lineas-lista' %}" class="nav-link small"><span class="nav-label">Líneas de Ensamblaje</span></a>
-                <a href="{% url 'estaciones-lista' %}" class="nav-link small"><span class="nav-label">Estaciones de Trabajo</span></a>
-            </div>
+        <li class="nav-item mb-2">
+            <a href="{% url 'trazabilidad:trazabilidad' %}" class="nav-link">
+                <i class="bi bi-search me-2"></i><span class="nav-label">Trazabilidad</span>
+            </a>
         </li>
+
+        <!-- Planta -->
+
+        <li class="nav-item mb-2">
+            <a href="{% url 'lineas-lista' %}" class="nav-link">
+                <i class="bi bi-diagram-3 me-2"></i><span class="nav-label">Planta</span>
+            </a>
+        </li>
+
+
  
         <!-- Materiales -->
 
@@ -121,7 +130,7 @@
  
         <!-- Reportes -->
         <li class="nav-item">
-            <a href="#" class="nav-link">
+            <a href="/reportes/" class="nav-link">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i><span class="nav-label">Reportes</span>
             </a>
         </li>

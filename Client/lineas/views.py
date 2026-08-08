@@ -29,6 +29,7 @@ def lineasListView(request):
             "codigo": request.POST.get("codigo"),
             "nombre": request.POST.get("nombre") or None,
             "descripcion": request.POST.get("descripcion") or None,
+            "tipo": request.POST.get("tipo") or None,
             "estado": request.POST.get("estado") or None,
             "activo": request.POST.get("activo") == "on",
         }
@@ -36,7 +37,12 @@ def lineasListView(request):
         respuesta = requests.post(f"{API}/lineas/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Línea registrada correctamente.")
+            datos = respuesta.json()
+            codigo = datos.get("codigo") or datos.get("id")
+            if codigo:
+                messages.success(request, f"Línea registrada correctamente. Código: {codigo}")
+            else:
+                messages.success(request, "Línea registrada correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 
@@ -44,6 +50,7 @@ def lineasListView(request):
 
     respuesta_lineas = get(f"{API}/lineas/", headers)
     respuesta_estados = get(f"{API}/lineas/estados/", headers)
+    respuesta_tipos = get(f"{API}/lineas/tipos/", headers)
 
     # Si la API falla se pinta la tabla vacía, pero avisando por qué: una lista
     # en blanco y sin explicación se confunde con "no hay líneas dadas de alta".
@@ -56,6 +63,7 @@ def lineasListView(request):
         {
             "lineas": lista(respuesta_lineas),
             "estados": lista(respuesta_estados),
+            "tipos": lista(respuesta_tipos),
         }
     )
 
@@ -70,8 +78,10 @@ def lineaEditarView(request, codigo):
         headers = _headers(request)
 
         payload = {
+            "codigo": codigo,
             "nombre": request.POST.get("nombre") or None,
             "descripcion": request.POST.get("descripcion") or None,
+            "tipo": request.POST.get("tipo") or None,
             "estado": request.POST.get("estado") or None,
             "activo": request.POST.get("activo") == "on",
         }
@@ -146,7 +156,12 @@ def estacionesListView(request):
         respuesta = requests.post(f"{API}/lineas/estaciones/", json=payload, headers=headers)
 
         if respuesta.status_code == 201:
-            messages.success(request, "Estación registrada correctamente.")
+            datos = respuesta.json()
+            codigo = datos.get("codigo") or datos.get("id")
+            if codigo:
+                messages.success(request, f"Estación registrada correctamente. Código: {codigo}")
+            else:
+                messages.success(request, "Estación registrada correctamente.")
         else:
             messages.error(request, mensaje_error(respuesta))
 
@@ -178,6 +193,7 @@ def estacionEditarView(request, codigo):
         headers = _headers(request)
 
         payload = {
+            "codigo": codigo,
             "nombre": request.POST.get("nombre") or None,
             "descripcion": request.POST.get("descripcion") or None,
             "linea": request.POST.get("linea") or None,

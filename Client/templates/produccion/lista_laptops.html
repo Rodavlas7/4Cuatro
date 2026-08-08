@@ -107,7 +107,7 @@
                         </a>
                         {% endif %}
                         <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
-                            <i class="bi bi-filter"></i> Filtrar resultados
+                             <i class="bi bi-funnel"></i> Filtrar
                         </button>
                     </div>
                 </div>
@@ -123,7 +123,7 @@
             <table class="table table-hover align-middle mb-0 w-100">
                 <thead class="table-light">
                     <tr>
-                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">#</th>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Num.</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Identificación</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo y Orden</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Ubicación (Línea/Lote)</th>
@@ -141,12 +141,12 @@
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-upc-scan text-secondary fs-5"></i>
+                                
                                 <div>
-                                    <div class="font-monospace fw-bold text-dark">{{ l.num_serie|default:"—" }}</div>
-                                    <div class="text-muted small text-truncate" style="max-width: 200px; font-size: 11px;" title="{{ l.descripcion|default:'' }}">
+                                    <div class="text-dark small fw-medium">{{ l.num_serie|default:"—" }}</div>
+                                    <!--<div class="text-muted small text-truncate" style="max-width: 200px; font-size: 11px;" title="{{ l.descripcion|default:'' }}">
                                         {{ l.descripcion|default:"Sin descripción" }}
-                                    </div>
+                                    </div> -->
                                 </div>
                             </div>
                         </td>
@@ -164,7 +164,7 @@
                         </td>
                         <td>
                             <div class="text-dark small fw-medium">{{ l.linea_nombre|default:"—" }}</div>
-                            <div class="text-secondary small" style="font-size: 11px;"><i class="bi bi-box me-1"></i>Lote: {{ l.lote_codigo|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">LOTE:  {{ l.lote_codigo|default:"—" }}</div>
                         </td>
                         <td class="text-center">
                             <span class="badge rounded-pill px-2 py-1 fw-semibold
@@ -183,7 +183,7 @@
                                     <i class="bi bi-list-ul"></i>
                                 </a>
 
-                                <!-- RECHAZAR LAPTOP -->
+                                <!-- RECHAZAR LAPTOP 
                                 {% if l.estado_codigo == 'RECHA' %}
                                     <button type="button" class="btn text-muted" disabled title="Ya está rechazada">
                                         <i class="bi bi-x-lg"></i>
@@ -198,6 +198,7 @@
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 {% endif %}
+                                -->
                             </div>
                         </td>
                     </tr>
@@ -279,15 +280,6 @@
                                 Calidad reemplazará esto por la definitiva (TP-AAAAMMDD-...) al aprobar.
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-medium">Línea de Ensamblaje</label>
-                            <select name="linea" class="form-select">
-                                <option value="">— Sin línea asignada —</option>
-                                {% for l in lineas %}
-                                <option value="{{ l.codigo }}">{{ l.codigo }} — {{ l.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -298,7 +290,7 @@
                     <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start mt-4">
                         <i class="bi bi-info-circle-fill text-primary mt-1"></i>
                         <div>
-                            La laptop se registrará en estado <strong>Registrada</strong>. Si es la primera de su orden, la orden pasará automáticamente a <strong>En Proceso</strong>.
+                            La laptop se registrará en estado <strong>Registrada</strong> y sin línea: la línea queda registrada al abrirle su ensamblaje. Si es la primera de su orden, la orden pasará automáticamente a <strong>En Proceso</strong>.
                         </div>
                     </div>
                 </div>

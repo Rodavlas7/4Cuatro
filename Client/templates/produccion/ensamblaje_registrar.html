@@ -1,29 +1,42 @@
 {% extends 'panel_admin/base.html' %}
+{% load formato %}
 
 {% block topbar_titulo %}Producción{% endblock %}
 
 {% block breadcrumbs %}
     <li class="breadcrumb-item"><a href="{% url 'ordenes-produccion-lista' %}">Producción</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Registro de Ensamblaje</li>
+    <li class="breadcrumb-item active" aria-current="page">Revisión de Ensamblaje</li>
 {% endblock %}
 
-{% block title %}Registrar Ensamblaje{% endblock %}
+{% block title %}Revisión de Ensamblaje{% endblock %}
 
 {% block content %}
 
+<style>
+    /* Pieza que ya sostiene a otras: no se puede quitar sin quitar primero lo
+       que va montado encima, así que se marca distinta. */
+    .chk-comp.chk-trabada { accent-color: #fd7e14; cursor: not-allowed; }
+    .table tr.fila-trabada > td { background-color: rgba(253, 126, 20, .07); }
+    .table tr.fila-trabada > td:first-child { box-shadow: inset 3px 0 0 #fd7e14; }
+</style>
+
 <div class="wrap pb-5">
 
-    <div class="mb-4">
-        <h2 class="fw-bold mb-0 text-dark">Registrar Ensamblaje</h2>
-        <p class="text-muted small mt-1">Asigna componentes desde el stock de la línea a la laptop seleccionada.</p>
-    </div>
 
     <!-- ==========================================
          PASO 1 — ELEGIR LÍNEA Y LAPTOP
          ========================================== -->
     <div class="emp-card mb-4 shadow-sm">
+
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Revisión de Ensamblaje</h4>
+                <p class="text-muted small mb-0">Verifica que las piezas que instala la línea estén puestas, y déjalas registradas contra la laptop.</p>
+            </div>
+        </div>
+
         <div class="emp-header px-4 py-3 border-bottom bg-light bg-opacity-50">
-            <h6 class="fw-bold mb-0 text-dark text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">Parámetros de Ensamblaje</h6>
+            <h6 class="fw-bold mb-0 text-dark text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">Parámetros de la Revisión</h6>
         </div>
         <div class="card-body p-4">
             <form method="GET" id="formLaptop" class="row g-4 align-items-end">
@@ -42,7 +55,7 @@
                 </div>
 
                 <div class="col-md-7">
-                    <label class="form-label small fw-medium">Laptop a ensamblar <span class="text-danger">*</span></label>
+                    <label class="form-label small fw-medium">Laptop a revisar <span class="text-danger">*</span></label>
                     <select name="laptop" class="form-select" onchange="document.getElementById('formLaptop').submit();">
                         <option value="">— Selecciona una laptop —</option>
                         {% for l in laptops %}
@@ -51,7 +64,7 @@
                         </option>
                         {% endfor %}
                     </select>
-                    <div class="form-text" style="font-size: 11px;">Solo laptops que no están embaladas ni aprobadas.</div>
+                    <div class="form-text" style="font-size: 11px;">Solo laptops registradas o en ensamblaje.</div>
                 </div>
 
             </form>
@@ -68,6 +81,18 @@
     {% endif %}
 
 
+    {% if tipos_ciclicos %}
+    <div class="alert bg-warning-subtle text-warning-emphasis border border-warning-subtle d-flex gap-2 shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div class="small">
+            El orden de montaje de estos tipos se muerde la cola en
+            <code>tipo_comp.necesario</code>: <strong>{{ tipos_ciclicos|join:", " }}</strong>.
+            Mientras se corrige en la base, se tratan como inicio de la cadena y
+            no bloquean nada.
+        </div>
+    </div>
+    {% endif %}
+
     {% if laptop_obj %}
     <!-- ==========================================
          PASO 2 — COMPONENTES COMPATIBLES
@@ -83,7 +108,7 @@
                 <div class="row g-3">
                     <div class="col-md-4">
                         <span class="d-block text-muted small fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Modelo</span>
-                        <div class="fw-medium text-dark"><i class="bi bi-pc-display me-1 text-secondary"></i> {{ laptop_obj.modelo_nombre }} <span class="text-muted small">({{ laptop_obj.modelo_codigo }})</span></div>
+                        <div class="fw-medium text-dark"><i class="bi bi-laptop text-secondary me-1"></i> {{ laptop_obj.modelo_nombre }} <span class="text-muted small">({{ laptop_obj.modelo_codigo }})</span></div>
                     </div>
                     <div class="col-md-4 border-start border-light-subtle">
                         <span class="d-block text-muted small fw-bold text-uppercase mb-1" style="font-size: 0.65rem;">Línea (Surte Stock)</span>
@@ -102,7 +127,7 @@
             <i class="bi bi-clock-history fs-5"></i>
             <div class="small">
                 Continúa el ensamblaje <strong>#{{ registro.numero }}</strong> de esta laptop — 
-                iniciado el {{ registro.fecha_inicio|default:"(sin fecha)" }} a las {{ registro.hora_inicio|default:"(sin hora)" }}.
+                iniciado el {{ registro.fecha_inicio|fecha|default:"(sin fecha)" }} a las {{ registro.hora_inicio|hora|default:"(sin hora)" }}.
             </div>
         </div>
         {% endif %}
@@ -110,7 +135,14 @@
         <!-- Tabla de Componentes -->
         <div class="emp-card overflow-hidden shadow-sm mb-4">
             <div class="emp-header px-4 py-3 border-bottom bg-light bg-opacity-50 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0"><i class="bi bi-cpu text-primary me-2"></i>Componentes Compatibles</h5>
+                <div>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-cpu text-primary me-2"></i>Componentes de esta línea</h5>
+                    {% if ocultos_por_linea %}
+                    <span class="text-muted" style="font-size: 11px;">
+                        {{ ocultos_por_linea }} componente{{ ocultos_por_linea|pluralize:"s" }} del modelo no se muestra{{ ocultos_por_linea|pluralize:"n" }}: no se instala{{ ocultos_por_linea|pluralize:"n" }} en {{ linea_sel }}.
+                    </span>
+                    {% endif %}
+                </div>
                 <span class="badge bg-secondary rounded-pill">{{ componentes|length }} encontrados</span>
             </div>
 
@@ -130,27 +162,37 @@
                     </thead>
                     <tbody>
                         {% for c in componentes %}
-                        <tr class="{% if c.sin_stock or c.tipo_lleno %}opacity-50 bg-light{% endif %}">
+                        <tr class="{% if c.sin_stock or c.tipo_lleno or c.orden_pendiente %}opacity-50 bg-light{% endif %}">
                             
                             <td class="ps-4 text-center">
                                 <div class="form-check d-flex justify-content-center mb-0">
                                     <input class="form-check-input chk-comp border-secondary" type="checkbox"
                                         name="comp_{{ c.codigo }}" id="chk_{{ c.codigo }}"
                                         data-codigo="{{ c.codigo }}" data-tipo="{{ c.tipo_codigo }}" data-cap-tipo="{{ c.capacidad_tipo }}"
+                                        data-requiere="{{ c.requiere_tipo }}"
+                                        data-sin-stock="{% if c.sin_stock or c.tipo_lleno %}1{% else %}0{% endif %}"
                                         style="width: 1.2rem; height: 1.2rem;"
-                                        {% if c.sin_stock or c.tipo_lleno %}disabled{% endif %}>
+                                        {% if c.sin_stock or c.tipo_lleno or c.orden_pendiente %}disabled{% endif %}>
                                 </div>
                             </td>
 
                             <td>
                                 <label class="form-check-label w-100" for="chk_{{ c.codigo }}" style="cursor: pointer;">
-                                    <div class="fw-bold text-dark">{{ c.nombre|default:c.codigo }}</div>
+                                    <div class="fw-bold text-dark">
+                                        <i class="bi bi-lock-fill icono-trabada d-none" style="color:#fd7e14;"></i>
+                                        {{ c.nombre|default:c.codigo }}
+                                    </div>
                                     <div class="font-monospace text-muted" style="font-size: 11px;">{{ c.codigo }}</div>
                                 </label>
                             </td>
 
                             <td>
                                 <span class="badge bg-light text-secondary border shadow-sm">{{ c.tipo|default:"—" }}</span>
+                                {% if c.requiere_nombre %}
+                                <div class="aviso-orden text-warning-emphasis mt-1 {% if not c.orden_pendiente %}d-none{% endif %}" style="font-size: 10px;">
+                                    <i class="bi bi-arrow-return-right"></i> Falta {{ c.requiere_nombre }}
+                                </div>
+                                {% endif %}
                             </td>
 
                             <td class="text-center">
@@ -198,26 +240,38 @@
             {% else %}
             <div class="card-body p-5 text-center">
                 <i class="bi bi-exclamation-circle text-warning d-block mb-3" style="font-size: 3rem;"></i>
+                {% if ocultos_por_linea %}
+                <p class="text-muted mb-0">
+                    En <strong>{{ linea_sel }}</strong> no hay stock de ningún componente de este modelo.
+                    Revisa que sea la línea correcta o surte material a sus estaciones.
+                </p>
+                {% else %}
                 <p class="text-muted mb-0">Este modelo de laptop no tiene componentes registrados en <code>modelo_laptop_componente</code>.</p>
+                {% endif %}
             </div>
             {% endif %}
 
             <!-- Footer / Action Bar -->
             <div class="card-footer bg-white border-top p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                <span id="avanceTipos" class="text-primary fw-medium small mb-2 mb-md-0 d-flex align-items-center gap-2">
-                    <!-- JS inyecta "Tipos cubiertos: X de Y" aquí -->
-                </span>
+                <div class="mb-2 mb-md-0">
+                    <span id="avanceTipos" class="text-primary fw-medium small d-flex align-items-center gap-2">
+                        <!-- JS inyecta "Tipos cubiertos: X de Y" aquí -->
+                    </span>
+                    <!-- Motivo, cuando se intenta quitar una pieza que sostiene a otras -->
+                    <span id="avisoOrden" class="small d-none d-flex align-items-center gap-1 mt-1" style="color:#fd7e14;">
+                    </span>
+                </div>
 
                 <div class="d-flex flex-wrap gap-2 justify-content-end">
                     <a href="{% url 'ensamblaje-registrar' %}" class="btn btn-white border shadow-sm">Cancelar</a>
                     
                     <button type="submit" name="accion" value="registrar" class="btn btn-primary shadow-sm" {% if not componentes %}disabled{% endif %}>
-                        <i class="bi bi-check2-circle me-1"></i> Registrar ensamblaje
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Revisión de Ensamblaje
                     </button>
 
                     <!-- Aparece solo cuando la laptop queda con todos sus tipos cubiertos -->
                     <button type="button" class="btn btn-danger shadow-sm d-none" id="btnTerminar" data-bs-toggle="modal" data-bs-target="#modalConfirmarTerminar">
-                        <i class="bi bi-flag-fill me-1"></i> Registrar y Terminar
+                        <i class="bi bi-flag-fill me-1"></i> Guardar y Terminar
                     </button>
                 </div>
             </div>
@@ -341,7 +395,6 @@ var TIPOS = datosTipos ? JSON.parse(datosTipos.textContent) : {};
 var porTipo = {};
 
 document.querySelectorAll('.chk-comp').forEach(function (chk) {
-    chk.dataset.sinStock = chk.disabled ? '1' : '0';
     (porTipo[chk.dataset.tipo] = porTipo[chk.dataset.tipo] || []).push(chk);
 });
 
@@ -390,15 +443,123 @@ function refrescarTipo(tipo) {
     });
 }
 
+// ---------------------------------------------------------------------------
+// 3.b ORDEN DE MONTAJE (tipo_comp.necesario)
+//
+// Un tipo solo se habilita cuando el que va ANTES ya lleva al menos una pieza
+// —montada de antes o marcada aquí mismo—: la RAM no se puede palomear hasta
+// que esté la tarjeta madre. Y al revés: una pieza que ya está sosteniendo a
+// otras se traba, para que no se pueda quitar sin quitar primero lo de encima.
+// ---------------------------------------------------------------------------
+
+// { tipo: [tipos que dependen de él] }
+var dependientesDe = {};
+Object.keys(TIPOS).forEach(function (t) {
+    var req = TIPOS[t].requiere;
+    if (req) (dependientesDe[req] = dependientesDe[req] || []).push(t);
+});
+
+// Piezas de ese tipo que hay en la laptop ahora mismo: las ya montadas más las
+// que están marcadas en la pantalla.
+function totalTipo(tipo) {
+    return (porTipo[tipo] || []).reduce(function (s, chk) {
+        return s + cantidadDe(chk);
+    }, montadoDe(tipo));
+}
+
+function requisitoCubierto(tipo) {
+    var req = TIPOS[tipo] && TIPOS[tipo].requiere;
+    return !req || totalTipo(req) >= 1;
+}
+
+// Tipos que ya están montados encima de éste (los que lo trabarían).
+function dependientesPuestos(tipo) {
+    return (dependientesDe[tipo] || []).filter(function (d) {
+        return totalTipo(d) > 0;
+    });
+}
+
+// Trabada = quitarla dejaría su tipo en cero habiendo ya algo montado encima.
+// Si quedan otras piezas del mismo tipo, se puede quitar sin problema.
+function estaTrabada(chk) {
+    if (!chk.checked) return false;
+    var tipo = chk.dataset.tipo;
+    if (totalTipo(tipo) - cantidadDe(chk) >= 1) return false;
+    return dependientesPuestos(tipo).length > 0;
+}
+
+function refrescarOrden() {
+    document.querySelectorAll('.chk-comp').forEach(function (chk) {
+        var tipo = chk.dataset.tipo;
+        var fila = chk.closest('tr');
+        var cubierto = requisitoCubierto(tipo);
+        var trabada = estaTrabada(chk);
+
+        chk.dataset.trabada = trabada ? '1' : '0';
+        chk.classList.toggle('chk-trabada', trabada);
+        chk.title = trabada
+            ? 'Primero quita ' + dependientesPuestos(tipo).map(function (d) {
+                  return TIPOS[d].nombre;
+              }).join(', ')
+            : '';
+
+        if (fila) {
+            fila.classList.toggle('fila-trabada', trabada);
+            var candado = fila.querySelector('.icono-trabada');
+            if (candado) candado.classList.toggle('d-none', !trabada);
+            var aviso = fila.querySelector('.aviso-orden');
+            if (aviso) aviso.classList.toggle('d-none', cubierto);
+        }
+
+        // El orden se suma a los motivos que ya bloqueaban (stock / tipo lleno).
+        // Nunca se deshabilita una casilla MARCADA: una casilla disabled no se
+        // envía en el POST y se perdería la selección.
+        if (!chk.checked && !cubierto) {
+            chk.disabled = true;
+            if (fila) fila.classList.add('opacity-50', 'bg-light');
+        }
+    });
+}
+
+// Al intentar desmarcar una pieza trabada se revierte el click y se explica.
+var avisoTimer = null;
+function avisarTrabada(chk) {
+    var caja = document.getElementById('avisoOrden');
+    if (!caja) return;
+    caja.innerHTML = '<i class="bi bi-lock-fill"></i> Para quitar ' +
+        (TIPOS[chk.dataset.tipo] || {}).nombre + ' hay que quitar primero: ' +
+        dependientesPuestos(chk.dataset.tipo).map(function (d) {
+            return TIPOS[d].nombre;
+        }).join(', ') + '.';
+    caja.classList.remove('d-none');
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(function () { caja.classList.add('d-none'); }, 5000);
+}
+
+// Un solo recálculo para todo: primero los topes por tipo (que re-habilitan lo
+// que tenga ranura libre) y encima las reglas de orden.
+function refrescarTodo() {
+    Object.keys(porTipo).forEach(refrescarTipo);
+    refrescarOrden();
+    refrescarCierre();
+}
+
 document.querySelectorAll('.chk-comp').forEach(function (chk) {
+    // 'click' corre con la casilla ya cambiada: preventDefault la regresa.
+    chk.addEventListener('click', function (ev) {
+        if (!chk.checked && chk.dataset.trabada === '1') {
+            ev.preventDefault();
+            avisarTrabada(chk);
+        }
+    });
+
     chk.addEventListener('change', function () {
         var caja = document.getElementById('cant_' + chk.dataset.codigo);
         if (caja) {
             caja.disabled = !chk.checked;
             if (chk.checked && !caja.value) caja.value = 1;
         }
-        refrescarTipo(chk.dataset.tipo);
-        refrescarCierre();
+        refrescarTodo();
     });
 });
 
@@ -412,8 +573,7 @@ document.querySelectorAll('.cant-comp').forEach(function (caja) {
             if (val > max) caja.value = max;
             if (val < min) caja.value = min;
         }
-        refrescarTipo(caja.dataset.tipo);
-        refrescarCierre();
+        refrescarTodo();
     });
 });
 
@@ -458,8 +618,8 @@ function refrescarCierre() {
     }
 }
 
-Object.keys(porTipo).forEach(refrescarTipo);
-refrescarCierre();
+// Estado inicial: topes por tipo contando lo ya montado, y orden de montaje.
+refrescarTodo();
 </script>
 
 {% endblock %}

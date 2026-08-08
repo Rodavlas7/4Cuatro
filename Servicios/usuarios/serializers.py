@@ -28,17 +28,28 @@ class TurnoSerializer(serializers.ModelSerializer):
 #----------------------------------------------------------------------------------------------
 #           E M P L E A D O
 #----------------------------------------------------------------------------------------------  
-class CreateEmpleadoSerializer(serializers.ModelSerializer):
+# usuarios/serializers.py (API)
+import re
 
+class CreateEmpleadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empleado
-        fields = (
-            "nombrepila",
-            "primerapell",
-            "segundoapell",
-            "rol",
-            "turno"
-        )
+        fields = ("nombrepila", "primerapell", "segundoapell", "rol", "turno")
+
+    def validate_nombrepila(self, value):
+        if not re.match(r'^[A-Za-zÀ-ÿ\s]+$', value):
+            raise serializers.ValidationError("El nombre no puede contener números.")
+        return value
+
+    def validate_primerapell(self, value):
+        if not re.match(r'^[A-Za-zÀ-ÿ\s]+$', value):
+            raise serializers.ValidationError("El apellido no puede contener números.")
+        return value
+
+    def validate_segundoapell(self, value):
+        if value and not re.match(r'^[A-Za-zÀ-ÿ\s]+$', value):
+            raise serializers.ValidationError("El apellido no puede contener números.")
+        return value
 
 
 class ListEmpleadoSerializer(serializers.ModelSerializer):
@@ -78,33 +89,7 @@ class BajaEmpleadoSerializer(serializers.ModelSerializer):
 #----------------------------------------------------------------------------------------------
 
 class CreateUsuarioSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Usuario
-
-        fields = (
-            "usuario",
-            "contrasena",
-            "estado",
-            "empleado"
-        )
-
-        extra_kwargs = {
-            "contrasena":{
-                "write_only":True
-            }
-        }
-
-    def create(self,validated_data):
-
-        validated_data["contrasena"] = make_password(
-            validated_data["contrasena"]
-        )
-
-        return Usuario.objects.create(**validated_data)
-    
-    
-class CreateUsuarioSerializer(serializers.ModelSerializer):
+    usuario = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Usuario
@@ -113,34 +98,66 @@ class CreateUsuarioSerializer(serializers.ModelSerializer):
             "contrasena",
             "empleado"
         )
-
         extra_kwargs = {
             "contrasena": {
                 "write_only": True
             }
         }
-    
+
+    def validate_usuario(self, value):
+        if value and not re.match(r'^[A-Za-z0-9_.-]+$', value):
+            raise serializers.ValidationError(
+                "El nombre de usuario solo puede contener letras, números, puntos, guiones y guiones bajos."
+            )
+        return value
+
+    def _generar_usuario_por_empleado(self, empleado):
+        numero = str(int(empleado.numero))[-4:].zfill(4)
+        nombre = (empleado.nombrepila or "").strip()
+        primer_apellido = (empleado.primerapell or "").strip()
+        segundo_apellido = (empleado.segundoapell or "").strip()
+
+        inicial_nombre = nombre[:1].upper() if nombre else "X"
+        inicial_primer_apellido = primer_apellido[:1].upper() if primer_apellido else "X"
+
+        if segundo_apellido:
+            inicial_segundo_apellido = segundo_apellido[:1].upper()
+        else:
+            inicial_segundo_apellido = (
+                primer_apellido[1:2].upper() if len(primer_apellido) > 1 else 
+                nombre[1:2].upper() if len(nombre) > 1 else "X"
+            )
+
+        return numero + inicial_nombre + inicial_primer_apellido + inicial_segundo_apellido
+
+    def validate(self, data):
+        if not data.get("usuario"):
+            empleado = data.get("empleado")
+            if not empleado:
+                raise serializers.ValidationError(
+                    {"empleado": "Debe asignar un empleado para generar el nombre de usuario."}
+                )
+            data["usuario"] = self._generar_usuario_por_empleado(empleado)
+        return data
+
     def validate_contrasena(self, value):
-    
-            if value == "":
-                raise serializers.ValidationError(
-                    "La contraseña no puede estar vacía."
-                )
-    
-            if len(value) < 8:
-                raise serializers.ValidationError(
-                    "La contraseña debe tener mínimo 8 caracteres."
-                )
-    
-            return value
+        if value == "":
+            raise serializers.ValidationError(
+                "La contraseña no puede estar vacía."
+            )
+
+        if len(value) < 8:
+            raise serializers.ValidationError(
+                "La contraseña debe tener mínimo 8 caracteres."
+            )
+
+        return value
 
     def create(self, validated_data):
         validated_data["contrasena"] = make_password(
             validated_data["contrasena"]
         )
-
         validated_data["estado"] = True
-
         return Usuario.objects.create(**validated_data)
     
     
@@ -165,14 +182,15 @@ class DetailUsuarioSerializer(serializers.ModelSerializer):
         
         
 class UpdateUsuarioSerializer(serializers.ModelSerializer):
+    admin_password = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = Usuario
         fields = (
             "usuario",
             "contrasena",
+            "admin_password",
         )
-
         extra_kwargs = {
             "contrasena": {
                 "write_only": True,
@@ -180,8 +198,18 @@ class UpdateUsuarioSerializer(serializers.ModelSerializer):
             }
         }
 
-    def validate_contrasena(self, value):
+    def validate_usuario(self, value):
+        if value and not re.match(r'^[A-Za-z0-9_.-]+$', value):
+            raise serializers.ValidationError(
+                "El nombre de usuario solo puede contener letras, números, puntos, guiones y guiones bajos."
+            )
+        if Usuario.objects.filter(usuario=value).exclude(numero=self.instance.numero).exists():
+            raise serializers.ValidationError(
+                "El nombre de usuario ya está en uso por otro registro."
+            )
+        return value
 
+    def validate_contrasena(self, value):
         if value == "":
             raise serializers.ValidationError(
                 "La contraseña no puede estar vacía."
@@ -194,15 +222,13 @@ class UpdateUsuarioSerializer(serializers.ModelSerializer):
 
         return value
 
-
     def update(self, instance, validated_data):
-
         if "contrasena" in validated_data:
-
             instance.contrasena = make_password(
                 validated_data.pop("contrasena")
             )
-
+        # admin_password is only used for authorization, not stored on the model.
+        validated_data.pop("admin_password", None)
         return super().update(
             instance,
             validated_data
@@ -238,9 +264,23 @@ class ListEmpleadoLineaSerializer(serializers.ModelSerializer):
         source="empleado.nombrepila",
         read_only=True
     )
-    
+
     linea = serializers.CharField(
         source="linea.nombre",
+        read_only=True
+    )
+
+    # Los dos de arriba son nombres, y con eso no se puede identificar a nadie:
+    # hay empleados que se llaman igual. Estas dos llaves se agregaron para que
+    # el cliente pueda saber en qué línea está el empleado que inició sesión
+    # (el panel de supervisor sólo le muestra el material de su línea).
+    empleado_numero = serializers.IntegerField(
+        source="empleado.numero",
+        read_only=True
+    )
+
+    linea_codigo = serializers.CharField(
+        source="linea.codigo",
         read_only=True
     )
 
@@ -249,7 +289,9 @@ class ListEmpleadoLineaSerializer(serializers.ModelSerializer):
 
         fields = (
             "empleado",
+            "empleado_numero",
             "linea",
+            "linea_codigo",
             "fecha_inicio",
             "fecha_fin",
         )

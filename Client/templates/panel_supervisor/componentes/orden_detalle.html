@@ -4,79 +4,148 @@
 
 {% block content %}
 
-<a href="{% url 'panel_supervisor:ordenes-lista' %}" class="text-decoration-none">
-    <i class="bi bi-arrow-left"></i> Volver a órdenes de material
-</a>
+<div class="wrap">
 
-<div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-    <div>
-        <h2 class="mb-0">Orden de Material #{{ orden.numero }}</h2>
-        <p class="text-muted mb-0">Fecha: {{ orden.fecha|default:"—" }} · Hora: {{ orden.hora|default:"—" }} · Línea: {{ orden.linea|default:"—" }}</p>
+    <a href="{% url 'panel_supervisor:ordenes-lista' %}" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1 mb-3">
+        <i class="bi bi-arrow-left"></i> Volver a órdenes de material
+    </a>
+
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO DE LA ORDEN
+         ========================================== -->
+    <div class="emp-card mb-4">
+
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Orden de Material #{{ orden.numero }}</h4>
+                <p class="text-muted small mb-0">Material solicitado para surtir tu línea.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                    <i class="bi bi-plus-lg"></i> Agregar renglón
+                </button>
+            </div>
+        </div>
+
+        <!-- DATOS DE LA ORDEN -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Fecha</div>
+                    <div class="text-dark fw-semibold d-flex align-items-center gap-2">
+                        <i class="bi bi-calendar3 text-secondary"></i> {{ orden.fecha|default:"—" }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Hora</div>
+                    <div class="text-dark fw-semibold d-flex align-items-center gap-2">
+                        <i class="bi bi-clock text-secondary"></i> {{ orden.hora|default:"—" }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Línea</div>
+                    <div class="text-dark fw-semibold d-flex align-items-center gap-2">
+                        <i class="bi bi-diagram-3 text-secondary"></i> {{ mi_linea_nombre|default:orden.linea|default:"—" }}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg me-1"></i> Agregar renglón
-    </button>
+
+    <!-- ==========================================
+         TARJETA 2: RENGLONES
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Modelo</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Cantidad</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in orden.detalles %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-cpu text-secondary fs-5"></i>
+                                <div>
+                                    <div class="fw-semibold text-dark">{{ d.modelo_nombre|default:"—" }}</div>
+                                    <div class="text-secondary small font-monospace" style="font-size: 11px;">{{ d.modelo }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-semibold">
+                                {{ d.cantidad|default:"0" }}
+                            </span>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <form method="POST" action="{% url 'panel_supervisor:renglon-eliminar' orden.numero d.modelo %}" class="d-inline" data-confirm="¿Eliminar este renglón?">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn text-danger" title="Eliminar renglón">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-5">
+                            <i class="bi bi-list-ul text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            Esta orden todavía no tiene renglones.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>Modelo</th>
-                <th>Cantidad</th>
-                <th class="text-end">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for d in orden.detalles %}
-            <tr>
-                <td>{{ d.modelo }}</td>
-                <td>{{ d.cantidad }}</td>
-                <td class="text-end">
-                    <form method="POST" action="{% url 'panel_supervisor:renglon-eliminar' orden.numero d.modelo %}" class="d-inline" onsubmit="return confirm('¿Eliminar este renglón?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="3" class="text-center text-muted py-4">Esta orden todavía no tiene renglones.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-
-<!-- MODAL: AGREGAR RENGLON -->
+<!-- ==========================================
+     MODAL: AGREGAR RENGLÓN
+     ========================================== -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{% url 'panel_supervisor:orden-detalle' orden.numero %}">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'panel_supervisor:orden-detalle' orden.numero %}" class="w-100">
             {% csrf_token %}
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Agregar renglón</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Agregar renglón</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Modelo de componente</label>
+                        <label class="form-label small fw-medium">Modelo de componente <span class="text-danger">*</span></label>
                         <select name="modelo" class="form-select" required>
                             <option value="">— Selecciona —</option>
                             {% for m in modelos %}
-                            <option value="{{ m.codigo }}">{{ m.nombre }}</option>
+                            <option value="{{ m.codigo }}">{{ m.codigo }} — {{ m.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Cantidad</label>
+                        <label class="form-label small fw-medium">Cantidad <span class="text-danger">*</span></label>
                         <input type="number" name="cantidad" class="form-control" min="1" required>
                     </div>
+
+                    <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start mt-4">
+                        <i class="bi bi-info-circle-fill text-primary mt-1"></i>
+                        <div>
+                            Cada modelo aparece una sola vez por orden. Si ya está en la lista,
+                            elimina el renglón y vuelve a agregarlo con la cantidad correcta.
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar renglón</button>
                 </div>
             </div>
         </form>

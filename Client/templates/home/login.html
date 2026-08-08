@@ -6,33 +6,561 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>TraceX</title>
+<title>TraceX — Acceso al sistema</title>
 
-<link rel="stylesheet" href="{% static 'css/styles.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --bg:#0d1117;
+    --bg-grid:#161d27;
+
+    --panel:#1b2430;
+    --panel-border:#2e3b4a;
+
+    --text:#edf2f7;
+    --text-muted:#94a3b8;
+
+    /* Color principal */
+    --primary:#3b82f6;
+    --primary-hover:#2563eb;
+
+    /* Color secundario */
+    --accent:#22c55e;
+
+    --danger-bg:#2b1618;
+    --danger-border:#6b2328;
+    --danger-text:#ff9ca3;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    height:100%;
+    margin:0;
+}
+
+body{
+
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--text);
+
+    background:
+    radial-gradient(circle at 15% 20%,rgba(59,130,246,.08),transparent 40%),
+    radial-gradient(circle at 85% 80%,rgba(34,197,94,.05),transparent 45%),
+    repeating-linear-gradient(
+        0deg,
+        var(--bg-grid) 0 1px,
+        transparent 1px 44px
+    ),
+    repeating-linear-gradient(
+        90deg,
+        var(--bg-grid) 0 1px,
+        transparent 1px 44px
+    ),
+    var(--bg);
+
+    display:flex;
+
+    justify-content:flex-end;
+
+    align-items:center;
+
+    padding-right:4vw;
+
+
+    position:relative;
+
+    overflow:hidden;
+
+}
+
+.card{
+
+    width:min(410px, 92vw);
+
+    margin-right:clamp(16px, 8vw, 120px);
+
+    background:linear-gradient(
+        180deg,
+        #1b2430,
+        #18212b
+    );
+
+    border:1px solid var(--panel-border);
+
+    border-radius:18px;
+
+    padding:42px 38px 34px;
+
+    position:relative;
+
+    overflow:hidden;
+
+    box-shadow:
+        0 25px 70px rgba(0,0,0,.55),
+        inset 0 1px rgba(255,255,255,.03);
+
+    z-index:2;
+
+}
+
+/* Barrido */
+
+.card::before{
+
+    content:"";
+
+    position:absolute;
+
+    top:0;
+    left:-40%;
+
+    width:40%;
+    height:2px;
+
+    background:linear-gradient(
+        90deg,
+        transparent,
+        var(--primary),
+        transparent
+    );
+
+    animation:sweep 1.8s ease-out .2s 1;
+
+}
+
+@keyframes sweep{
+
+    from{
+        left:-40%;
+    }
+
+    to{
+        left:100%;
+    }
+
+}
+
+.logo-wrap{
+    display:flex;
+    justify-content:center;
+    margin-bottom:24px;
+}
+
+.logo-chip{
+
+    width:86px;
+    height:86px;
+
+    background:transparent;
+
+    border-radius:0;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    box-shadow:none;
+
+    padding:0;
+
+}
+
+.logo-chip img{
+
+    width:86px;
+    height:86px;
+
+    object-fit:contain;
+
+    filter:
+        drop-shadow(0 8px 15px rgba(0,0,0,.5));
+
+}
+
+h1{
+
+    font-family:'Space Grotesk',sans-serif;
+
+    text-align:center;
+
+    margin:0;
+
+    font-size:28px;
+
+    font-weight:700;
+
+    letter-spacing:.5px;
+
+}
+
+.subtitle{
+
+    margin:8px 0 24px;
+
+    text-align:center;
+
+    color:var(--text-muted);
+
+    font-size:14px;
+
+}
+
+.status-strip{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    background:#10161f;
+
+    border:1px solid var(--panel-border);
+
+    border-radius:10px;
+
+    padding:10px 12px;
+
+    margin-bottom:26px;
+
+    font-family:'JetBrains Mono',monospace;
+
+    font-size:11px;
+
+    text-transform:uppercase;
+
+    color:var(--accent);
+
+}
+
+.status-dot{
+
+    width:8px;
+    height:8px;
+
+    border-radius:50%;
+
+    background:var(--accent);
+
+    box-shadow:0 0 0 rgba(34,197,94,.5);
+
+    animation:pulse 2.3s infinite;
+
+}
+
+@keyframes pulse{
+
+    0%{
+
+        box-shadow:0 0 0 0 rgba(34,197,94,.45);
+
+    }
+
+    70%{
+
+        box-shadow:0 0 0 7px rgba(34,197,94,0);
+
+    }
+
+    100%{
+
+        box-shadow:0 0 0 0 rgba(34,197,94,0);
+
+    }
+
+}
+
+.error-box{
+
+    background:var(--danger-bg);
+
+    border:1px solid var(--danger-border);
+
+    color:var(--danger-text);
+
+    padding:12px;
+
+    border-radius:8px;
+
+    margin-bottom:18px;
+
+    text-align:center;
+
+}
+
+form{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:15px;
+
+}
+
+.field{
+
+    position:relative;
+
+}
+
+.field label{
+
+    display:block;
+
+    margin-bottom:6px;
+
+    font-size:11px;
+
+    font-weight:600;
+
+    text-transform:uppercase;
+
+    letter-spacing:.6px;
+
+    color:var(--text-muted);
+
+}
+
+.field input{
+
+    width:100%;
+
+    background:#101923;
+
+    border:1px solid var(--panel-border);
+
+    border-radius:10px;
+
+    color:var(--text);
+
+    padding:13px 14px;
+
+    font-size:14px;
+
+    transition:.2s;
+
+}
+
+.field input::placeholder{
+
+    color:#64748b;
+
+}
+
+.field input:focus{
+
+    outline:none;
+
+    border-color:var(--primary);
+
+    box-shadow:
+
+        0 0 0 4px rgba(59,130,246,.18);
+
+}
+
+.field.password input{
+
+    padding-right:45px;
+
+}
+
+.eye{
+
+    position:absolute;
+
+    right:10px;
+
+    top:35px;
+
+    background:none;
+
+    border:none;
+
+    color:var(--text-muted);
+
+    cursor:pointer;
+
+}
+
+.eye:hover{
+
+    color:white;
+
+}
+
+.eye:focus-visible{
+
+    outline:2px solid var(--primary);
+
+    outline-offset:2px;
+
+}
+
+.btn-primary{
+
+    margin-top:6px;
+
+    border:none;
+
+    border-radius:10px;
+
+    padding:13px;
+
+    cursor:pointer;
+
+    background:var(--primary);
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    font-family:'Space Grotesk',sans-serif;
+
+    transition:.2s;
+
+    box-shadow:
+
+        0 10px 24px rgba(59,130,246,.25);
+
+}
+
+.btn-primary:hover{
+
+    background:var(--primary-hover);
+
+}
+
+.btn-primary:active{
+
+    transform:scale(.98);
+
+}
+
+.btn-primary:focus-visible{
+
+    outline:2px solid var(--accent);
+
+    outline-offset:2px;
+
+}
+
+.footnote{
+
+    margin-top:24px;
+
+    text-align:center;
+
+    color:#64748b;
+
+    font-size:10px;
+
+    font-family:'JetBrains Mono',monospace;
+
+    text-transform:uppercase;
+
+    letter-spacing:.5px;
+
+}
+
+.background-login{
+
+    position:fixed;
+
+    left:0;
+
+    bottom:0;
+
+    height:100vh;
+
+    width:auto;
+
+    max-width:none;
+
+    object-fit:contain;
+
+    object-position:left bottom;
+
+    opacity:.95;
+
+    pointer-events:none;
+
+    z-index:0;
+
+    filter:
+        drop-shadow(0 25px 50px rgba(0,0,0,.55));
+
+}
+
+@media (max-width:768px){
+
+    body{
+
+        justify-content:center;
+
+        padding:20px;
+
+        background:
+            linear-gradient(rgba(13,17,23,.82), rgba(13,17,23,.82)),
+            url("{% static 'img/tracex_login - copia.png' %}") center center / cover no-repeat,
+            var(--bg);
+
+    }
+
+    .card{
+        margin-right:0;
+        width:100%;
+        max-width:410px;
+    }
+
+    .background-login{
+        display:none;
+    }
+
+}
+
+</style>
 </head>
 
 <body>
 
+<img 
+    src="{% static 'img/tracex_login - copia.png' %}" 
+    class="background-login"
+    alt="TraceX">
+
 <div class="card">
 
     <div class="logo-wrap">
-        <img src="{% static 'img/tracex-logo.png' %}" alt="Trace X">
+        <div class="logo-chip">
+            <img src="{% static 'img/isotipo-blanco.svg' %}" alt="TraceX">
+        </div>
     </div>
 
-    <h1>Trace X</h1>
-    <p class="subtitle"> Conéctate a tu espacio de trabajo</p>
-    <h1>Trace X</h1>
+    <h1>TraceX</h1>
+    <p class="subtitle">Conéctate a tu espacio de trabajo</p>
+    
+
+    <div class="status-strip">
+        <span class="status-dot" aria-hidden="true"></span>
+        Conexión segura · Terminal de planta
+    </div>
 
     {% if error %}
-    <div style="
-        background:#ffe5e5;
-        color:#b30000;
-        border:1px solid #ffb3b3;
-        padding:10px;
-        border-radius:8px;
-        margin:15px 0;
-        text-align:center;
-    ">
+    <div class="error-box" role="alert">
         {{ error }}
     </div>
     {% endif %}
@@ -42,31 +570,91 @@
         {% csrf_token %}
 
         <div class="field">
-            <input type="text" name="usuario" placeholder="Usuario" required>
-            <span class="dot"></span>
+            <label for="usuario">Usuario</label>
+            <input
+                type="text"
+                id="usuario"
+                name="usuario"
+                placeholder="tu.usuario"
+                required
+                autocomplete="username">
         </div>
 
-        <div class="field">
-            <input type="password" name="contrasena" placeholder="Contraseña" id="pw" required>
-            <button  type="button" class="eye" onclick="togglePw()"> 👁</button>
-            <span class="dot"></span>
+        <div class="field password">
+            <label for="pw">Contraseña</label>
+
+            <input
+                type="password"
+                id="pw"
+                name="contrasena"
+                placeholder="••••••••"
+                required
+                autocomplete="current-password">
+
+            <button
+                type="button"
+                class="eye"
+                onclick="togglePw()"
+                aria-label="Mostrar contraseña">
+
+                <svg
+                    id="eyeIcon"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
+
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+
+                </svg>
+
+            </button>
+
         </div>
 
-        <button class="btn-primary" type="submit">Iniciar Sesión</button>
+        <button
+            class="btn-primary"
+            type="submit">
+
+            Iniciar sesión
+
+        </button>
 
     </form>
+
+    <p class="footnote">
+        Sistema de trazabilidad de producción
+    </p>
+
 </div>
 
-
 <script>
-function togglePw(){
-    const pw = document.getElementById('pw');
-    pw.type = pw.type === 'password'
-        ? 'text'
-        : 'password';
-}
-</script>
 
+function togglePw(){
+
+    const pw = document.getElementById("pw");
+    const icon = document.getElementById("eyeIcon");
+
+    const hidden = pw.type === "password";
+
+    pw.type = hidden ? "text" : "password";
+
+    icon.innerHTML = hidden
+
+        ? `<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-3.22 4.56M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+           <line x1="1" y1="1" x2="23" y2="23"/>`
+
+        : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+           <circle cx="12" cy="12" r="3"/>`;
+
+}
+
+</script>
 
 </body>
 </html>

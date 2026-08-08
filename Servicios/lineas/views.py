@@ -10,6 +10,7 @@ from rest_framework.response import Response
 # Create your views here.
 ''' AQUI ESTAN LOS VIEWS DE:
 │   - EdoLinea
+│   - TipoLinea
 │   - VistaLinea (consulta general, lee de la vista SQL vista_lineas)
 │   - Linea (crear / modificar / eliminar=desactivar)
 │   - VistaEstacion (consulta general, lee de la vista SQL vista_estaciones)
@@ -26,6 +27,18 @@ class EdoLineaListAPIView(generics.ListAPIView):
     modulo = "lineas"
     queryset = EdoLinea.objects.all()
     serializer_class = EdoLineaSerializer
+
+
+class TipoLineaListAPIView(generics.ListAPIView):
+    """Catálogo de tipos de línea (Ensamblaje / Embalaje). Llena el select del
+    alta y la edición de líneas en el cliente."""
+    permission_classes = [
+                IsAuthenticated,
+                TienePermisoModulo
+            ]
+    modulo = "lineas"
+    queryset = TipoLinea.objects.all()
+    serializer_class = TipoLineaSerializer
 
 
 class LineaListAPIView(generics.ListCreateAPIView):

@@ -1,22 +1,43 @@
 from rest_framework import serializers
-from embalaje.models import RegistroEmbalaje, VistaRegistroEmbalaje
+from embalaje.models import RegistroEmbalaje, VistaRegistroEmbalaje, TipoEmbalaje
+from produccion.models import Laptop
+from calidad.models import InspeccionCalidad
 
+# SERIALIZERS PARA EL FRONTEND ---
+class TipoEmbalajeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoEmbalaje
+        fields = (
+            "codigo", 
+            "nombre")
 
-#----------------------------------------------------------------------------------------------
-#           R E G I S T R O   E M B A L A J E   
-#----------------------------------------------------------------------------------------------
+class LaptopDisponibleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Laptop
+        fields = ("numero", "num_serie") 
 
-# . . . . . .  . REGISTRAR
+# --- SERIALIZADOR DE CREACIÓN ---
 class CreateRegistroEmbalajeSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegistroEmbalaje
+        fields = ("fecha", "hora", "laptop", "tipo")
 
-        fields = (
-            "fecha",
-            "hora",
-            "laptop",
-            "tipo",
-        )
+    def validate(self, attrs):
+        laptop = attrs.get('laptop')
+
+        # 1. Validar si ya fue embalada
+        if RegistroEmbalaje.objects.filter(laptop=laptop).exists():
+            raise serializers.ValidationError({"laptop": "Esta laptop ya ha sido embalada anteriormente."})
+
+        # 2. Validar calidad aprobada (resultado=1)
+        if not InspeccionCalidad.objects.filter(laptop=laptop, resultado=1).exists():
+            raise serializers.ValidationError({"laptop": "La laptop no cuenta con una inspección de calidad aprobada."})
+
+        # 3. Validar que no esté rechazada (resultado=0)
+        if InspeccionCalidad.objects.filter(laptop=laptop, resultado=0).exists():
+            raise serializers.ValidationError({"laptop": "La laptop tiene una inspección de calidad rechazada."})
+
+        return attrs
 
 
 

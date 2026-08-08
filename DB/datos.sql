@@ -34,6 +34,7 @@ TRUNCATE TABLE modelo_componente;
 TRUNCATE TABLE modelo_laptop;
 TRUNCATE TABLE tipo_comp;
 TRUNCATE TABLE tipo_embalaje;
+TRUNCATE TABLE tipo_linea;
 TRUNCATE TABLE edo_componente;
 TRUNCATE TABLE edo_laptop;
 TRUNCATE TABLE edo_linea;
@@ -42,7 +43,6 @@ TRUNCATE TABLE rol;
 TRUNCATE TABLE turno;
  
 -- Reactivar validación de FKs
-SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. ROLES
 
@@ -67,6 +67,17 @@ INSERT INTO edo_linea (codigo, nombre, descripcion) VALUES
 ('INAC', 'Inactiva',     'Línea fuera de operación temporalmente'),
 ('PARO', 'En Paro',      'Línea detenida por incidencia registrada'),
 ('MANT', 'Mantenimiento','Línea en proceso de mantenimiento preventivo o correctivo');
+
+
+-- 3.1 TIPOS DE LÍNEA
+--
+-- El tipo dice QUÉ PROCESO corre la línea, no cómo está (eso es edo_linea).
+-- Solo en una línea de tipo ENSA se puede registrar ensamblaje: lo obliga el
+-- trigger tg_Validar_Linea_Ensamblaje (DB/triggers.sql).
+
+INSERT INTO tipo_linea (codigo, nombre, descripcion) VALUES
+('ENSA', 'Ensamblaje', 'Línea donde se arman las laptops a partir de componentes'),
+('EMBA', 'Embalaje',   'Línea donde se empacan y sellan las laptops terminadas');
 
 
 -- 4. ESTADOS DE LAPTOP 
@@ -99,22 +110,40 @@ INSERT INTO edo_produccion (codigo, nombre) VALUES
 
 -- 7. TIPOS DE COMPONENTE
 
-INSERT INTO tipo_comp (codigo, nombre) VALUES
-('TC001', 'Procesador'),
-('TC002', 'Memoria RAM'),
-('TC003', 'Almacenamiento SSD'),
-('TC004', 'Tarjeta Madre'),
-('TC005', 'Pantalla'),
-('TC006', 'Batería'),
-('TC007', 'Teclado'),
-('TC008', 'Touchpad'),
-('TC009', 'Cámara Web'),
-('TC010', 'Tarjeta de Red'),
-('TC011', 'Disipador / Ventilador'),
-('TC012', 'Chasis Superior'),
-('TC013', 'Chasis Inferior'),
-('TC014', 'Conector de Carga'),
-('TC015', 'Altavoces');
+-- 'necesario' es el tipo que tiene que estar montado ANTES que éste. Encadenados
+-- forman el orden de armado, y es lo que la pantalla de registro de ensamblaje usa
+-- para ir habilitando las casillas del checklist.
+--
+-- El orden es el de las estaciones (ver más abajo, sección 12), que a su vez es el
+-- de la línea de producción real: se arranca del CHASIS SUPERIOR —el top cover es
+-- la pieza estructural sobre la que se arma todo— y se cierra con el CHASIS
+-- INFERIOR, que es la tapa que se atornilla al final. Por eso cada tipo apunta al
+-- de la estación anterior: así ninguna línea puede adelantarse a la que va antes,
+-- y el stock de cada línea alcanza justo para sus estaciones.
+--
+--   Línea A (LIN001)  A1 Chasis Superior · A1 Touchpad · A2 Teclado
+--                     A3 Altavoces · A4 Conector de Carga
+--   Línea B (LIN002)  B1 Tarjeta Madre · B3 Procesador · B4 Memoria RAM
+--   Línea C (LIN003)  C1 SSD · C2 Tarjeta de Red · C3 Disipador
+--   Línea D (LIN004)  D1 Pantalla · D1 Cámara Web · D4 Batería
+--                     D5 Chasis Inferior
+--   Línea E (LIN005)  Embalaje: no monta componentes
+INSERT INTO tipo_comp (codigo, nombre, necesario) VALUES
+('TC012', 'Chasis Superior', NULL),        -- A1  por aquí se empieza
+('TC008', 'Touchpad', 'TC012'),            -- A1
+('TC007', 'Teclado', 'TC008'),             -- A2
+('TC015', 'Altavoces', 'TC007'),           -- A3
+('TC014', 'Conector de Carga', 'TC015'),   -- A4
+('TC004', 'Tarjeta Madre', 'TC014'),       -- B1  cierra la línea A, abre la B
+('TC001', 'Procesador', 'TC004'),          -- B3
+('TC002', 'Memoria RAM', 'TC001'),         -- B4
+('TC003', 'Almacenamiento SSD', 'TC002'),  -- C1
+('TC010', 'Tarjeta de Red', 'TC003'),      -- C2
+('TC011', 'Disipador / Ventilador', 'TC010'), -- C3
+('TC005', 'Pantalla', 'TC011'),            -- D1
+('TC009', 'Cámara Web', 'TC005'),          -- D1
+('TC006', 'Batería', 'TC009'),             -- D4
+('TC013', 'Chasis Inferior', 'TC006');     -- E1  la tapa, hasta el final
 
 
 -- 8. TIPOS DE EMBALAJE
@@ -196,16 +225,20 @@ SELECT 'ML001', mc.codigo,
 FROM modelo_componente mc;
 
 
--- 11. LÍNEAS DE ENSAMBLAJE
--- 5 normales y una de embalaje
+-- 11. LÍNEAS DE PRODUCCIÓN
+-- 4 de ensamblaje (tipo ENSA) y una de embalaje (tipo EMBA). El tipo ya no se
+-- adivina del nombre: es la columna `tipo`, y es la que decide dónde se puede
+-- registrar ensamblaje.
+--
+-- `siguiente` encadena el flujo: A -> B -> C -> D -> E(embalaje). El chasis
+-- inferior lo cierra la D, en su estación D5.
 
-INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
-('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN005', 'Línea E — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ACTI'),
-('LIN006', 'Línea F — Embalaje',   'Proceso de embalaje y empaque final',   'ACTI');
+INSERT INTO linea (codigo, nombre, descripcion, tipo, estado, siguiente) VALUES
+('LIN001', 'Línea A — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN002'),
+('LIN002', 'Línea B — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN003'),
+('LIN003', 'Línea C — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN004'),
+('LIN004', 'Línea D — Ensamblaje', 'Ensamblaje ThinkPad T14 Gen 5',         'ENSA', 'ACTI','LIN005'),
+('LIN005', 'Línea E — Embalaje',   'Proceso de embalaje y empaque final',   'EMBA', 'ACTI', NULL);
 
 
 -- 12. ESTACIONES — Líneas de ensamblaje
@@ -214,47 +247,49 @@ INSERT INTO linea (codigo, nombre, descripcion, estado) VALUES
 --  EST-X2  Ensamblaje de placa y procesador
 --  EST-X3  Integración de pantalla, teclado y chasis
 --  EST-X4  Pruebas funcionales y cierre
-
--- Línea A: Chasis Superior y Periféricos Base
-INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-A1', 'A1 — Chasis y Touchpad',    'Inspección del chasis superior e instalación y atornillado del touchpad',                 'LIN001'),
-('EST-A2', 'A2 — Módulo de Teclado',    'Colocación del teclado retroiluminado, fijación y ruteo inicial del flexor',              'LIN001'),
-('EST-A3', 'A3 — Audio y Conexiones',   'Montaje de altavoces, enrutamiento de cables de audio y fijación acústica',               'LIN001'),
-('EST-A4', 'A4 — Conector de Carga',    'Instalación del conector de carga USB-C, anclaje al chasis y revisión de puertos',        'LIN001');
+--
+-- Cada línea de ensamblaje cierra con una estación de calidad, que es donde se
+-- para el empleado con rol OPCALI de esa línea.
+INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
+('EST-A1', 'A1 — Chasis y Touchpad',    'Inspección del chasis superior e instalación y atornillado del touchpad en ensamblaje',                 'LIN001', TRUE),
+('EST-A2', 'A2 — Módulo de Teclado',    'Colocación del teclado retroiluminado, fijación y ruteo inicial del flexor en ensamblaje',              'LIN001', TRUE),
+('EST-A3', 'A3 — Audio y Conexiones',   'Montaje de altavoces, enrutamiento de cables de audio y fijación acústica en ensamblaje',               'LIN001', TRUE),
+('EST-A4', 'A4 — Conector de Carga',    'Instalación del conector de carga USB-C, anclaje al chasis y revisión de puertos en ensamblaje',        'LIN001', TRUE),
+('EST-A5', 'A5 — Inspección de Calidad','Revisión del inspector sobre chasis, teclado, audio y conector, y registro del resultado de inspección','LIN001', TRUE);
 
 -- Línea B: Tarjeta Madre y Procesamiento
-INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-B1', 'B1 — Tarjeta Madre',        'Colocación de la tarjeta madre en el chasis superior y fijación con tornillos',           'LIN002'),
-('EST-B2', 'B2 — Conexión de Periféricos','Conexión de los flexores del teclado, touchpad y altavoces a la tarjeta madre',         'LIN002'),
-('EST-B3', 'B3 — CPU y Pasta Térmica',  'Montaje del procesador en el socket y aplicación de pasta térmica',                       'LIN002'),
-('EST-B4', 'B4 — Memoria RAM',          'Inserción de módulos de memoria RAM en las ranuras SO-DIMM y aseguramiento',              'LIN002');
+INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
+('EST-B1', 'B1 — Tarjeta Madre',        'Colocación de la tarjeta madre en el chasis superior y fijación con tornillos en ensamblaje',           'LIN002', TRUE),
+('EST-B2', 'B2 — Conexión de Periféricos','Conexión de los flexores del teclado, touchpad y altavoces a la tarjeta madre en ensamblaje',         'LIN002', TRUE),
+('EST-B3', 'B3 — CPU y Pasta Térmica',  'Montaje del procesador en el socket y aplicación de pasta térmica en ensamblaje',                       'LIN002', TRUE),
+('EST-B4', 'B4 — Memoria RAM',          'Inserción de módulos de memoria RAM en las ranuras SO-DIMM y aseguramiento en ensamblaje',              'LIN002', TRUE),
+('EST-B5', 'B5 — Inspección de Calidad','Revisión del inspector sobre tarjeta madre, CPU, RAM y flexores, y registro del resultado de inspección','LIN002', TRUE);
 
 -- Línea C: Almacenamiento, Red y Refrigeración
-INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-C1', 'C1 — Almacenamiento SSD',   'Instalación de la unidad NVMe M.2 y fijación del tornillo de retención',                  'LIN003'),
-('EST-C2', 'C2 — Tarjeta de Red',       'Instalación del módulo Wi-Fi y conexión cuidadosa de las antenas de red',                 'LIN003'),
-('EST-C3', 'C3 — Disipador Térmico',    'Montaje del módulo térmico sobre el procesador y atornillado en cruz',                    'LIN003'),
-('EST-C4', 'C4 — Conexión de Ventilación','Conexión del cable de alimentación del ventilador a la tarjeta madre',                  'LIN003');
+INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
+('EST-C1', 'C1 — Almacenamiento SSD',   'Instalación de la unidad NVMe M.2 y fijación del tornillo de retención en ensamblaje',                  'LIN003', TRUE),
+('EST-C2', 'C2 — Tarjeta de Red',       'Instalación del módulo Wi-Fi y conexión cuidadosa de las antenas de red en ensamblaje',                 'LIN003', TRUE),
+('EST-C3', 'C3 — Disipador Térmico',    'Montaje del módulo térmico sobre el procesador y atornillado en cruz en ensamblaje',                    'LIN003', TRUE),
+('EST-C4', 'C4 — Conexión de Ventilación','Conexión del cable de alimentación del ventilador a la tarjeta madre en ensamblaje',                  'LIN003', TRUE),
+('EST-C5', 'C5 — Inspección de Calidad','Revisión del inspector sobre SSD, tarjeta de red y módulo térmico, y registro del resultado de inspección','LIN003', TRUE);
 
 -- Línea D: Ensamblaje de Pantalla y Energía
-INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-D1', 'D1 — Módulo de Pantalla',   'Preparación de la pantalla e instalación de la cámara web en el marco',                   'LIN004'),
-('EST-D2', 'D2 — Bisagras y Enrutamiento','Acoplamiento de las bisagras de pantalla al chasis principal y enrutamiento de cables', 'LIN004'),
-('EST-D3', 'D3 — Conexión de Video',    'Conexión del cable de video (eDP) y cable de cámara a la tarjeta madre',                  'LIN004'),
-('EST-D4', 'D4 — Batería Principal',    'Colocación de la batería de Li-Ion, atornillado y conexión de alimentación a la placa',   'LIN004');
+INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
+('EST-D1', 'D1 — Módulo de Pantalla',   'Preparación de la pantalla e instalación de la cámara web en el marco en ensamblaje',                   'LIN004', TRUE),
+('EST-D2', 'D2 — Bisagras y Enrutamiento','Acoplamiento de las bisagras de pantalla al chasis principal y enrutamiento de cables en ensamblaje', 'LIN004', TRUE),
+('EST-D3', 'D3 — Conexión de Video',    'Conexión del cable de video (eDP) y cable de cámara a la tarjeta madre en ensamblaje',                  'LIN004', TRUE),
+('EST-D4', 'D4 — Batería Principal',    'Colocación de la batería de Li-Ion, atornillado y conexión de alimentación a la placa en ensamblaje',   'LIN004', TRUE),
+-- La D cierra el equipo: el chasis inferior, que antes montaba la desaparecida
+-- línea E, entra aquí. Va después de la batería —la tapa sella lo que ya quedó
+-- adentro— y antes de calidad, que siempre es la última estación de la línea.
+('EST-D5', 'D5 — Chasis Inferior',      'Colocación de la tapa inferior (Bottom Cover) y atornillado final del equipo en ensamblaje',            'LIN004', TRUE),
+('EST-D6', 'D6 — Inspección de Calidad','Revisión del inspector sobre pantalla, bisagras, video, batería y cierre, y registro del resultado de inspección','LIN004', TRUE);
 
--- Línea E: Cierre de Equipo y Calidad
-INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-E1', 'E1 — Chasis Inferior',      'Colocación de la tapa inferior (Bottom Cover) y atornillado preliminar de las esquinas',  'LIN005'),
-('EST-E2', 'E2 — Cierre y Revisión',    'Atornillado final, revisión de ajuste de plásticos y limpieza de excesos',                'LIN005'),
-('EST-E3', 'E3 — Pruebas Funcionales',  'Encendido del equipo, pruebas POST, verificación de RAM, SSD, cámara y teclado',          'LIN005'),
-('EST-E4', 'E4 — Inspección de Calidad','Validación final por el inspector, registro de aprobación y generación de número de serie','LIN005');
-
--- Línea F: Embalaje
-INSERT INTO estacion (codigo, nombre, descripcion, linea) VALUES
-('EST-F1', 'F1 — Limpieza y Escaneo',   'Revisión estética final, limpieza de pantalla, chasis y escaneo del número de serie',     'LIN006'),
-('EST-F2', 'F2 — Empaque y Sellado',    'Colocación en caja con material de protección, inclusión de manuales y sellado final',    'LIN006');
-
+-- Línea E: Embalaje
+INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
+('EST-E1', 'E1 — Limpieza y Escaneo',   'Revisión estética final, limpieza de pantalla, chasis y escaneo del número de serie en embalaje',     'LIN005', TRUE),
+('EST-E2', 'E2 — Empaque y Sellado',    'Colocación en caja con material de protección, inclusión de manuales y sellado final en embalaje',    'LIN005', TRUE),
+('EST-E3', 'E3 — Inspección de Calidad','Verificación del empaquetado, sellado y etiquetado por el inspector, y registro del resultado de inspección','LIN005', TRUE);
 
 -- 13. LOTE DE LAPTOPS
 
@@ -276,54 +311,71 @@ INSERT INTO lote_comp (codigo, descripcion) VALUES
 
 -- LINEA A para el equipo matutino
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607001, 'Carlos',    'García',   'López',    'OPENSA', 'MAT', TRUE),
-(2607002, 'María',     'Fernández','Sánchez',  'OPENSA', 'MAT', TRUE),
-(2607003, 'Luis',      'Martínez', 'Gómez',    'OPENSA', 'MAT', TRUE),
-(2607004, 'Lucía',     'Torres',   'Vargas',   'OPCALI', 'MAT', TRUE),
-(2607005, 'Chelly',    'Montes',   'Marcos',   'SUPER',  'MAT', TRUE);
+(2607001, 'Ana Maria',       'Antonio',     'Cova',     'OPENSA', 'MAT', TRUE),
+(2607002, 'Samanta Denisse', 'Contreras',   'Rangel',   'OPENSA', 'MAT', TRUE),
+(2607003, 'Luis Alberto',    'Cruz',        'Ortiz',    'OPENSA', 'MAT', TRUE),
+(2607004, 'Ricardo Daniel',  'De La Torre', 'Garcia',   'OPCALI', 'MAT', TRUE),
+(2607005, 'Maria Hilda',     'De Leon',     'Martinez', 'SUPER',  'MAT', TRUE);
 
 
 -- LINEA B
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607006, 'Jorge',     'Ramírez',  'Díaz',     'OPENSA', 'MAT', TRUE),
-(2607007, 'Elena',     'Castro',   'Ruiz',     'OPENSA', 'MAT', TRUE),
-(2607008, 'Miguel',    'Ortiz',    'Méndez',   'OPENSA', 'MAT', TRUE),
-(2607009, 'Roberto',   'Flores',   'Silva',    'OPCALI', 'MAT', TRUE),
-(2607010, 'Patricia',  'Navarro',  'Ríos',     'SUPER',  'MAT', TRUE);
+(2607006, 'Anwar Fernando',  'Estrada',     'Santos',     'OPENSA', 'MAT', TRUE),
+(2607007, 'Jesus Gildardo',  'Fonseca',     'De La Cruz', 'OPENSA', 'MAT', TRUE),
+(2607008, 'Luis David',      'Gallardo',    'Ramirez',    'OPENSA', 'MAT', TRUE),
+(2607009, 'Jose Jonathan',   'Gonzalez',    'De La Mora', 'OPCALI', 'MAT', TRUE),
+(2607010, 'Marlene Yesenia', 'Gutierrez',   'Soto',       'SUPER',  'MAT', TRUE);
 
 
 -- LINEA C
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607011, 'Pedro',     'Mendoza',  'Vega',     'OPENSA', 'MAT', TRUE),
-(2607012, 'Laura',     'Salinas',  'Ponce',    'OPENSA', 'MAT', TRUE),
-(2607013, 'Valeria',   'Guzmán',   'Rojas',    'OPENSA', 'MAT', TRUE),
-(2607014, 'Héctor',    'Paz',      'Mora',     'OPCALI', 'MAT', TRUE),
-(2607015, 'Diana',     'Ríos',     'Blanco',   'SUPER',  'MAT', TRUE);
+(2607011, 'Josue Isaac',     'Huape',       'Gil',      'OPENSA', 'MAT', TRUE),
+(2607012, 'Axel Santiago',   'Islas',       'Ruelas',   'OPENSA', 'MAT', TRUE),
+(2607013, 'Rosalba Abigail', 'Lopez',       'Garcia',   'OPENSA', 'MAT', TRUE),
+(2607014, 'Saul',            'Marquez',     'Gomez',    'OPCALI', 'MAT', TRUE),
+(2607015, 'Jorge Jonathan',  'Martinez',    'Zambrano', 'SUPER',  'MAT', TRUE);
 
 
 -- LINEA D
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607016, 'Mario',     'Cruz',     'Vidal',    'OPENSA', 'MAT', TRUE),
-(2607017, 'Teresa',    'Luna',     'Ortiz',    'OPENSA', 'MAT', TRUE),
-(2607018, 'Raúl',      'Navarro',  'Pinto',    'OPENSA', 'MAT', TRUE),
-(2607019, 'Carmen',    'Sosa',     'Molina',   'OPCALI', 'MAT', TRUE),
-(2607020, 'Gloria',    'Peña',     'Silva',    'SUPER',  'MAT', TRUE);
+(2607016, 'Irving De Jesus', 'Morales',     'Aparicio', 'OPENSA', 'MAT', TRUE),
+(2607017, 'Hemilton Raul',   'Orduno',      'Santiago', 'OPENSA', 'MAT', TRUE),
+(2607018, 'Diego',           'Sanchez',     'Hernandez','OPENSA', 'MAT', TRUE),
+(2607019, 'Misael',          'Urquidez',    'Arredondo','OPCALI', 'MAT', TRUE),
+(2607020, 'Fernando Alonso', 'Zuniga',      'Arevalo',  'SUPER',  'MAT', TRUE);
 
 
--- LINEA E
+-- LINEA D — refuerzo para la estación de chasis inferior (D5)
+-- Es la única persona que quedó de la desaparecida línea E: la que montaba el
+-- chasis inferior. Los otros cuatro se dieron de baja junto con la línea.
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607021, 'Hugo',      'Díaz',     'Ramos',    'OPENSA', 'MAT', TRUE),
-(2607022, 'Silvia',    'Vargas',   'Luna',     'OPENSA', 'MAT', TRUE),
-(2607023, 'Beatriz',   'Méndez',   'Solis',    'OPENSA', 'MAT', TRUE),
-(2607024, 'Ramón',     'Blanco',   'Cruz',     'OPCALI', 'MAT', TRUE),
-(2607025, 'Julia',     'Cabrera',  'Pérez',    'SUPER',  'MAT', TRUE);
+(2607021, 'Ana Maria',       'Antonio',     'Cova',     'OPENSA', 'MAT', TRUE);
 
 
--- LINEA F (EMBALAJE)
+-- LINEA E (EMBALAJE)
 INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
-(2607026, 'Ricardo',   'Gutiérrez','Pérez',    'OPEMBA', 'MAT', TRUE),
-(2607027, 'Isabel',    'Domínguez','Salas',    'OPEMBA', 'MAT', TRUE),
-(2607028, 'Arturo',    'Jiménez',  'Cruz',     'SUPER',  'MAT', TRUE);
+(2607026, 'Anwar Fernando',  'Estrada',     'Santos',     'OPEMBA', 'MAT', TRUE),
+(2607027, 'Jesus Gildardo',  'Fonseca',     'De La Cruz', 'OPEMBA', 'MAT', TRUE),
+(2607028, 'Luis David',      'Gallardo',    'Ramirez',    'SUPER',  'MAT', TRUE);
+
+
+-- OPERARIOS DE ENSAMBLAJE QUE CUBREN LA CUARTA ESTACIÓN
+-- El inspector de calidad de cada línea se pasó a la estación de calidad (X5),
+-- así que la estación X4 en la que estaba se quedó sin operario. Estos empleados
+-- la cubren. Van con número nuevo al final de la secuencia para no renumerar a
+-- los de arriba (datos_pruebas.sql y la tabla usuario los referencian por número).
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607031, 'Jose Jonathan',   'Gonzalez',    'De La Mora', 'OPENSA', 'MAT', TRUE),   -- LINEA A, EST-A4
+(2607032, 'Marlene Yesenia', 'Gutierrez',   'Soto',       'OPENSA', 'MAT', TRUE),   -- LINEA B, EST-B4
+(2607033, 'Josue Isaac',     'Huape',       'Gil',        'OPENSA', 'MAT', TRUE),   -- LINEA C, EST-C4
+(2607034, 'Axel Santiago',   'Islas',       'Ruelas',     'OPENSA', 'MAT', TRUE);   -- LINEA D, EST-D4
+
+
+-- INSPECTOR DE CALIDAD DE LA LINEA E (EMBALAJE)
+-- La línea de embalaje no tenía ningún empleado con rol OPCALI al cual mover,
+-- así que su estación de calidad (EST-E3) estrena inspector.
+INSERT INTO empleado (numero, nombrePila, primerApell, segundoApell, rol, turno, activo) VALUES
+(2607035, 'Rosalba Abigail', 'Lopez',       'Garcia',     'OPCALI', 'MAT', TRUE);   -- LINEA E, EST-E3
 
 
 
@@ -356,73 +408,77 @@ INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
 (2607015, 'LIN003', '2026-07-15', NULL);
 
 
--- LINEA D (LIN004)
+-- LINEA D (LIN004) — incluye a 2607021, que llegó de la línea E con la
+-- estación de chasis inferior.
 INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
 (2607016, 'LIN004', '2026-07-15', NULL),
 (2607017, 'LIN004', '2026-07-15', NULL),
 (2607018, 'LIN004', '2026-07-15', NULL),
 (2607019, 'LIN004', '2026-07-15', NULL),
-(2607020, 'LIN004', '2026-07-15', NULL);
+(2607020, 'LIN004', '2026-07-15', NULL),
+(2607021, 'LIN004', '2026-07-15', NULL);
 
 
--- LINEA E (LIN005)
+-- LINEA E - EMBALAJE (LIN005)
 INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
-(2607021, 'LIN005', '2026-07-15', NULL),
-(2607022, 'LIN005', '2026-07-15', NULL),
-(2607023, 'LIN005', '2026-07-15', NULL),
-(2607024, 'LIN005', '2026-07-15', NULL),
-(2607025, 'LIN005', '2026-07-15', NULL);
+(2607026, 'LIN005', '2026-07-15', NULL),
+(2607027, 'LIN005', '2026-07-15', NULL),
+(2607028, 'LIN005', '2026-07-15', NULL);
 
 
--- LINEA F - EMBALAJE (LIN006)
+-- EMPLEADOS NUEVOS (cuartas estaciones e inspector de embalaje)
 INSERT INTO empleado_linea (empleado, linea, fecha_inicio, fecha_fin) VALUES
-(2607026, 'LIN006', '2026-07-15', NULL),
-(2607027, 'LIN006', '2026-07-15', NULL),
-(2607028, 'LIN006', '2026-07-15', NULL);
+(2607031, 'LIN001', '2026-07-15', NULL),
+(2607032, 'LIN002', '2026-07-15', NULL),
+(2607033, 'LIN003', '2026-07-15', NULL),
+(2607034, 'LIN004', '2026-07-15', NULL),
+(2607035, 'LIN005', '2026-07-15', NULL);
 
 
 
 -- 15.2 ASIGNACION DE UN EMPLEADO A SU ESTACION
+
+-- El empleado con rol OPCALI de cada línea va en la última estación (la de
+-- calidad) y la estación anterior la cubre un operario de ensamblaje.
 
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 -- LINEA A
 (2607001, 'EST-A1', '2026-07-15', NULL),
 (2607002, 'EST-A2', '2026-07-15', NULL),
 (2607003, 'EST-A3', '2026-07-15', NULL),
-(2607004, 'EST-A4', '2026-07-15', NULL);
+(2607031, 'EST-A4', '2026-07-15', NULL),
+(2607004, 'EST-A5', '2026-07-15', NULL);   -- Ricardo Daniel De La Torre Garcia (OPCALI)
 
 -- LINEA B
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607006, 'EST-B1', '2026-07-15', NULL),
 (2607007, 'EST-B2', '2026-07-15', NULL),
 (2607008, 'EST-B3', '2026-07-15', NULL),
-(2607009, 'EST-B4', '2026-07-15', NULL);
+(2607032, 'EST-B4', '2026-07-15', NULL),
+(2607009, 'EST-B5', '2026-07-15', NULL);   -- Jose Jonathan Gonzalez De La Mora (OPCALI)
 
 -- LINEA C
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607011, 'EST-C1', '2026-07-15', NULL),
 (2607012, 'EST-C2', '2026-07-15', NULL),
 (2607013, 'EST-C3', '2026-07-15', NULL),
-(2607014, 'EST-C4', '2026-07-15', NULL);
+(2607033, 'EST-C4', '2026-07-15', NULL),
+(2607014, 'EST-C5', '2026-07-15', NULL);   -- Saul Marquez Gomez (OPCALI)
 
--- LINEA D 
+-- LINEA D
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
 (2607016, 'EST-D1', '2026-07-15', NULL),
 (2607017, 'EST-D2', '2026-07-15', NULL),
 (2607018, 'EST-D3', '2026-07-15', NULL),
-(2607019, 'EST-D4', '2026-07-15', NULL);
+(2607034, 'EST-D4', '2026-07-15', NULL),
+(2607021, 'EST-D5', '2026-07-15', NULL),   -- Ana Maria Antonio Cova, venía de la línea E
+(2607019, 'EST-D6', '2026-07-15', NULL);   -- Misael Urquidez Arredondo (OPCALI)
 
--- LINEA E
+-- LINEA E (EMBALAJE)
 INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
-(2607021, 'EST-E1', '2026-07-15', NULL),
-(2607022, 'EST-E2', '2026-07-15', NULL),
-(2607023, 'EST-E3', '2026-07-15', NULL),
-(2607024, 'EST-E4', '2026-07-15', NULL);
-
--- LINEA F (EMBALAJE)
-INSERT INTO empleado_estacion (empleado, estacion, fecha_inicio, fecha_fin) VALUES
-(2607026, 'EST-F1', '2026-07-15', NULL),
-(2607027, 'EST-F2', '2026-07-15', NULL);
+(2607026, 'EST-E1', '2026-07-15', NULL),
+(2607027, 'EST-E2', '2026-07-15', NULL),
+(2607035, 'EST-E3', '2026-07-15', NULL);   -- Rosalba Abigail Lopez Garcia (OPCALI)
 
 
 
@@ -482,11 +538,11 @@ INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
 -- Contraseña = las 3 letras del usuario + 2026
 
 INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
-('0002LTV', 'LTV2026', 1, 2607004),   -- Lucía Torres Vargas    (LINEA A)
-('0004RFS', 'RFS2026', 1, 2607009),   -- Roberto Flores Silva   (LINEA B)
-('0006HPM', 'HPM2026', 1, 2607014),   -- Héctor Paz Mora        (LINEA C)
-('0008CSM', 'CSM2026', 1, 2607019),   -- Carmen Sosa Molina     (LINEA D)
-('0010RBC', 'RBC2026', 1, 2607024);   -- Ramón Blanco Cruz      (LINEA E)
+('0002RTG', 'RTG2026', 1, 2607004),   -- Ricardo Daniel De La Torre Garcia (LINEA A)
+('0004JGM', 'JGM2026', 1, 2607009),   -- Jose Jonathan Gonzalez De La Mora (LINEA B)
+('0006SMG', 'SMG2026', 1, 2607014),   -- Saul Marquez Gomez                (LINEA C)
+('0008MUA', 'MUA2026', 1, 2607019),   -- Misael Urquidez Arredondo         (LINEA D)
+('0013RLG', 'RLG2026', 1, 2607035);   -- Rosalba Abigail Lopez Garcia      (LINEA E, embalaje)
 
 
 -- -------------------------------------------------------------- SUPERVISORES
@@ -494,9 +550,12 @@ INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
 -- Contraseña = las 3 letras del usuario + 2026
 
 INSERT INTO usuario (usuario,contrasena,estado,empleado) VALUES
-('0003CMM', 'CMM2026', 1, 2607005),   -- Chelly Montes Marcos   (LINEA A)
-('0005PNR', 'PNR2026', 1, 2607010),   -- Patricia Navarro Ríos  (LINEA B)
-('0007DRB', 'DRB2026', 1, 2607015),   -- Diana Ríos Blanco      (LINEA C)
-('0009GPS', 'GPS2026', 1, 2607020),   -- Gloria Peña Silva      (LINEA D)
-('0011JCP', 'JCP2026', 1, 2607025),   -- Julia Cabrera Pérez    (LINEA E)
-('0012AJC', 'AJC2026', 1, 2607028);   -- Arturo Jiménez Cruz    (LINEA F, embalaje)
+('0003MDM', 'MDM2026', 1, 2607005),   -- Maria Hilda De Leon Martinez     (LINEA A)
+('0005MGS', 'MGS2026', 1, 2607010),   -- Marlene Yesenia Gutierrez Soto   (LINEA B)
+('0007JMZ', 'JMZ2026', 1, 2607015),   -- Jorge Jonathan Martinez Zambrano (LINEA C)
+('0009FZA', 'FZA2026', 1, 2607020),   -- Fernando Alonso Zuniga Arevalo   (LINEA D)
+('0012LGR', 'LGR2026', 1, 2607028);   -- Luis David Gallardo Ramirez      (LINEA E, embalaje)
+
+
+
+SET FOREIGN_KEY_CHECKS = 1;

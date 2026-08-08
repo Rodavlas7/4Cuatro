@@ -1,25 +1,39 @@
 import requests
 
 from datetime import datetime, time
+from threading import local
 
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.views import generic
 
 from core.api import get, lista, objeto
+from core.lineas import es_de_ensamblaje, solo_de_ensamblaje
+from core.templatetags.formato import fecha_hora
 
 from .forms import get_choices_lineas_paro
 
 # URL base de la API (Servicios). Igual que en home/views.py y componentes/views.py.
 API = "http://127.0.0.1:8000/api"
 
-# Estados de laptop que YA no admiten registrar ensamblaje:
-# EMBALA = Embalada, APROV = Aprobada (ya pasó calidad, va camino a embalaje).
-ESTADOS_LAPTOP_EXCLUIDOS = {"EMBALA", "APROV"}
+# Estados en los que la laptop ya cerró su ciclo productivo: ni admite un
+# ensamblaje nuevo ni se le pueden quitar piezas.
+#   APROV  = Aprobada  (ya pasó calidad, va camino a embalaje)
+#   RECHA  = Rechazada (salió de la línea)
+#   EMBALA = Embalada  (terminada)
+# Es la misma lista que bloquea el trigger
+# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql): si aquí se
+# ofreciera una de esas laptops, el registro tronaría hasta la base de datos.
+ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
 
 # Estados de componente.
 EDO_COMP_DISPONIBLE = "EDC001"
 EDO_COMP_EN_USO = "EDC002"
+
+# Mermado. Un componente así ya no vuelve al inventario, y sp_Liberar_Componentes_Laptop
+# lo deja tal cual —con su vínculo al ensamblaje— para no perder el rastro de en
+# qué laptop se perdió.
+EDO_COMP_MERMADO = "EDC004"
 
 # Estado con el que nace una orden de producción (edo_produccion).
 EDO_ORDEN_PENDIENTE = "PEND"
@@ -38,16 +52,50 @@ def _json(url, headers, params=None):
 
     Devolver None es suficiente porque todas las funciones de este módulo ya
     revisan el tipo (`isinstance(x, list)`) antes de usar el resultado, y None no
-    pasa esa revisión."""
+    pasa esa revisión.
+
+    Lo que None NO dice es POR QUÉ falló, y esa diferencia importa: una pantalla
+    vacía porque no hay datos se ve igual que una vacía porque la API contestó
+    403 o está apagada. `_motivo_json` guarda el motivo del último fallo para que
+    la vista pueda explicarlo en vez de mentir con un "no hay nada"."""
     respuesta = get(url, headers, params=params)
 
-    if respuesta is None or respuesta.status_code != 200:
+    if respuesta is None:
+        _motivo_json(url, "No se pudo comunicar con la API.")
+        return None
+
+    if respuesta.status_code == 403:
+        _motivo_json(url, "Tu rol no tiene permiso para consultar esos datos.")
+        return None
+
+    if respuesta.status_code != 200:
+        _motivo_json(url, f"La API respondió {respuesta.status_code}.")
         return None
 
     try:
         return respuesta.json()
     except ValueError:
+        _motivo_json(url, "La API respondió algo que no es JSON.")
         return None
+
+
+# Motivo del último fallo de _json, por hilo. No se guarda en la sesión a
+# propósito: es información de ESTA petición y no tiene por qué sobrevivirla.
+_fallos = local()
+
+
+def _motivo_json(url, motivo):
+    _fallos.ultimo = {"url": url, "motivo": motivo}
+
+
+def motivo_ultimo_fallo():
+    """El porqué del último _json que devolvió None en esta petición, o None."""
+    return getattr(_fallos, "ultimo", None)
+
+
+def limpiar_fallos():
+    """Se llama al empezar una vista, para no arrastrar el fallo de otra."""
+    _fallos.ultimo = None
 
 
 def _headers(request):
@@ -69,12 +117,13 @@ def _mensaje_api(response):
 
 
 def _laptops_disponibles(headers):
-    """Laptops que todavía pueden recibir ensamblaje (no embaladas ni ya aprobadas)."""
+    """Laptops que todavía pueden recibir ensamblaje: quedan fuera las que ya
+    cerraron su proceso (aprobadas, rechazadas y embaladas)."""
     laptops = _json(f"{API}/produccion/laptops/", headers)
     if not isinstance(laptops, list):
         return []
     return [l for l in laptops
-            if l.get("estado_codigo") not in ESTADOS_LAPTOP_EXCLUIDOS]
+            if l.get("estado_codigo") not in ESTADOS_LAPTOP_FINALIZADOS]
 
 
 def _bom(headers, modelo_laptop):
@@ -94,6 +143,71 @@ def _capacidad_por_tipo(filas_bom):
         tipo = fila.get("componente_tipo")
         caps[tipo] = max(caps.get(tipo, 0), fila.get("capacidad") or 1)
     return caps
+
+
+def _necesario_por_tipo(headers):
+    """{tipo: tipo que tiene que estar montado ANTES}, tal cual está en
+    tipo_comp.necesario. None = por ahí se empieza (el chasis)."""
+    tipos = _json(f"{API}/componentes/tipos/", headers)
+    if not isinstance(tipos, list):
+        return {}
+    return {t.get("codigo"): t.get("necesario") for t in tipos}
+
+
+def _orden_de_montaje(necesario_de, tipos_bom):
+    """Traduce tipo_comp.necesario al orden que aplica A ESTE modelo de laptop.
+
+    Devuelve (requisito, profundidad, ciclicos):
+
+      requisito[t]    Tipo que hay que colocar antes que `t`, saltándose los
+                      que el modelo no lleva: si la cámara necesita pantalla y
+                      este modelo no trae pantalla, sube por la cadena hasta el
+                      primero que sí esté. None = con ése se arranca.
+      profundidad[t]  Cuántos pasos hay de `t` hasta el arranque. Sirve para
+                      listar primero lo que se monta primero.
+      ciclicos        Tipos cuya cadena se muerde la cola (p. ej. TC004 → TC007
+                      → TC012 → TC011 → TC001 → TC004, o TC008 apuntándose a sí
+                      mismo). Eso es un error de captura en tipo_comp: no existe
+                      un orden posible. Se tratan como arranque para no dejar la
+                      pantalla trabada, y la vista los reporta para corregirlos.
+    """
+    # 1) Requisito directo, brincándose los tipos que este modelo no lleva.
+    requisito = {}
+    for tipo in tipos_bom:
+        visitados = {tipo}
+        actual = necesario_de.get(tipo)
+        while actual and actual not in visitados and actual not in tipos_bom:
+            visitados.add(actual)
+            actual = necesario_de.get(actual)
+        requisito[tipo] = actual if actual in tipos_bom else None
+
+    # 2) Un tipo está en ciclo si siguiendo la cadena se vuelve a encontrar a sí
+    #    mismo. Solo se rompen los del anillo; lo que cuelga de ellos se acomoda
+    #    solo una vez que el anillo pasa a ser arranque.
+    ciclicos = set()
+    for tipo in requisito:
+        actual = requisito.get(tipo)
+        for _ in range(len(requisito)):
+            if actual is None:
+                break
+            if actual == tipo:
+                ciclicos.add(tipo)
+                break
+            actual = requisito.get(actual)
+    for tipo in ciclicos:
+        requisito[tipo] = None
+
+    # 3) Ya sin ciclos: cuántos saltos faltan para llegar al arranque.
+    profundidad = {}
+    for tipo in requisito:
+        pasos = 0
+        actual = requisito.get(tipo)
+        while actual is not None and pasos <= len(requisito):
+            pasos += 1
+            actual = requisito.get(actual)
+        profundidad[tipo] = pasos
+
+    return requisito, profundidad, ciclicos
 
 
 def _todos_los_componentes(headers):
@@ -117,24 +231,40 @@ def _componentes_libres(comps, linea=None):
     return libres
 
 
-def _registro_abierto(headers, laptop):
-    """El ensamblaje SIN TERMINAR (sin fecha_fin) de esa laptop, si existe.
-    Se reutiliza en vez de abrir uno nuevo en cada registro parcial."""
+def _registros_de_laptop(headers, laptop):
+    """TODOS los registros de ensamblaje de esa laptop.
+
+    Son varios, uno por línea: la laptop cierra el de una línea y abre el de la
+    siguiente conforme avanza. Por eso lo que lleva puesto está repartido entre
+    todos ellos y no solo en el que está abierto."""
     regs = _json(f"{API}/produccion/registros-ensamblaje/", headers)
     if not isinstance(regs, list):
-        return None
-    abiertos = [r for r in regs
-                if str(r.get("laptop")) == str(laptop) and not r.get("fecha_fin")]
+        return []
+    return [r for r in regs if str(r.get("laptop")) == str(laptop)]
+
+
+def _registro_abierto(headers, laptop):
+    """El ensamblaje SIN TERMINAR (sin fecha_fin) de esa laptop, si existe.
+    Es el de la línea en la que va ahora; se reutiliza en vez de abrir otro."""
+    abiertos = [r for r in _registros_de_laptop(headers, laptop)
+                if not r.get("fecha_fin")]
     return abiertos[-1] if abiertos else None
 
 
-def _montado_por_modelo(comps, numero_registro):
-    """Cuántas piezas de cada modelo ya están montadas en ese ensamblaje."""
+def _montado_por_modelo(comps, numeros_registro):
+    """Cuántas piezas de cada modelo lleva PUESTAS la laptop.
+
+    Se cuenta contra todos sus registros, no solo el abierto: la tarjeta madre
+    que montó la línea B quedó pegada al registro de la B, que para cuando la
+    laptop llega a la C ya está cerrado, y aun así sigue puesta. Mirando solo el
+    registro abierto, la línea C vería la laptop vacía y el orden de montaje le
+    bloquearía todo."""
     montado = {}
-    if not numero_registro:
+    numeros = {str(n) for n in (numeros_registro or []) if n is not None}
+    if not numeros:
         return montado
     for c in comps:
-        if str(c.get("registro_ensamblaje")) == str(numero_registro):
+        if str(c.get("registro_ensamblaje")) in numeros:
             modelo = c.get("modelo_codigo")
             montado[modelo] = montado.get(modelo, 0) + 1
     return montado
@@ -170,6 +300,23 @@ def ensamblajeRegistrarView(request):
             messages.error(request, "Selecciona la línea en la que se ensambla.")
             return redirect('ensamblaje-registrar')
 
+        # Y tiene que ser de ensamblaje. Se revisa aquí y no sólo en la API porque
+        # cuando la laptop ya trae un ensamblaje abierto este flujo no vuelve a
+        # POSTear el registro: se iría derecho a surtir piezas de una línea que no
+        # las tiene y el operador leería "0 componentes" en vez del motivo real.
+        catalogo_lineas = _json(f"{API}/lineas/", headers)
+        if isinstance(catalogo_lineas, list):
+            linea_obj = next(
+                (l for l in catalogo_lineas if str(l.get("codigo")) == str(linea)),
+                None
+            )
+            if not es_de_ensamblaje(linea_obj):
+                messages.error(
+                    request,
+                    "Solo se puede registrar ensamblaje en líneas de tipo Ensamblaje."
+                )
+                return redirect('ensamblaje-registrar')
+
         laptop_obj = next(
             (l for l in _laptops_disponibles(headers) if str(l.get("numero")) == str(laptop)),
             None
@@ -184,8 +331,9 @@ def ensamblajeRegistrarView(request):
         cap_tipo = _capacidad_por_tipo(filas_bom)
 
         comps = _todos_los_componentes(headers)
-        registro = _registro_abierto(headers, laptop)
-        ya_montado = _montado_por_modelo(comps, registro.get("numero") if registro else None)
+        registros_laptop = _registros_de_laptop(headers, laptop)
+        registro = next((r for r in reversed(registros_laptop) if not r.get("fecha_fin")), None)
+        ya_montado = _montado_por_modelo(comps, [r.get("numero") for r in registros_laptop])
 
         # Lo que se marcó en el formulario.
         seleccion = {}
@@ -217,6 +365,33 @@ def ensamblajeRegistrarView(request):
             messages.error(
                 request,
                 "No se registró: se excede la capacidad por tipo — " + "; ".join(excedidos)
+            )
+            return redirect('ensamblaje-registrar')
+
+        # Y que se respete el orden de montaje (tipo_comp.necesario): un tipo solo
+        # entra si el que va antes ya lleva al menos una pieza —montada de antes o
+        # marcada en este mismo envío—. Se revisa aquí y no solo en el navegador
+        # porque el JS se puede saltar con las herramientas de desarrollo.
+        requisito_tipo, _, _ = _orden_de_montaje(
+            _necesario_por_tipo(headers), set(cap_tipo)
+        )
+
+        seleccion_por_tipo = {}
+        for codigo_modelo, cantidad in seleccion.items():
+            tipo = tipo_de.get(codigo_modelo)
+            seleccion_por_tipo[tipo] = seleccion_por_tipo.get(tipo, 0) + cantidad
+
+        fuera_de_orden = [
+            f"{nombre_tipo.get(t) or t} va después de "
+            f"{nombre_tipo.get(requisito_tipo[t]) or requisito_tipo[t]}"
+            for t in seleccion_por_tipo
+            if requisito_tipo.get(t) and usado_por_tipo.get(requisito_tipo[t], 0) < 1
+        ]
+        if fuera_de_orden:
+            messages.error(
+                request,
+                "No se registró: hay que respetar el orden de montaje — "
+                + "; ".join(fuera_de_orden)
             )
             return redirect('ensamblaje-registrar')
 
@@ -290,8 +465,9 @@ def ensamblajeRegistrarView(request):
             if cierre.status_code in (200, 202):
                 messages.success(
                     request,
-                    f"Ensamblaje #{numero_registro} TERMINADO el {fecha_hoy} a las "
-                    f"{hora_ahora} (se agregaron {montados} componente(s))."
+                    f"Ensamblaje #{numero_registro} TERMINADO el "
+                    f"{fecha_hora(fecha_hoy, hora_ahora)} "
+                    f"(se agregaron {montados} componente(s))."
                 )
                 return redirect('ensamblaje-registrar')
             messages.error(request, "Se registraron las piezas pero no se pudo marcar el fin.")
@@ -308,15 +484,18 @@ def ensamblajeRegistrarView(request):
     # ------------------------------------------------------------------- GET
     laptops = _laptops_disponibles(headers)
 
-    lineas = _json(f"{API}/lineas/", headers)
-    if not isinstance(lineas, list):
-        lineas = []
+    # Solo las de ENSAMBLAJE: en una línea de embalaje no se arma nada, y la API
+    # y el trigger de la base rechazarían el registro de todas formas.
+    lineas = solo_de_ensamblaje(_json(f"{API}/lineas/", headers))
 
     laptop_sel = request.GET.get("laptop") or ""
     linea_sel = request.GET.get("linea") or ""
     laptop_obj = None
     componentes_bom = []
     tipos_info = {}
+    tipos_ciclicos = []
+    # Componentes del modelo que esta línea no instala y por eso no se listan.
+    ocultos_por_linea = 0
     registro = None
 
     # Se necesitan las dos: la laptop define QUÉ componentes acepta (BOM) y
@@ -331,11 +510,22 @@ def ensamblajeRegistrarView(request):
             filas_bom = _bom(headers, laptop_obj["modelo_codigo"])
             cap_tipo = _capacidad_por_tipo(filas_bom)
 
+            nombre_de_tipo = {f.get("componente_tipo"): f.get("componente_tipo_nombre")
+                              for f in filas_bom}
+
+            # Orden de montaje: qué tipo va antes de cuál y a cuántos pasos está
+            # cada uno del arranque.
+            requisito_tipo, profundidad_tipo, ciclicos = _orden_de_montaje(
+                _necesario_por_tipo(headers), set(cap_tipo)
+            )
+            tipos_ciclicos = sorted(nombre_de_tipo.get(t) or t for t in ciclicos)
+
             comps = _todos_los_componentes(headers)
             libres = _componentes_libres(comps, linea_sel)
 
-            registro = _registro_abierto(headers, laptop_sel)
-            ya_montado = _montado_por_modelo(comps, registro.get("numero") if registro else None)
+            registros_laptop = _registros_de_laptop(headers, laptop_sel)
+            registro = next((r for r in reversed(registros_laptop) if not r.get("fecha_fin")), None)
+            ya_montado = _montado_por_modelo(comps, [r.get("numero") for r in registros_laptop])
 
             # Cuánto lleva montado cada TIPO en este ensamblaje.
             montado_tipo = {}
@@ -352,6 +542,34 @@ def ensamblajeRegistrarView(request):
                 capacidad = fila.get("capacidad") or 1
                 cap_t = cap_tipo.get(tipo_codigo, capacidad)
                 libres_tipo = cap_t - montado_tipo.get(tipo_codigo, 0)
+
+                # Tipo que va antes que éste. Al cargar la pantalla nada está
+                # marcado todavía, así que lo único que puede cubrirlo es lo que
+                # ya venía montado; de ahí en adelante manda el JS.
+                requiere = requisito_tipo.get(tipo_codigo)
+
+                # tipos_info va con el BOM COMPLETO a propósito: el contador y el
+                # botón de terminar miden la laptop entera, no lo que le toca a
+                # esta línea. Si midieran solo lo de la línea, la primera en
+                # acabar lo suyo cerraría el ensamblaje a media producción.
+                tipos_info.setdefault(tipo_codigo, {
+                    "nombre": fila.get("componente_tipo_nombre") or tipo_codigo,
+                    "capacidad": cap_t,
+                    "montado": montado_tipo.get(tipo_codigo, 0),
+                    # El JS lo usa para habilitar/trabar casillas en vivo.
+                    "requiere": requiere,
+                })
+
+                # La tabla, en cambio, solo lleva lo que ESTA línea puede
+                # instalar. Por ahora eso se deduce del stock: cada línea surte
+                # únicamente los tipos que sus estaciones montan, así que lo que
+                # no tiene existencias aquí es que no le toca.
+                # TODO: cuando exista la relación estación/línea ↔ tipo_comp,
+                # filtrar por ahí. El stock confunde "no me toca" con "me quedé
+                # sin material".
+                if disponibles == 0:
+                    ocultos_por_linea += 1
+                    continue
 
                 componentes_bom.append({
                     "codigo": codigo,
@@ -370,19 +588,19 @@ def ensamblajeRegistrarView(request):
                     "sin_stock": disponibles == 0,
                     # Ese tipo ya quedó lleno con lo montado antes.
                     "tipo_lleno": libres_tipo <= 0,
+                    # Orden de montaje.
+                    "requiere_tipo": requiere or "",
+                    "requiere_nombre": nombre_de_tipo.get(requiere) or requiere or "",
+                    "profundidad": profundidad_tipo.get(tipo_codigo, 0),
+                    "orden_pendiente": bool(requiere) and montado_tipo.get(requiere, 0) < 1,
                 })
 
-                tipos_info.setdefault(tipo_codigo, {
-                    "nombre": fila.get("componente_tipo_nombre") or tipo_codigo,
-                    "capacidad": cap_t,
-                    "montado": montado_tipo.get(tipo_codigo, 0),
-                })
-
-            # Primero los que más stock tienen en la línea (los que sí se pueden
-            # montar quedan arriba y los "sin stock" al final); a igual stock,
-            # en orden alfabético por nombre.
+            # Primero lo que va primero: los que están a menos pasos del arranque
+            # de la cadena de montaje. A igual paso, los que más stock tienen en
+            # la línea (los "sin stock" al final) y luego alfabético por nombre.
             componentes_bom.sort(
-                key=lambda c: (-c["disponibles"], (c["nombre"] or c["codigo"]).lower())
+                key=lambda c: (c["profundidad"], -c["disponibles"],
+                               (c["nombre"] or c["codigo"]).lower())
             )
 
     return render(
@@ -396,6 +614,8 @@ def ensamblajeRegistrarView(request):
             "laptop_obj": laptop_obj,
             "componentes": componentes_bom,
             "tipos_info": tipos_info,
+            "tipos_ciclicos": tipos_ciclicos,
+            "ocultos_por_linea": ocultos_por_linea,
             "registro": registro,
         }
     )
@@ -437,8 +657,8 @@ def _avance_ensamblaje(registros):
             "estado": "proceso",
             "texto": f"En proceso #{abierto.get('numero')}",
             "clase": "text-bg-warning",
-            "detalle": f"Inició {abierto.get('fecha_inicio') or '—'} "
-                       f"{abierto.get('hora_inicio') or ''}".strip(),
+            "detalle": "Inició " + (fecha_hora(abierto.get("fecha_inicio"),
+                                               abierto.get("hora_inicio")) or "—"),
         }
 
     cerrados = [r for r in registros if r.get("fecha_fin")]
@@ -448,8 +668,8 @@ def _avance_ensamblaje(registros):
             "estado": "terminado",
             "texto": f"Terminado #{ultimo.get('numero')}",
             "clase": "text-bg-success",
-            "detalle": f"Terminó {ultimo.get('fecha_fin')} "
-                       f"{ultimo.get('hora_fin') or ''}".strip(),
+            "detalle": "Terminó " + (fecha_hora(ultimo.get("fecha_fin"),
+                                                ultimo.get("hora_fin")) or "—"),
         }
 
     return {
@@ -546,7 +766,13 @@ def ordenProduccionEditarView(request, folio):
 
 
 def ordenProduccionCancelarView(request, folio):
-    """El DELETE de la API no borra la orden: la deja en estado Cancelada (CANC)."""
+    """Cancela la orden y deja la planta consistente.
+
+    Antes esto era un DELETE que sólo movía el estado a Cancelada y dejaba el
+    material apartado en laptops que ya nadie iba a terminar. Ahora lo resuelve
+    sp_Cancelar_Orden_Produccion, que además libera los componentes de las
+    laptops a medias y las rechaza, todo en una transacción. Las Aprobadas y
+    Embaladas se respetan: ya pasaron calidad."""
 
     if 'token' not in request.session:
         return redirect('login')
@@ -554,14 +780,50 @@ def ordenProduccionCancelarView(request, folio):
     if request.method == "POST":
 
         headers = _headers(request)
-        respuesta = requests.delete(f"{API}/produccion/mod/{folio}/", headers=headers)
+        respuesta = requests.post(f"{API}/produccion/{folio}/cancelar/", json={}, headers=headers)
 
-        if respuesta.status_code == 204:
-            messages.success(request, f"Orden #{folio} cancelada.")
+        if respuesta.status_code == 200:
+            resumen = respuesta.json()
+            messages.success(
+                request,
+                f"Orden #{folio} cancelada. "
+                f"{resumen.get('laptops_rechazadas', 0)} laptop(s) rechazada(s), "
+                f"{resumen.get('componentes_liberados', 0)} componente(s) devuelto(s) al inventario"
+                + (f", {resumen['laptops_respetadas']} laptop(s) terminada(s) sin tocar."
+                   if resumen.get('laptops_respetadas') else ".")
+            )
         else:
             messages.error(request, _mensaje_api(respuesta))
 
     return redirect('ordenes-produccion-lista')
+
+
+def ordenProduccionIniciarEnsamblajeView(request, folio):
+    """Da de alta de un jalón las laptops que le faltan a la orden.
+
+    Lo resuelve sp_Iniciar_Ensamblaje_Orden. No se pide línea: las laptops
+    nacen sin ella, y en cuál se arma cada una lo dice su registro de
+    ensamblaje, que se abre después unidad por unidad."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+        respuesta = requests.post(
+            f"{API}/produccion/{folio}/iniciar-ensamblaje/",
+            json={},
+            headers=headers,
+        )
+
+        if respuesta.status_code == 200:
+            creadas = respuesta.json().get('laptops_creadas', 0)
+            messages.success(request, f"Se registraron {creadas} laptop(s) para la orden #{folio}.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('orden-produccion-detalle', folio=folio)
 
 
 def ordenProduccionDetalleView(request, folio):
@@ -614,6 +876,10 @@ def ordenProduccionDetalleView(request, folio):
             "embaladas": embaladas,
             # Se topa en 100 para que la barra no se desborde si se registraron too many
             "porcentaje": min(100, round(registradas * 100 / planificadas)) if planificadas else 0,
+            # Para las dos acciones del encabezado: sólo tienen sentido mientras
+            # la orden siga abierta.
+            "abierta": orden.get("estado_codigo") in EDOS_ORDEN_ABIERTA,
+            "faltantes": max(0, planificadas - registradas),
         }
     )
 
@@ -622,10 +888,9 @@ def ordenProduccionDetalleView(request, folio):
 #   LAPTOPS
 # 
 
-# Estados en los que la laptop ya cerró su ciclo productivo y no se le deben
-# quitar piezas. Es el mismo criterio del trigger
-# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql).
-ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
+# ESTADOS_LAPTOP_FINALIZADOS está declarado arriba del archivo: lo comparten el
+# selector de ensamblaje (no ofrece esas laptops) y el detalle (no deja quitarles
+# componentes). Es una sola lista para que no se desincronicen.
 
 # Estado con el que nace una laptop.
 EDO_LAPTOP_REGISTRADA = "REGIS"
@@ -1077,13 +1342,14 @@ def laptopsListView(request):
 
         # Ni modelo ni lote ni estado se capturan: los dos primeros los hereda de
         # su orden (la API los resuelve) y el estado siempre es Registrada.
+        # La línea tampoco: la laptop no la guarda. Se sabrá en qué línea va
+        # cuando se le abra su registro de ensamblaje.
         payload = {
             "num_serie": (request.POST.get("num_serie") or "").strip()
                          or _serie_temporal_sugerida(laptops_actuales),
             "descripcion": request.POST.get("descripcion") or None,
             "orden": orden,
             "estado": EDO_LAPTOP_REGISTRADA,
-            "linea": request.POST.get("linea") or None,
         }
 
         respuesta = requests.post(f"{API}/produccion/laptops/", json=payload, headers=headers)
@@ -1171,6 +1437,10 @@ def laptopDetalleView(request, numero):
         "laptop": laptop,
         "registros": registros,
         "componentes": componentes,
+        # Hay algo que soltar sólo si queda un componente que no esté mermado:
+        # los mermados se quedan pegados al ensamblaje a propósito, y sin esto el
+        # botón de desarmar seguiría ahí sin nada que hacer.
+        "desarmable": any(c.get("estado_codigo") != EDO_COMP_MERMADO for c in componentes),
         "inspecciones": inspecciones,
         "embalajes": embalajes,
         "tiempos": tiempos,
@@ -1199,16 +1469,17 @@ def laptopEditarView(request, numero):
 
         headers = _headers(request)
 
-        # Tres campos quedan fuera del payload a propósito:
+        # Cuatro campos quedan fuera del payload a propósito:
         #   num_serie     — se fija al registrar y solo la reescribe el trigger
         #                   tg_Generar_Numero_Serie_Final al aprobar en calidad.
         #   modelo y lote — se heredan de la orden; la API los recalcula sola en
         #                   cada guardado, así que mandarlos no serviría de nada.
+        #   linea         — la laptop no la guarda: sale de su registro de
+        #                   ensamblaje, que se edita en su propia pantalla.
         payload = {
             "descripcion": request.POST.get("descripcion") or None,
             "orden": request.POST.get("orden") or None,
             "estado": request.POST.get("estado") or None,
-            "linea": request.POST.get("linea") or None,
         }
 
         respuesta = requests.patch(
@@ -1286,6 +1557,50 @@ def laptopComponenteLiberarView(request, numero, componente):
     return redirect('laptop-detalle', numero=numero)
 
 
+def laptopDesarmarView(request, numero):
+    """Desarma la laptop completa: suelta TODOS sus componentes de un golpe.
+
+    Es el hermano mayor de laptopComponenteLiberarView, que quita uno solo. Lo
+    resuelve sp_Liberar_Componentes_Laptop, que además cierra el registro de
+    ensamblaje.
+
+    OJO: al cerrarlo, tg_Control_Componentes_Duplicados ya no deja abrirle otro,
+    o sea que la laptop no se vuelve a armar. Por eso la plantilla lo pregunta
+    con todas sus letras antes de mandar el POST."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+
+        nuevo_estado = request.POST.get("estado") or EDO_COMP_DISPONIBLE
+        if nuevo_estado == EDO_COMP_EN_USO:
+            messages.error(request, "Un componente liberado no puede quedar En Uso.")
+            return redirect('laptop-detalle', numero=numero)
+
+        respuesta = requests.post(
+            f"{API}/produccion/laptops/{numero}/liberar-componentes/",
+            json={"estado": nuevo_estado},
+            headers=headers,
+        )
+
+        if respuesta.status_code == 200:
+            resumen = respuesta.json()
+            mermados = resumen.get('mermados_conservados', 0)
+            messages.success(
+                request,
+                f"Laptop #{numero} desarmada: "
+                f"{resumen.get('componentes_liberados', 0)} componente(s) liberado(s)"
+                + (f" ({mermados} mermado(s) se quedaron como estaban)." if mermados else ".")
+            )
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+    return redirect('laptop-detalle', numero=numero)
+
+
 #--------------------------------------------------------------------------------
 #                         P A R O S
 #---------------------------------------------------------------------------------
@@ -1327,6 +1642,7 @@ class ListaParos(generic.View):
             "fecha_hasta": fecha_hasta,
         }
         return render(request, self.template_name, context)
+
 
 
 class CrearParo(generic.View):
@@ -1404,3 +1720,4 @@ class CerrarParo(generic.View):
             messages.error(request, error_data.get("mensaje", "No se pudo cerrar el paro."))
 
         return redirect("lista_paros")
+   

@@ -363,29 +363,27 @@ class ComponenteCreateUpdateSerializer(serializers.ModelSerializer):
 # ============================================================================
 class LaptopListSerializer(serializers.ModelSerializer):
     modelo = ModeloLaptopListSerializer(read_only=True)
-    linea = LineaListSerializer(read_only=True)
     lote = LoteLaptopListSerializer(read_only=True)
     estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'modelo', 'estado', 'linea', 'lote']
+        fields = ['numero', 'descripcion', 'modelo', 'estado', 'lote']
 
 
 class LaptopDetailSerializer(serializers.ModelSerializer):
     modelo = ModeloLaptopDetailSerializer(read_only=True)
-    linea = LineaDetailSerializer(read_only=True)
     lote = LoteLaptopDetailSerializer(read_only=True)
     orden = OrdenProduccionDetailSerializer(read_only=True)
     estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'orden', 'modelo', 'estado', 'linea', 'lote']
+        fields = ['numero', 'descripcion', 'orden', 'modelo', 'estado', 'lote']
 
 
 class LaptopCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'orden', 'modelo', 'linea', 'lote']
+        fields = ['numero', 'descripcion', 'orden', 'modelo', 'lote']
 
 
 # ============================================================================

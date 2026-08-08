@@ -4,7 +4,10 @@
 -- Version: 2026-07-15
 
 DROP DATABASE IF EXISTS cuatro;
-CREATE DATABASE IF NOT EXISTS cuatro;
+CREATE DATABASE IF NOT EXISTS cuatro CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE cuatro;
+
+SET NAMES utf8mb4;
 USE cuatro;
 
 -- -------------------------------------mysql-------------------
@@ -23,6 +26,18 @@ CREATE TABLE componente (
   lote varchar(12) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
   PRIMARY KEY (numero)
+);
+
+-- Qué piezas concretas reprobó una inspección. La inspección dice si la laptop
+-- pasa o no; esto dice POR CUÁL componente, que es lo que sirve para reclamar al
+-- proveedor o detectar un lote malo. Sin esta tabla el motivo solo vivía en el
+-- texto libre de `observaciones` y no se podía cruzar con nada.
+DROP TABLE IF EXISTS detalle_inspeccion;
+CREATE TABLE detalle_inspeccion (
+  inspeccion int NOT NULL,
+  componente int NOT NULL,
+  observacion varchar(256) DEFAULT NULL,
+  PRIMARY KEY (inspeccion, componente)
 );
 
 DROP TABLE IF EXISTS detalle_material;
@@ -124,7 +139,6 @@ CREATE TABLE laptop (
   orden int DEFAULT NULL,
   modelo varchar(8) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
-  linea varchar(8) DEFAULT NULL,
   lote varchar(8) DEFAULT NULL,
   PRIMARY KEY (numero)
 );
@@ -134,8 +148,10 @@ CREATE TABLE linea (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
   descripcion varchar(128) DEFAULT NULL,
+  tipo varchar(8) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
-  activo BOOLEAN DEFAULT FALSE,
+  activo BOOLEAN DEFAULT TRUE,
+  siguiente VARCHAR(8) DEFAULT NULL,
   PRIMARY KEY (codigo)
 );
 
@@ -247,6 +263,7 @@ DROP TABLE IF EXISTS tipo_comp;
 CREATE TABLE tipo_comp (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
+  necesario VARCHAR(8) DEFAULT NULL,
   PRIMARY KEY (codigo)
 );
 
@@ -254,6 +271,17 @@ DROP TABLE IF EXISTS tipo_embalaje;
 CREATE TABLE tipo_embalaje (
   codigo varchar(8) NOT NULL,
   nombre varchar(32) DEFAULT NULL,
+  PRIMARY KEY (codigo)
+);
+
+-- Qué proceso corre la línea (ensamblaje o embalaje). Es distinto de edo_linea:
+-- ese dice cómo está la línea (activa, en paro...), este dice para qué sirve, y
+-- es lo que decide si en ella se puede registrar ensamblaje.
+DROP TABLE IF EXISTS tipo_linea;
+CREATE TABLE tipo_linea (
+  codigo varchar(8) NOT NULL,
+  nombre varchar(32) DEFAULT NULL,
+  descripcion varchar(64) DEFAULT NULL,
   PRIMARY KEY (codigo)
 );
 
@@ -310,6 +338,8 @@ ALTER TABLE componente ADD CONSTRAINT FK_componente_lote FOREIGN KEY (lote) REFE
 ALTER TABLE componente ADD CONSTRAINT FK_componente_estado FOREIGN KEY (estado) REFERENCES edo_componente(codigo);
 
 -- Llaves foráneas para la tabla detalle_material
+ALTER TABLE detalle_inspeccion ADD CONSTRAINT FK_detalle_inspeccion_inspeccion FOREIGN KEY (inspeccion) REFERENCES inspeccion_calidad(numero);
+ALTER TABLE detalle_inspeccion ADD CONSTRAINT FK_detalle_inspeccion_componente FOREIGN KEY (componente) REFERENCES componente(numero);
 ALTER TABLE detalle_material ADD CONSTRAINT FK_detalle_material_orden FOREIGN KEY (orden) REFERENCES orden_material(numero);
 ALTER TABLE detalle_material ADD CONSTRAINT FK_detalle_material_modelo FOREIGN KEY (modelo) REFERENCES modelo_componente(codigo);
 
@@ -337,14 +367,19 @@ ALTER TABLE inspeccion_calidad ADD CONSTRAINT FK_inspeccion_calidad_linea FOREIG
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_orden FOREIGN KEY (orden) REFERENCES orden_produccion(folio);
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_modelo FOREIGN KEY (modelo) REFERENCES modelo_laptop(codigo);
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_estado FOREIGN KEY (estado) REFERENCES edo_laptop(codigo);
-ALTER TABLE laptop ADD CONSTRAINT FK_laptop_linea FOREIGN KEY (linea) REFERENCES linea(codigo);
 ALTER TABLE laptop ADD CONSTRAINT FK_laptop_lote FOREIGN KEY (lote) REFERENCES lote_laptop(codigo);
 
 -- Llaves foráneas para la tabla linea
 ALTER TABLE linea ADD CONSTRAINT FK_linea_estado FOREIGN KEY (estado) REFERENCES edo_linea(codigo);
+ALTER TABLE linea ADD CONSTRAINT FK_linea_tipo FOREIGN KEY (tipo) REFERENCES tipo_linea(codigo);
+ALTER TABLE linea ADD CONSTRAINT FK_linea_siguiente FOREIGN KEY (siguiente) REFERENCES linea(codigo);
+
 
 -- Llaves foráneas para la tabla modelo_componente
 ALTER TABLE modelo_componente ADD CONSTRAINT FK_modelo_componente_tipo_componente FOREIGN KEY (tipo_componente) REFERENCES tipo_comp(codigo);
+
+-- Llves foraneas para la tabla tipo_comp
+ALTER TABLE tipo_comp ADD CONSTRAINT FK_tipo_comp_necesario_instalado FOREIGN KEY (necesario) REFERENCES tipo_comp(codigo);
 
 -- Llaves foráneas para la tabla puente modelo_laptop_componente
 ALTER TABLE modelo_laptop_componente ADD CONSTRAINT FK_mlc_modelo_laptop FOREIGN KEY (modelo_laptop) REFERENCES modelo_laptop(codigo);
@@ -385,6 +420,7 @@ CREATE UNIQUE INDEX IUK_modelo_laptop_nombre ON modelo_laptop(nombre);
 CREATE UNIQUE INDEX IUK_rol_nombre ON rol(nombre);
 CREATE UNIQUE INDEX IUK_tipo_comp_nombre ON tipo_comp(nombre);
 CREATE UNIQUE INDEX IUK_tipo_embalaje_nombre ON tipo_embalaje(nombre);
+CREATE UNIQUE INDEX IUK_tipo_linea_nombre ON tipo_linea(nombre);
 CREATE UNIQUE INDEX IUK_turno_nombre ON turno(nombre);
 CREATE UNIQUE INDEX IUK_usuario_usuario ON usuario(usuario);
 CREATE UNIQUE INDEX IUK_usuario_empleado ON usuario(empleado);
@@ -397,4 +433,5 @@ CREATE UNIQUE INDEX IUK_serie_laptop ON laptop(num_serie);
 #Modificar el default de los usuarios al registrarlos
 ALTER TABLE usuario
 MODIFY estado TINYINT(1) NOT NULL DEFAULT 1;
+
 

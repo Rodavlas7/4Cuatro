@@ -4,58 +4,123 @@
 
 {% block content %}
 
-<a href="{% url 'lineas-lista' %}" class="text-decoration-none">
-    <i class="bi bi-arrow-left"></i> Volver a líneas de ensamblaje
-</a>
+<div class="wrap">
 
-<div class="mt-2 mb-3">
-    <h2 class="mb-0">{{ linea.nombre|default:linea.codigo }}</h2>
-    <p class="text-muted mb-0">
-        Código: {{ linea.codigo }} · Estado: {{ linea.estado_nombre|default:"—" }} ·
-        {% if linea.activo %}
-            <span class="badge text-bg-success">Activa</span>
-        {% else %}
-            <span class="badge text-bg-secondary">Inactiva</span>
+    <!-- BOTÓN DE RETROCESO -->
+    <div class="mb-3">
+        <a href="{% url 'lineas-lista' %}" class="text-decoration-none text-muted hover-primary d-inline-flex align-items-center gap-2 small fw-medium transition-all">
+            <i class="bi bi-arrow-left"></i> Volver a líneas de ensamblaje
+        </a>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 1: FICHA DE LA LÍNEA
+         ========================================== -->
+    <div class="emp-card mb-4">
+        <div class="emp-header px-4 py-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 55px; height: 55px;">
+                    <i class="bi bi-diagram-3 fs-3"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold text-dark mb-1">{{ linea.nombre|default:linea.codigo }}</h3>
+                    <div class="d-flex align-items-center gap-2 text-muted small">
+                        <span class="badge-id text-secondary px-2 py-1 bg-light border">{{ linea.codigo }}</span>
+                        <span>•</span>
+                        {% if linea.tipo_codigo == 'ENSA' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">
+                                <i class="bi bi-tools me-1"></i>{{ linea.tipo_nombre|default:"Ensamblaje" }}
+                            </span>
+                        {% elif linea.tipo_codigo == 'EMBA' %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2">
+                                <i class="bi bi-box-seam me-1"></i>{{ linea.tipo_nombre|default:"Embalaje" }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-light text-muted border rounded-pill px-2">Sin tipo</span>
+                        {% endif %}
+                        <span>•</span>
+                        <span class="fw-medium text-dark"><i class="bi bi-tag me-1"></i>{{ linea.estado_nombre|default:"—" }}</span>
+                        <span>•</span>
+                        {% if linea.activo %}
+                            <span class="status-pill active"><span class="status-dot"></span> Activa</span>
+                        {% else %}
+                            <span class="status-pill inactive"><span class="status-dot"></span> Inactiva</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if linea.descripcion %}
+        <div class="px-4 py-3 border-top bg-light rounded-bottom-4">
+            <p class="text-muted small mb-0">
+                <strong class="text-dark"><i class="bi bi-info-circle me-1"></i> Descripción:</strong> {{ linea.descripcion }}
+            </p>
+        </div>
         {% endif %}
-    </p>
-    <p class="mb-0">{{ linea.descripcion|default:"" }}</p>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: ESTACIONES ASIGNADAS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        
+        <div class="emp-toolbar px-4 py-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-geo-alt text-primary me-2"></i>Estaciones de esta línea</h5>
+            <a href="{% url 'estaciones-lista' %}" class="btn btn-dark btn-sm py-2 px-3 fw-medium shadow-sm d-flex align-items-center gap-2">
+                <i class="bi bi-plus-lg"></i> Agregar estación
+            </a>
+        </div>
+
+        <div class="table-responsive border-top">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Código</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Nombre</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Descripción</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Activo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in linea.estaciones %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="badge-id text-primary">{{ e.codigo }}</span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ e.nombre|default:"—" }}</div>
+                        </td>
+                        <td>
+                            <div class="text-muted small text-truncate" style="max-width: 350px;" title="{{ e.descripcion|default:'' }}">
+                                {{ e.descripcion|default:"—" }}
+                            </div>
+                        </td>
+                        <td class="pe-4 text-end">
+                            {% if e.activo %}
+                                <span class="status-pill active">
+                                    <span class="status-dot"></span> Activa
+                                </span>
+                            {% else %}
+                                <span class="status-pill inactive">
+                                    <span class="status-dot"></span> Inactiva
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-geo-alt text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            Esta línea todavía no tiene estaciones asignadas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
-
-<h5 class="mt-4">Estaciones de esta línea</h5>
-
-<div class="table-responsive">
-    <table class="table table-hover align-middle bg-white">
-        <thead class="table-light">
-            <tr>
-                <th>Código</th>
-                <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Activo</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for e in linea.estaciones %}
-            <tr>
-                <td>{{ e.codigo }}</td>
-                <td>{{ e.nombre|default:"—" }}</td>
-                <td>{{ e.descripcion|default:"—" }}</td>
-                <td>
-                    {% if e.activo %}
-                        <span class="badge text-bg-success">Activa</span>
-                    {% else %}
-                        <span class="badge text-bg-secondary">Inactiva</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-4">Esta línea todavía no tiene estaciones asignadas.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<a href="{% url 'estaciones-lista' %}" class="btn btn-outline-primary btn-sm">
-    <i class="bi bi-plus-lg me-1"></i> Agregar estación
-</a>
 
 {% endblock %}

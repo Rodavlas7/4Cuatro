@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +25,16 @@ SECRET_KEY = 'django-insecure-ob*!ktbw$zun7-xvi6h8hbr+b-)!0z_($6x674jl&)gb_=7gg&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
+
+# Cuando compartimos el Client por un túnel de Cloudflare, el navegador del
+# compañero entra por https pero el túnel nos entrega la petición por http.
+# Django compara el Origin (https://...) contra el esquema que ve aquí (http)
+# y rechazaría todos los POST con "Origin checking failed". Declarar el dominio
+# del túnel como de confianza resuelve eso; en local no cambia nada.
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.trycloudflare.com',
+]
 
 # Cliente y API corren en el mismo host (127.0.0.1) y las cookies no distinguen
 # puerto, así que con los nombres por defecto cada proyecto le pisaba la sesión
@@ -62,16 +71,19 @@ INSTALLED_APPS = [
     'componentes',
     'calidad',
     'embalaje',
+    'trazabilidad',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'Client.middleware.MantenimientoMiddleware',
 
     # Va al final: necesita sesión y mensajes ya montados para poder decidir
     # y para poder avisar por qué te sacó.
@@ -146,8 +158,24 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'static'
+    os.path.join(BASE_DIR, 'static'),
+]
+
+# Aquí es donde Django juntará todos los archivos cuando ejecutes collectstatic
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Opcional: Activa la compresión y caché para que tu sistema cargue rapidísimo
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Añádelo al final de settings.py
+MAINTENANCE_PATHS = [
+    '/perfil/',
+    '/reportes/'
+    
+    
+
 ]

@@ -7,6 +7,7 @@ tocar los otros paneles.
 """
 
 from core.api import get, headers_token, lista, url
+from core.lineas import es_de_ensamblaje
 
 
 def get_choices_lineas_paro(token):
@@ -21,10 +22,14 @@ def get_choices_lineas_paro(token):
 
 
 def get_choices_lineas_produccion(token):
-    """Líneas activas, para el formulario de inspecciones."""
+    """Líneas activas de ensamblaje para el formulario de inspecciones."""
     lineas = lista(get(url('lineas/lineas/activas/'), headers_token(token)))
 
-    return [(l.get('codigo'), l.get('nombre')) for l in lineas]
+    return [
+        (l.get('codigo'), l.get('nombre'))
+        for l in lineas
+        if es_de_ensamblaje(l)
+    ]
 
 
 def get_choices_laptops(token):
