@@ -506,8 +506,10 @@ class DetalleUsuario(generic.View):
 # ==================================================
 # ACTUALIZAR (UPDATE)
 # ==================================================
+# ==================================================
+# ACTUALIZAR (UPDATE)
+# ==================================================
 class EditarUsuario(generic.View):
-
 
     def post(self, request, numero):
 
@@ -532,7 +534,6 @@ class EditarUsuario(generic.View):
             data=data
         )
 
-
         if response.status_code == 200:
 
             datos = response.json()
@@ -542,22 +543,25 @@ class EditarUsuario(generic.View):
                 f"{datos.get('mensaje')}. Número de usuario: {numero}."
             )
 
-
         else:
 
             error = response.json()
+            
+            
+            mensaje_error = error.get("mensaje")
+
+            if not mensaje_error:
+                for campo, lista_errores in error.items():
+                    if isinstance(lista_errores, list) and lista_errores:
+                        mensaje_error = lista_errores[0]
+                        break
 
             messages.error(
                 request,
-                error.get(
-                    "mensaje",
-                    "No se pudo actualizar el usuario."
-                )
+                mensaje_error or "No se pudo actualizar el usuario."
             )
 
-
         return redirect("lista_usuarios")
-
 
 
 class DesactivarUsuario(generic.View):
