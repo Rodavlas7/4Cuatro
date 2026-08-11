@@ -1,0 +1,146 @@
+{% extends 'panel_admin/base.html' %}
+
+{% block topbar_titulo %}Reportes{% endblock %}
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Reportes</li>
+{% endblock %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<div class="wrap pb-5">
+
+    <!-- ==========================================
+         ENCABEZADO PRINCIPAL (Estilo Enterprise)
+         ========================================== -->
+    <div class="emp-card mb-4">
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 px-4 py-4">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Centro de Reportes</h4>
+                <p class="text-muted small mb-0">Genera y exporta la información operativa de la planta para análisis y auditoría en hojas de calculo.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ==========================================
+         CUADRÍCULA DE TARJETAS DE EXPORTACIÓN
+         ========================================== -->
+    <div class="row g-4 align-items-stretch">
+        
+        <!-- TARJETA 1: CALIDAD -->
+        <div class="col-md-6 col-lg-4">
+            <div class="emp-card h-100 shadow-sm border-0 border-top border-4 border-success d-flex flex-column">
+                <div class="emp-header px-4 py-3 bg-light bg-opacity-50 border-bottom">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-shield-check text-success me-2 fs-5 align-middle"></i>Calidad
+                    </h6>
+                </div>
+                <div class="card-body p-4 d-flex flex-column">
+                    <p class="text-muted small mb-4">Exporta un documento tabular con el historial de dictámenes y resultados de pruebas ejecutadas por los inspectores.</p>
+                    
+                    <form method="GET" action="{% url 'trazabilidad:reporte_calidad_excel' %}" class="mt-auto">
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label text-muted small fw-bold mb-1">Desde</label>
+                                <input type="date" name="desde" class="form-control form-control-sm py-2 text-secondary">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-muted small fw-bold mb-1">Hasta</label>
+                                <input type="date" name="hasta" class="form-control form-control-sm py-2 text-secondary">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold mb-1">Resultado (Dictamen)</label>
+                            <select name="resultado" class="form-select form-select-sm py-2 text-secondary">
+                                <option value="">Todos los dictámenes</option>
+                                <option value="1">Solo Aprobadas</option>
+                                <option value="0">Solo Rechazadas</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-outline-success btn-sm py-2 w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-file-earmark-excel-fill fs-6"></i> Generar Reporte
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- TARJETA 2: EMBALAJE -->
+        <div class="col-md-6 col-lg-4">
+            <div class="emp-card h-100 shadow-sm border-0 border-top border-4 border-info d-flex flex-column">
+                <div class="emp-header px-4 py-3 bg-light bg-opacity-50 border-bottom">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-box-seam text-info me-2 fs-5 align-middle"></i>Embalaje
+                    </h6>
+                </div>
+                <div class="card-body p-4 d-flex flex-column">
+                    <p class="text-muted small mb-4">Exporta la relación de equipos despachados control documental de salida de mercancía.</p>
+                    
+                    <form method="GET" action="{% url 'trazabilidad:reporte_embalaje_excel' %}" class="mt-auto">
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <label class="form-label text-muted small fw-bold mb-1">Desde</label>
+                                <input type="date" name="desde" class="form-control form-control-sm py-2 text-secondary">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-muted small fw-bold mb-1">Hasta</label>
+                                <input type="date" name="hasta" class="form-control form-control-sm py-2 text-secondary">
+                            </div>
+                        </div>
+                        
+                        <!-- Espaciador para igualar la altura con la tarjeta de Calidad -->
+                        <div class="mb-4" style="visibility: hidden;">
+                            <label class="form-label small mb-1">Espaciador</label>
+                            <select class="form-select form-select-sm py-2"><option>Espacio</option></select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-outline-info btn-sm py-2 w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-file-earmark-excel-fill fs-6"></i> Generar Reporte
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- TARJETA 3: PRODUCCIÓN -->
+        <div class="col-md-6 col-lg-4">
+            <div class="emp-card h-100 shadow-sm border-0 border-top border-4 border-primary d-flex flex-column">
+                <div class="emp-header px-4 py-3 bg-light bg-opacity-50 border-bottom">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-gear-wide-connected text-primary me-2 fs-5 align-middle"></i>Producción
+                    </h6>
+                </div>
+                <div class="card-body p-4 d-flex flex-column">
+                    <p class="text-muted small mb-4">Genera un reporte consolidado con los lotes de fabricación, componentes consumidos y métricas de avance de las órdenes.</p>
+                    
+                    <form action="#" class="mt-auto">
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold mb-1">Folio de Orden</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                    <i class="bi bi-hash"></i>
+                                </span>
+                                <input type="text" name="folio" class="form-control border-start-0 py-2 text-secondary" placeholder="Ej. 1234">
+                            </div>
+                        </div>
+                        
+                        <!-- Espaciador para igualar la altura -->
+                        <div class="mb-4" style="visibility: hidden;">
+                            <label class="form-label small mb-1">Espaciador</label>
+                            <select class="form-select form-select-sm py-2"><option>Espacio</option></select>
+                        </div>
+                        
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-2 w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 disabled">
+                            <i class="bi bi-tools fs-6"></i> Próximamente
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

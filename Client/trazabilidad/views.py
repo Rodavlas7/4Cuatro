@@ -9,6 +9,8 @@ from core.api import get, headers, lista, objeto, url
 from core.guards import RolRequeridoMixin
 from core.roles import ROL_ADMIN
 from core.templatetags.formato import fecha_hora
+# Importamos nuestros servicios de generación de reportes
+from .reportes import generar_pdf_expediente, generar_excel_calidad, generar_excel_embalaje
 
 # URL base de la API (Servicios)
 API = "http://127.0.0.1:8000/api"
@@ -315,3 +317,108 @@ class TrazabilidadOrden(RolRequeridoMixin, generic.View):
         })
 
         return render(request, self.template_name, contexto)
+    
+
+def centroReportesView(request):
+    """Renderiza la interfaz del Centro Unificado de Reportes."""
+    if 'token' not in request.session:
+        return redirect('login')
+    
+    return render(request, "trazabilidad/centro_reportes.html")
+    
+    
+def exportarLaptopPDFView(request, num_serie):
+    """RF51: Prepara los datos del expediente y solicita la generación del PDF."""
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers_dict = _headers(request)
+    
+  
+    laptops = _json(f"{API}/produccion/laptops/", headers_dict)
+    laptop_base = next((l for l in laptops if str(l.get("num_serie")).lower() == num_serie.lower() or str(l.get("numero")) == num_serie), None) if isinstance(laptops, list) else None
+
+    if not laptop_base:
+        messages.error(request, f"No se encontró la unidad '{num_serie}'.")
+        return redirect('trazabilidad:trazabilidad')
+
+    numero = laptop_base.get("numero")
+    laptop = _json(f"{API}/produccion/laptops/{numero}/", headers_dict)
+    orden = _json(f"{API}/produccion/{laptop.get('orden_folio')}/", headers_dict) if laptop.get('orden_folio') else {}
+    if not isinstance(orden, dict): orden = {}
+
+    registros = laptop.get("registros_ensamblaje") or []
+    linea_codigo = laptop.get("linea_codigo") or (registros[-1].get("linea") if registros else None)
+    linea_detalle = _json(f"{API}/lineas/{linea_codigo}/", headers_dict) if linea_codigo else {}
+    estaciones = linea_detalle.get("estaciones", []) if isinstance(linea_detalle, dict) else []
+
+    componentes = _componentes_montados(headers_dict, registros)
+    supervisor = _obtener_supervisor_linea(headers_dict, linea_codigo) if linea_codigo else "Sin línea asignada"
+
+    inspecciones = _inspecciones_de_laptop(headers_dict, numero)
+    ultima_inspeccion = inspecciones[-1] if inspecciones else None
+    inspector = ultima_inspeccion.get("empleado_nombre") if ultima_inspeccion else "Sin inspección"
+
+    embalajes = _embalajes_de_laptop(headers_dict, laptop.get("num_serie"))
+    bitacora = _bitacora(registros, inspecciones, embalajes)
+
+    # Armamos el diccionario
+    contexto = {
+        "laptop": laptop, "orden": orden, "linea": linea_detalle,
+        "estaciones": estaciones, "componentes": componentes,
+        "supervisor": supervisor, "inspector": inspector,
+        "ultima_inspeccion": ultima_inspeccion, "bitacora": bitacora,
+        "fecha_impresion": datetime.now().strftime("%d/%m/%Y %H:%M"),
+    }
+    return generar_pdf_expediente(request, contexto, laptop.get("num_serie", num_serie))
+
+
+def exportarCalidadExcelView(request):
+    """RF52: Filtra los datos de calidad y solicita la generación del Excel."""
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers_dict = _headers(request)
+    
+    fecha_desde = request.GET.get('desde')
+    fecha_hasta = request.GET.get('hasta')
+    resultado = request.GET.get('resultado')
+
+    inspecciones = _json(f"{API}/calidad/Inspeccion/Listar/", headers_dict)
+    if not isinstance(inspecciones, list):
+        inspecciones = []
+
+    if fecha_desde:
+        inspecciones = [i for i in inspecciones if (i.get('fecha') or "") >= fecha_desde]
+    if fecha_hasta:
+        inspecciones = [i for i in inspecciones if (i.get('fecha') or "") <= fecha_hasta]
+    if resultado:
+        inspecciones = [i for i in inspecciones if str(i.get('resultado')) == resultado]
+
+  
+    return generar_excel_calidad(inspecciones)
+
+
+def exportarEmbalajeExcelView(request):
+    """RF53: Filtra los datos de embalaje y solicita la generación del Excel."""
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers_dict = _headers(request)
+    
+    fecha_desde = request.GET.get('desde')
+    fecha_hasta = request.GET.get('hasta')
+
+    # Consultamos tu endpoint de Embalaje
+    embalajes = _json(f"{API}/embalaje/Embalaje/Listar/", headers_dict)
+    if not isinstance(embalajes, list):
+        embalajes = []
+
+    # Aplicamos los filtros de fecha
+    if fecha_desde:
+        embalajes = [e for e in embalajes if (e.get('fecha') or "") >= fecha_desde]
+    if fecha_hasta:
+        embalajes = [e for e in embalajes if (e.get('fecha') or "") <= fecha_hasta]
+
+    
+    return generar_excel_embalaje(embalajes)

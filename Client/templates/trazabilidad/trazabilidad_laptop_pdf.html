@@ -1,0 +1,238 @@
+{% load formato %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Expediente de Trazabilidad - {{ laptop.num_serie }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 1.5cm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 9pt;
+                font-family: sans-serif;
+                color: #666;
+            }
+            @bottom-left {
+                content: "TraceX System · Reporte Confidencial de Trazabilidad";
+                font-size: 9pt;
+                font-family: sans-serif;
+                color: #666;
+            }
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #222;
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+        .header-table {
+            width: 100%;
+            border-bottom: 2px solid #000;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #111;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        .subtitle {
+            font-size: 9pt;
+            color: #555;
+            margin-top: 4px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 8pt;
+            font-weight: bold;
+            border-radius: 4px;
+            background-color: #eee;
+            border: 1px solid #ccc;
+        }
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            background-color: #f2f2f2;
+            padding: 6px 10px;
+            border-left: 4px solid #000;
+            margin-top: 18px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .grid-table td, .grid-table th {
+            padding: 6px 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 9.5pt;
+        }
+        .grid-table th {
+            background-color: #fafafa;
+            text-align: left;
+            font-size: 8.5pt;
+            text-transform: uppercase;
+            color: #444;
+        }
+        .mono {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        .signatures {
+            margin-top: 40px;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+        .signatures td {
+            width: 50%;
+            text-align: center;
+            vertical-align: bottom;
+            height: 60px;
+        }
+        .line {
+            border-top: 1px solid #000;
+            width: 70%;
+            margin: 0 auto 5px auto;
+        }
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td>
+                <h1 class="title">EXPEDIENTE DE TRAZABILIDAD</h1>
+                
+            </td>
+            <td style="text-align: right; vertical-align: bottom;">
+                <div class="subtitle">Fecha de Emisión: {{ fecha_impresion }}</div>
+                <div class="subtitle">Num. Laptop: #{{ laptop.numero }}</div>
+            </td>
+        </tr>
+    </table>
+
+
+    <div class="section-title">1. Resumen de la Unidad </div>
+    <table class="grid-table">
+        <tr>
+            <th>Número de Serie</th>
+            <td class="mono">{{ laptop.num_serie|default:"TMP-PENDIENTE" }}</td>
+            <th>Estado Operativo</th>
+            <td><span class="badge">{{ laptop.estado_nombre|default:"Sin Estado" }}</span></td>
+        </tr>
+        <tr>
+            <th>Modelo de Laptop</th>
+            <td>{{ laptop.modelo_nombre|default:laptop.modelo_codigo }}</td>
+            <th>Orden de Producción</th>
+            <td>#{{ orden.folio|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <th>Lote de Fabricación</th>
+            <td>{{ orden.lote_codigo|default:"N/A" }}</td>
+            <th>Fecha de Apertura</th>
+            <td>{{ orden.fecha|fecha|default:"—" }}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">2. Responsables de Línea y Calidad</div>
+    <table class="grid-table">
+        <tr>
+            <th>Supervisor Responsable</th>
+            <td>{{ supervisor }}</td>
+        </tr>
+        <tr>
+            <th>Inspector de Calidad </th>
+            <td>{{ inspector }} (Dictamen: {{ ultima_inspeccion.resultado_nombre|default:"Pendiente" }})</td>
+        </tr>
+    </table>
+
+    <div class="section-title">3. Línea y Estaciones Participantes </div>
+    <table class="grid-table">
+        <tr>
+            <th>Línea de Ensamblaje</th>
+            <td>{{ linea.nombre|default:laptop.linea_nombre|default:"Desconocida" }} ({{ linea.codigo|default:"N/A" }})</td>
+        </tr>
+        <tr>
+            <th>Estaciones Recorridas</th>
+            <td>
+                {% for est in estaciones %}
+                    [{{ forloop.counter }}] {{ est.nombre }}{% if not forloop.last %} → {% endif %}
+                {% empty %}
+                    Sin secuencia de estaciones registradas.
+                {% endfor %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-title">4. Componentes Instalados </div>
+    <table class="grid-table">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Modelo</th>
+                <th>Número de Serie de Componente</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in componentes %}
+            <tr>
+                <td>{{ c.tipo_nombre|default:"Genérico" }}</td>
+                <td>{{ c.modelo_nombre|default:c.modelo_codigo }}</td>
+                <td class="mono">{{ c.num_serie|default:"SIN SERIE" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: #777;">No hay registros de componentes montados para esta unidad.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="section-title">5. Bitácora de Fabricación</div>
+    <table class="grid-table">
+        <thead>
+            <tr>
+                <th>Fecha / Hora</th>
+                <th>Evento</th>
+                <th>Detalles / Observaciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in bitacora %}
+            <tr>
+                <td style="width: 130px;">{{ ev.fecha|fecha_hora:ev.hora }}</td>
+                <td><strong>{{ ev.titulo }}</strong></td>
+                <td>{{ ev.detalle }} {% if ev.observaciones %}({{ ev.observaciones }}){% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center; color: #777;">Sin eventos registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="signatures">
+        <tr>
+            <td>
+                <div class="line"></div>
+                <strong>{{ supervisor }}</strong><br>
+                Supervisor de Producción
+            </td>
+            <td>
+                <div class="line"></div>
+                <strong>{{ inspector }}</strong><br>
+                Inspector de Aseguramiento de Calidad
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
