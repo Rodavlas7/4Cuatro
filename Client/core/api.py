@@ -160,3 +160,32 @@ def mensaje_error(respuesta):
         return ' | '.join(f'{c}: {_texto(v)}' for c, v in datos.items())
 
     return f'La API respondió {respuesta.status_code}.'
+
+
+def lista_paginada(respuesta):
+    """Resultados + metadata de un endpoint paginado por DRF.
+
+    Como lista(), nunca truena: si la respuesta no sirve o no tiene la forma
+    esperada, regresa una página vacía en lugar de dejar que la plantilla
+    reciba algo que no puede iterar."""
+    vacio = {"items": [], "count": 0, "has_next": False, "has_previous": False}
+
+    if respuesta is None or respuesta.status_code != 200:
+        return vacio
+
+    try:
+        datos = respuesta.json()
+    except ValueError:
+        return vacio
+
+    if not isinstance(datos, dict):
+        return vacio
+
+    resultados = datos.get("results")
+
+    return {
+        "items": resultados if isinstance(resultados, list) else [],
+        "count": datos.get("count", 0),
+        "has_next": datos.get("next") is not None,
+        "has_previous": datos.get("previous") is not None,
+    }

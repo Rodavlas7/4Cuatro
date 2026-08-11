@@ -370,6 +370,15 @@ class DeleteInspeccionCalidadAPIView(APIView):
         )
         
        
+from rest_framework.pagination import PageNumberPagination
+
+
+class InspeccionPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"  # opcional: permite ?page_size=20 desde el cliente
+    max_page_size = 100
+
+
 class BuscarInspeccionCalidadView(generics.ListAPIView):
 
     permission_classes = [
@@ -379,8 +388,8 @@ class BuscarInspeccionCalidadView(generics.ListAPIView):
     ]
 
     modulo = "calidad"
-
     serializer_class = serializers.ListVistaInspeccionSerializer
+    pagination_class = InspeccionPagination  # 👈 esto activa la paginación
 
     def get_queryset(self):
 
@@ -391,31 +400,26 @@ class BuscarInspeccionCalidadView(generics.ListAPIView):
         fecha_fin = self.request.GET.get("fecha_fin")
 
         if buscar:
-
-            queryset = queryset.filter(
-
-                Q(numero__icontains=buscar) |
+            filtro = (
                 Q(laptop_numero__icontains=buscar) |
+                Q(laptop_num_serie__icontains=buscar) |
                 Q(empleado_nombre__icontains=buscar) |
                 Q(linea_nombre__icontains=buscar) |
                 Q(observaciones__icontains=buscar)
-
             )
 
+            if buscar.isdigit():
+                filtro |= Q(numero=int(buscar))
+            else:
+                filtro |= Q(numero__icontains=buscar)
 
-        # Filtro desde fecha
+            queryset = queryset.filter(filtro)
+
         if fecha_inicio:
-            queryset = queryset.filter(
-                fecha__gte=fecha_inicio
-            )
+            queryset = queryset.filter(fecha__gte=fecha_inicio)
 
-
-        # Filtro hasta fecha
         if fecha_fin:
-            queryset = queryset.filter(
-                fecha__lte=fecha_fin
-            )
-
+            queryset = queryset.filter(fecha__lte=fecha_fin)
 
         return queryset.order_by('-numero')
 
