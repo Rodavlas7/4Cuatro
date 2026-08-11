@@ -222,8 +222,7 @@ class DetailInspeccionCalidadAPIView(APIView):
 
 '''
 
-# Asegúrate de importar el nuevo modelo:
-# from .models import InspeccionCalidad, VistaInspeccionCalidad
+
 
 
 # . . . . . .  . LISTA con la vista
@@ -240,7 +239,7 @@ class ListaInspeccionCalidadAPIView(APIView):
 
     def get(self, request):
 
-        inspecciones = VistaInspeccionCalidad.objects.all()
+        inspecciones = VistaInspeccionCalidad.objects.all().order_by('-numero')
 
         # Usamos el serializer de lista (ligero)
         serializer = serializers.ListVistaInspeccionSerializer(
@@ -418,7 +417,7 @@ class BuscarInspeccionCalidadView(generics.ListAPIView):
             )
 
 
-        return queryset.order_by("-fecha", "-hora")
+        return queryset.order_by('-numero')
 
 #----------------------------------------------------------------------------------------------
 #           D E T A L L E   D E   I N S P E C C I O N     V I E W S
