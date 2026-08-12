@@ -107,3 +107,16 @@ def fecha_hora(valor, hora_valor=None):
 
     partes = [p for p in (fecha(valor), hora(hora_valor)) if p]
     return ' '.join(partes)
+
+
+
+@register.filter
+def rango(total):
+    """Genera un rango de 1 a total, para pintar botones de paginación.
+
+    >>> {% for num in total_pages|rango %}
+    """
+    try:
+        return range(1, int(total) + 1)
+    except (TypeError, ValueError):
+        return range(0)

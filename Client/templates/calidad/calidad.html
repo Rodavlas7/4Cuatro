@@ -298,6 +298,35 @@
                 </tbody>
             </table>
 
+            {% if total_pages > 1 %}
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <span class="text-muted small">
+                Página {{ page_actual }} de {{ total_pages }}
+            </span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item {% if not has_previous %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page_actual|add:'-1' }}&buscar={{ buscar|default:'' }}&fecha_inicio={{ fecha_inicio|default:'' }}&fecha_fin={{ fecha_fin|default:'' }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% for num in total_pages|rango %}
+                        <li class="page-item {% if num == page_actual %}active{% endif %}">
+                            <a class="page-link" href="?page={{ num }}&buscar={{ buscar|default:'' }}&fecha_inicio={{ fecha_inicio|default:'' }}&fecha_fin={{ fecha_fin|default:'' }}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                    <li class="page-item {% if not has_next %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page_actual|add:'1' }}&buscar={{ buscar|default:'' }}&fecha_inicio={{ fecha_inicio|default:'' }}&fecha_fin={{ fecha_fin|default:'' }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
         </div>
 
     </div>

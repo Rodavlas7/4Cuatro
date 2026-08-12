@@ -43,8 +43,9 @@ class ListaInspecciones(generic.View):
         buscar = request.GET.get("buscar", "").strip()
         fecha_inicio = request.GET.get("fecha_inicio", "")
         fecha_fin = request.GET.get("fecha_fin", "")
+        page = request.GET.get("page", "1")
 
-        params = {}
+        params = {"page": page}
 
         if buscar:
             params["buscar"] = buscar
@@ -55,14 +56,16 @@ class ListaInspecciones(generic.View):
         if fecha_fin:
             params["fecha_fin"] = fecha_fin
 
-
         response = api_get(
             API_INSPECCION + "Buscar/",
             headers,
             params=params,
         )
 
-        items = lista(response)
+        # La respuesta ahora viene paginada: {count, next, previous, results}
+        data = response.json() if hasattr(response, "json") else response
+
+        items = data.get("results", [])
         inspecciones_base = [normalizar_listar(i) for i in items]
 
         inspecciones = []
@@ -75,6 +78,10 @@ class ListaInspecciones(generic.View):
                 "observaciones": detalle.get("observaciones"),
             })
 
+        count = data.get("count", 0)
+        page_size = 10  # debe coincidir con InspeccionPagination.page_size
+        total_pages = max(1, -(-count // page_size))
+
         context = {
             "inspecciones": inspecciones,
             "laptops": get_choices_laptops(token),
@@ -83,6 +90,11 @@ class ListaInspecciones(generic.View):
             "buscar": buscar,
             "fecha_inicio": fecha_inicio,
             "fecha_fin": fecha_fin,
+            "page_actual": int(page),
+            "total_pages": total_pages,
+            "has_next": data.get("next") is not None,
+            "has_previous": data.get("previous") is not None,
+            "total_count": count,
         }
         return render(request, self.template_name, context)
 
