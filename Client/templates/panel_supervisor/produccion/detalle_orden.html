@@ -110,7 +110,6 @@
                 <tr>
                     <th>#</th>
                     <th>Num. Serie</th>
-                    <th>Descripción</th>
                     <th>Línea</th>
                     <th>Lote</th>
                     <th>Estado</th>
@@ -122,7 +121,6 @@
                 <tr>
                     <td>{{ l.numero }}</td>
                     <td>{{ l.num_serie|default:"—" }}</td>
-                    <td>{{ l.descripcion|default:"—" }}</td>
                     <td>{{ l.linea_nombre|default:"—" }}</td>
                     <td>{{ l.lote_codigo|default:"—" }}</td>
                     <td>
@@ -143,7 +141,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center text-muted py-4">
+                <tr><td colspan="6" class="text-center text-muted py-4">
                     Esta orden todavía no tiene laptops registradas.
                 </td></tr>
                 {% endfor %}

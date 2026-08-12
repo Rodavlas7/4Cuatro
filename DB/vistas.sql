@@ -183,7 +183,6 @@ CREATE VIEW vista_laptops AS
 SELECT
     lap.numero,
     lap.num_serie,
-    lap.descripcion,
     lap.orden      AS orden_folio,
     lap.modelo     AS modelo_codigo,
     ml.nombre       AS modelo_nombre,

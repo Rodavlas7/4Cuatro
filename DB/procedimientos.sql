@@ -7,8 +7,9 @@
 -- pasar completas. En Python serían un bucle de N viajes a la base sin
 -- atomicidad real; aquí son una sola llamada y una sola transacción.
 --
--- NO son reglas de negocio sueltas: esas viven en DB/triggers.sql. Estos tres
--- son acciones que alguien dispara a propósito desde una pantalla.
+-- NO son reglas de negocio sueltas: esas viven en DB/triggers.sql. Los cuatro
+-- primeros son acciones que alguien dispara a propósito desde una pantalla; el
+-- quinto (sp_Dashboard_Resumen) es la excepción y su propio comentario lo dice.
 --
 -- Cómo se cargan (después de estructura.sql, vistas.sql y triggers.sql):
 --
@@ -34,6 +35,7 @@ USE cuatro;
 DROP PROCEDURE IF EXISTS sp_Liberar_Componentes_Laptop;
 DROP PROCEDURE IF EXISTS sp_Cancelar_Orden_Produccion;
 DROP PROCEDURE IF EXISTS sp_Iniciar_Ensamblaje_Orden;
+DROP PROCEDURE IF EXISTS sp_Recibir_Orden_Material;
 DROP PROCEDURE IF EXISTS sp_Dashboard_Resumen;
 
 DELIMITER $$
@@ -335,9 +337,8 @@ BEGIN
 
         SET consecutivo_serie = consecutivo_serie + 1;
 
-        INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote)
+        INSERT INTO laptop (num_serie, orden, modelo, estado, lote)
         VALUES (CONCAT('TMP-', LPAD(consecutivo_serie, 4, '0')),
-                CONCAT('Alta en lote de la orden #', p_folio),
                 p_folio,
                 modelo_orden,
                 'REGIS',
@@ -355,7 +356,179 @@ END$$
 
 
 -- ============================================================
--- 4. sp_Dashboard_Resumen
+-- 4. sp_Recibir_Orden_Material
+-- ============================================================
+--
+-- Objetivo : Convertir una orden de material en piezas físicas. Por cada
+--            renglón de detalle_material da de alta los componentes que le
+--            faltan y los deja Disponibles en el inventario de la línea.
+--
+-- Parámetros:
+--   p_orden  Número de la orden de material a recibir.
+--   p_lote   Lote de componentes (lote_comp) con el que entran las piezas.
+--            NULL se acepta: entran sin lote.
+--
+-- Por qué existe: detalle_material dice "pedí 50 piezas del modelo X", pero los
+--   componente físicos se capturaban de uno en uno desde el formulario del
+--   supervisor. Cincuenta piezas eran cincuenta altas a mano, cada una su
+--   propia transacción, y a media captura el inventario quedaba a medias.
+--
+-- Recepción parcial: siempre mira cuántas FALTAN por renglón (lo pedido menos
+--   lo que ya se recibió de esa orden y ese modelo), igual que
+--   sp_Iniciar_Ensamblaje_Orden. Así el proveedor puede mandar 30 de 50 hoy y
+--   20 mañana, y correrlo dos veces no duplica nada.
+--
+-- La línea NO se pide: es la de la orden. Y se exige que la tenga, porque el
+--   inventario del supervisor filtra por línea (ver Client, componentesListView)
+--   y una pieza sin línea no aparecería en la pantalla de nadie.
+--
+-- Se inserta con un INSERT ... SELECT sobre un WITH RECURSIVE de números en vez
+--   de un cursor con WHILE anidado: es un solo statement para toda la orden. La
+--   técnica es la que ya usa sp_p2_surtir en DB/datos_pruebas2.sql.
+--
+-- El num_serie sale <orden>-<modelo>-<nnn>, con el consecutivo continuando
+--   después de lo que ya existía de ese renglón. La columna es varchar(18) sin
+--   UNIQUE, así que el formato cabe (4+1+8+1+3) y no se repite entre corridas.
+
+CREATE PROCEDURE sp_Recibir_Orden_Material(
+    IN p_orden INT,
+    IN p_lote  VARCHAR(12)
+)
+BEGIN
+    DECLARE linea_orden        VARCHAR(8);
+    DECLARE orden_existe       INT;
+    DECLARE lote_existe        INT;
+    DECLARE total_renglones    INT DEFAULT 0;
+    DECLARE total_faltantes    INT DEFAULT 0;
+    DECLARE total_previos      INT DEFAULT 0;
+    DECLARE total_creados      INT DEFAULT 0;
+
+    -- Validaciones
+
+    SELECT COUNT(*), MAX(linea)
+      INTO orden_existe, linea_orden
+      FROM orden_material
+     WHERE numero = p_orden;
+
+    IF orden_existe = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden de material no existe';
+    END IF;
+
+    IF linea_orden IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: la orden no tiene línea, las piezas no aparecerían en el inventario de nadie';
+    END IF;
+
+    SELECT COUNT(*) INTO total_renglones
+      FROM detalle_material
+     WHERE orden = p_orden;
+
+    IF total_renglones = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden no tiene renglones que recibir';
+    END IF;
+
+    -- El lote es opcional, pero si viene tiene que existir. Se valida aquí para
+    -- dar el motivo en español en lugar del error de llave foránea de MySQL.
+    IF p_lote IS NOT NULL THEN
+
+        SELECT COUNT(*) INTO lote_existe FROM lote_comp WHERE codigo = p_lote;
+
+        IF lote_existe = 0 THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: ese lote de componentes no existe';
+        END IF;
+
+    END IF;
+
+    -- Qué falta por recibir
+    --
+    -- Se calcula una vez aquí para poder cortar con un mensaje claro cuando ya
+    -- no falta nada, y otra vez dentro del INSERT de abajo. Recibido = las
+    -- piezas que ya existen de esa orden y ese modelo, sin importar en qué
+    -- estado estén: una pieza que llegó y salió dañada ya se recibió, y las
+    -- bajas del sistema son a Mermado (EDC004), no borrados.
+
+    SELECT IFNULL(SUM(GREATEST(IFNULL(dm.cantidad, 0) - IFNULL(recibido.piezas, 0), 0)), 0),
+           IFNULL(SUM(IFNULL(recibido.piezas, 0)), 0)
+      INTO total_faltantes, total_previos
+      FROM detalle_material dm
+      LEFT JOIN (SELECT modelo, COUNT(*) AS piezas
+                   FROM componente
+                  WHERE orden_material = p_orden
+                  GROUP BY modelo) AS recibido
+             ON recibido.modelo = dm.modelo
+     WHERE dm.orden = p_orden;
+
+    IF total_faltantes = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden de material ya se recibió completa';
+    END IF;
+
+    -- Alta de las piezas
+    --
+    -- La CTE de números llega hasta el renglón más grande que falte y el JOIN
+    -- recorta por renglón con n.i <= por_recibir, así una sola CTE sirve para
+    -- todos.
+    --
+    -- El consecutivo de la serie sale del MÁXIMO que ya exista de ese renglón,
+    -- no del conteo: si a una orden ya recibida le borraron piezas de en medio,
+    -- contar daría números que ya están usados. Las series que no traen el
+    -- formato <orden>-<modelo>-<nnn> (las de los datos de prueba, por ejemplo)
+    -- caen en 0 al castear, así que no estorban.
+
+    INSERT INTO componente (num_serie, descripcion, linea, orden_material,
+                            modelo, lote, estado, registro_ensamblaje)
+    WITH RECURSIVE n(i) AS (
+        SELECT 1
+        UNION ALL
+        SELECT i + 1 FROM n WHERE i < total_faltantes
+    ),
+    faltan AS (
+        SELECT dm.modelo                                        AS modelo,
+               IFNULL(recibido.consecutivo, 0)                  AS desde,
+               GREATEST(IFNULL(dm.cantidad, 0)
+                        - IFNULL(recibido.piezas, 0), 0)        AS por_recibir
+          FROM detalle_material dm
+          LEFT JOIN (SELECT modelo,
+                            COUNT(*) AS piezas,
+                            MAX(CAST(SUBSTRING_INDEX(num_serie, '-', -1) AS UNSIGNED))
+                                     AS consecutivo
+                       FROM componente
+                      WHERE orden_material = p_orden
+                      GROUP BY modelo) AS recibido
+                 ON recibido.modelo = dm.modelo
+         WHERE dm.orden = p_orden
+    )
+    SELECT CONCAT(p_orden, '-', f.modelo, '-',
+                  LPAD(f.desde + n.i, 3, '0')),
+           mc.nombre,
+           linea_orden,
+           p_orden,
+           f.modelo,
+           p_lote,
+           'EDC001',
+           NULL
+      FROM faltan f
+      JOIN n  ON n.i <= f.por_recibir
+      JOIN modelo_componente mc ON mc.codigo = f.modelo
+     ORDER BY f.modelo, n.i;
+
+    SET total_creados = ROW_COUNT();
+
+    SELECT p_orden         AS orden,
+           linea_orden     AS linea,
+           p_lote          AS lote,
+           total_renglones AS renglones,
+           total_creados   AS componentes_creados,
+           total_previos   AS componentes_previos;
+END$$
+
+
+
+-- ============================================================
+-- 5. sp_Dashboard_Resumen
 -- ============================================================
 --
 -- Objetivo : Devolver en un solo renglón los números del dashboard de
@@ -365,7 +538,7 @@ END$$
 --   p_desde  Primer día del rango. NULL = desde que existe la planta.
 --   p_hasta  Último día del rango. NULL = hasta hoy.
 --
--- ADVERTENCIA — éste no es como los otros tres
+-- ADVERTENCIA — éste no es como los otros cuatro
 -- --------------------------------------------
 -- Los de arriba existen porque tocan muchas filas de varias tablas y tienen
 -- que pasar o no pasar completas. Éste no escribe nada: solamente lee. No hay

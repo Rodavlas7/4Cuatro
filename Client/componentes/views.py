@@ -521,12 +521,16 @@ def ordenDetalleView(request, numero):
     linea = _por_codigo(lista(get(f"{API}/lineas/", headers))).get(orden.get("linea")) or {}
     orden["linea_nombre"] = linea.get("nombre")
 
+    # Los lotes son para el modal de recibir: con cuál entran las piezas.
+    lotes = lista(get(f"{API}/componentes/lotes/", headers))
+
     return render(
         request,
         "componentes/orden_detalle.html",
         {
             "orden": orden,
             "modelos": modelos,
+            "lotes": lotes,
         }
     )
 
@@ -543,6 +547,46 @@ def renglonEliminarView(request, numero, modelo):
 
         if respuesta.status_code == 204:
             messages.success(request, "Renglón eliminado correctamente.")
+        else:
+            messages.error(request, mensaje_error(respuesta))
+
+    return redirect('orden-detalle', numero=numero)
+
+
+def ordenRecibirView(request, numero):
+    """Convierte los renglones de la orden en piezas físicas de inventario.
+
+    Antes esto era capturar componente por componente desde la pantalla de
+    materiales: cincuenta piezas eran cincuenta altas a mano, cada una su propia
+    transacción. Ahora lo resuelve sp_Recibir_Orden_Material, que da de alta lo
+    que falte de cada renglón en una sola transacción.
+
+    Se puede volver a llamar: el procedimiento siempre mira cuántas faltan, así
+    que sirve para cuando el proveedor manda incompleto y luego completa.
+
+    La línea no se manda: el procedimiento usa la de la orden."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+        respuesta = requests.post(
+            f"{API}/componentes/ordenes/{numero}/recibir/",
+            json={"lote": request.POST.get("lote") or None},
+            headers=headers,
+        )
+
+        if respuesta.status_code == 200:
+            resumen = respuesta.json()
+            messages.success(
+                request,
+                f"Se recibieron {resumen.get('componentes_creados', 0)} pieza(s) "
+                f"de la orden #{numero}, disponibles en {resumen.get('linea')}"
+                + (f". Ya se habían recibido {resumen['componentes_previos']} antes."
+                   if resumen.get('componentes_previos') else ".")
+            )
         else:
             messages.error(request, mensaje_error(respuesta))
 

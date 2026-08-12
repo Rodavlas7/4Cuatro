@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from api.errores import ErroresDeBaseMixin
+from api.views import AccionDeProcedimientoAPIView
 from .models import *
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
@@ -12,7 +13,7 @@ from usuarios.permissions import TienePermisoModulo
 │   - EdoComponente (catálogo, solo lectura)
 │   - LoteComp (catálogo: crear / modificar / eliminar)
 │   - ModeloComponente (catálogo: crear / modificar / eliminar)
-│   - OrdenMaterial + DetalleMaterial (crear / modificar / eliminar)
+│   - OrdenMaterial + DetalleMaterial (crear / modificar / eliminar / recibir)
 │   - VistaComponente (consulta general, lee de la vista SQL vista_componentes)
 │   - Componente (crear / modificar / eliminar=marcar como Mermado)
 '''
@@ -237,8 +238,35 @@ class DetalleMaterialModifyAPIView(ErroresDeBaseMixin, generics.RetrieveUpdateDe
         )
         self.check_object_permissions(self.request, obj)
         return obj
- 
- 
+
+
+# ==================================================
+# A C C I O N E S   ( P R O C E D I M I E N T O S )
+# ==================================================
+#
+# Recibir una orden de material no es CRUD sobre una tabla: son N altas de
+# componente derivadas de sus renglones, y tienen que pasar o no pasar
+# completas. Lo resuelve la base con un procedimiento (DB/procedimientos.sql) y
+# aquí sólo se dispara la llamada. La clase base vive en api/views.py.
+
+
+class RecibirOrdenMaterialAPIView(AccionDeProcedimientoAPIView):
+    """Da de alta las piezas que le faltan a la orden de material.
+
+    Por cada renglón crea los componentes que falten para llegar a la cantidad
+    pedida y los deja Disponibles en la línea de la orden. Admite recepción
+    parcial: se puede llamar otra vez cuando el proveedor complete.
+
+    'lote' es el lote de componentes (lote_comp) con el que entran las piezas;
+    si no viene, entran sin lote."""
+
+    modulo = "orden_material"
+    procedimiento = "sp_Recibir_Orden_Material"
+
+    def argumentos(self, request, numero=None):
+        return (numero, request.data.get('lote') or None)
+
+
 # Vistas de COMPONENTE
  
 class ComponenteListAPIView(ErroresDeBaseMixin, generics.ListCreateAPIView):

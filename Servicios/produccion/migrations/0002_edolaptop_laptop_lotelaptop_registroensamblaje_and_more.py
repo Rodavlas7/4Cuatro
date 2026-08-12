@@ -26,7 +26,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('numero', models.AutoField(primary_key=True, serialize=False)),
                 ('num_serie', models.CharField(max_length=50)),
-                ('descripcion', models.CharField(blank=True, max_length=256, null=True)),
             ],
             options={
                 'db_table': 'laptop',
@@ -63,7 +62,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('numero', models.IntegerField(primary_key=True, serialize=False)),
                 ('num_serie', models.CharField(blank=True, max_length=50, null=True)),
-                ('descripcion', models.CharField(blank=True, max_length=256, null=True)),
                 ('orden_folio', models.IntegerField(blank=True, null=True)),
                 ('modelo_codigo', models.CharField(blank=True, max_length=8, null=True)),
                 ('modelo_nombre', models.CharField(blank=True, max_length=32, null=True)),

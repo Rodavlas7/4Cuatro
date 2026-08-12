@@ -20,7 +20,12 @@
                 <h4 class="fw-bold text-dark mb-1">Orden de Material #{{ orden.numero }}</h4>
                 <p class="text-muted small mb-0">Material solicitado para surtir tu línea.</p>
             </div>
-            <div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-white border shadow-sm px-3 d-flex align-items-center gap-2"
+                        data-bs-toggle="modal" data-bs-target="#modalRecibir"
+                        {% if not orden.detalles %}disabled title="Primero agrega renglones"{% endif %}>
+                    <i class="bi bi-box-arrow-in-down"></i> Recibir material
+                </button>
                 <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
                     <i class="bi bi-plus-lg"></i> Agregar renglón
                 </button>
@@ -146,6 +151,63 @@
                 <div class="modal-footer border-top-0 bg-light">
                     <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-accent shadow-sm">Guardar renglón</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODAL: RECIBIR MATERIAL
+     ========================================== -->
+<div class="modal fade" id="modalRecibir" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'panel_supervisor:orden-recibir' orden.numero %}" class="w-100">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Recibir material</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <p class="text-muted small">
+                        Da de alta las piezas de cada renglón y las deja disponibles en tu
+                        línea. Se van a crear las que <strong>falten</strong> para llegar a la
+                        cantidad pedida:
+                    </p>
+
+                    <ul class="list-unstyled small mb-3">
+                        {% for d in orden.detalles %}
+                        <li class="d-flex justify-content-between border-bottom py-1">
+                            <span class="text-dark">{{ d.modelo_nombre|default:d.modelo }}</span>
+                            <span class="text-secondary font-monospace">{{ d.cantidad|default:"0" }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Lote de componentes</label>
+                        <select name="lote" class="form-select">
+                            <option value="">— Sin lote —</option>
+                            {% for l in lotes %}
+                            <option value="{{ l.codigo }}">{{ l.codigo }}{% if l.descripcion %} — {{ l.descripcion }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start">
+                        <i class="bi bi-info-circle-fill text-primary mt-1"></i>
+                        <div>
+                            Si el proveedor manda incompleto, recibe lo que llegó y vuelve a
+                            darle a este botón cuando complete: sólo se crean las que falten,
+                            no se duplica nada.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Recibir</button>
                 </div>
             </div>
         </form>

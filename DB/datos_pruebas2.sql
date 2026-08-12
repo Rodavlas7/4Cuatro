@@ -328,10 +328,10 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 ('2026-08-01', '07:00:00', 'ML001', 3, 0, 'PEND', 'LOT2026A');
 SET @ordA := LAST_INSERT_ID();
 
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-P2-A1', 'Orden A - terminada', @ordA, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-A2', 'Orden A - terminada', @ordA, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-A3', 'Orden A - terminada', @ordA, 'ML001', 'REGIS', 'LOT2026A');
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-P2-A1', @ordA, 'ML001', 'REGIS', 'LOT2026A'),   -- terminada
+('TMP-P2-A2', @ordA, 'ML001', 'REGIS', 'LOT2026A'),   -- terminada
+('TMP-P2-A3', @ordA, 'ML001', 'REGIS', 'LOT2026A');   -- terminada
 
 SET @l := (SELECT numero FROM laptop WHERE num_serie = 'TMP-P2-A1');
 CALL sp_p2_terminar(@l); CALL sp_p2_embalar(@l, 'TE001');
@@ -348,12 +348,12 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 ('2026-08-02', '07:00:00', 'ML001', 5, 0, 'PEND', 'LOT2026A');
 SET @ordB := LAST_INSERT_ID();
 
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-P2-B1', 'Orden B - terminada',        @ordB, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-B2', 'Orden B - terminada',        @ordB, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-B3', 'Orden B - terminada',        @ordB, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-B4', 'Orden B - terminada',        @ordB, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-B5', 'Orden B - en ensamblaje (C)',@ordB, 'ML001', 'REGIS', 'LOT2026A');
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-P2-B1', @ordB, 'ML001', 'REGIS', 'LOT2026A'),   -- terminada
+('TMP-P2-B2', @ordB, 'ML001', 'REGIS', 'LOT2026A'),   -- terminada
+('TMP-P2-B3', @ordB, 'ML001', 'REGIS', 'LOT2026A'),   -- terminada
+('TMP-P2-B4', @ordB, 'ML001', 'REGIS', 'LOT2026A'),   -- terminada
+('TMP-P2-B5', @ordB, 'ML001', 'REGIS', 'LOT2026A');   -- en ensamblaje (C)
 
 SET @l := (SELECT numero FROM laptop WHERE num_serie = 'TMP-P2-B1');
 CALL sp_p2_terminar(@l); CALL sp_p2_embalar(@l, 'TE001');
@@ -374,13 +374,13 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 ('2026-08-03', '07:00:00', 'ML001', 6, 0, 'PEND', 'LOT2026B');
 SET @ordC := LAST_INSERT_ID();
 
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-P2-C1', 'Orden C - parada en A', @ordC, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-C2', 'Orden C - parada en B', @ordC, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-C3', 'Orden C - parada en C', @ordC, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-C4', 'Orden C - parada en D', @ordC, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-C5', 'Orden C - rechazada',   @ordC, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-C6', 'Orden C - terminada',   @ordC, 'ML001', 'REGIS', 'LOT2026B');
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-P2-C1', @ordC, 'ML001', 'REGIS', 'LOT2026B'),   -- parada en A
+('TMP-P2-C2', @ordC, 'ML001', 'REGIS', 'LOT2026B'),   -- parada en B
+('TMP-P2-C3', @ordC, 'ML001', 'REGIS', 'LOT2026B'),   -- parada en C
+('TMP-P2-C4', @ordC, 'ML001', 'REGIS', 'LOT2026B'),   -- parada en D
+('TMP-P2-C5', @ordC, 'ML001', 'REGIS', 'LOT2026B'),   -- rechazada
+('TMP-P2-C6', @ordC, 'ML001', 'REGIS', 'LOT2026B');   -- terminada
 
 SET @l := (SELECT numero FROM laptop WHERE num_serie = 'TMP-P2-C1');
 CALL sp_p2_avanzar_hasta(@l, 'LIN001');
@@ -404,11 +404,11 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 ('2026-08-03', '14:00:00', 'ML001', 4, 0, 'PEND', 'LOT2026B');
 SET @ordD := LAST_INSERT_ID();
 
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-P2-D1', 'Orden D - terminada',       @ordD, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-D2', 'Orden D - terminada',       @ordD, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-D3', 'Orden D - rechazada en D',  @ordD, 'ML001', 'REGIS', 'LOT2026B'),
-('TMP-P2-D4', 'Orden D - parada en B',     @ordD, 'ML001', 'REGIS', 'LOT2026B');
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-P2-D1', @ordD, 'ML001', 'REGIS', 'LOT2026B'),   -- terminada
+('TMP-P2-D2', @ordD, 'ML001', 'REGIS', 'LOT2026B'),   -- terminada
+('TMP-P2-D3', @ordD, 'ML001', 'REGIS', 'LOT2026B'),   -- rechazada en D
+('TMP-P2-D4', @ordD, 'ML001', 'REGIS', 'LOT2026B');   -- parada en B
 
 SET @l := (SELECT numero FROM laptop WHERE num_serie = 'TMP-P2-D1');
 CALL sp_p2_terminar(@l); CALL sp_p2_embalar(@l, 'TE001');
@@ -428,8 +428,8 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 ('2026-08-04', '07:30:00', 'ML001', 3, 0, 'PEND', 'LOT2026B');
 SET @ordE := LAST_INSERT_ID();
 
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-P2-E1', 'Orden E - de orden cancelada', @ordE, 'ML001', 'REGIS', 'LOT2026B');
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-P2-E1', @ordE, 'ML001', 'REGIS', 'LOT2026B');   -- de orden cancelada
 
 UPDATE orden_produccion SET estado = 'CANC' WHERE folio = @ordE;
 
@@ -447,11 +447,11 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 ('2026-08-05', '09:00:00', 'ML001', 4, 0, 'PEND', 'LOT2026A');
 SET @ordG := LAST_INSERT_ID();
 
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-P2-G1', 'Orden G - aprobada, por embalar', @ordG, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-G2', 'Orden G - aprobada, por embalar', @ordG, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-G3', 'Orden G - aprobada, por embalar', @ordG, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-G4', 'Orden G - parada en D',           @ordG, 'ML001', 'REGIS', 'LOT2026A');
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-P2-G1', @ordG, 'ML001', 'REGIS', 'LOT2026A'),   -- aprobada, por embalar
+('TMP-P2-G2', @ordG, 'ML001', 'REGIS', 'LOT2026A'),   -- aprobada, por embalar
+('TMP-P2-G3', @ordG, 'ML001', 'REGIS', 'LOT2026A'),   -- aprobada, por embalar
+('TMP-P2-G4', @ordG, 'ML001', 'REGIS', 'LOT2026A');   -- parada en D
 
 SET @l := (SELECT numero FROM laptop WHERE num_serie = 'TMP-P2-G1'); CALL sp_p2_terminar(@l);
 SET @l := (SELECT numero FROM laptop WHERE num_serie = 'TMP-P2-G2'); CALL sp_p2_terminar(@l);
@@ -466,9 +466,9 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 ('2026-08-06', '08:00:00', 'ML001', 2, 0, 'PEND', 'LOT2026A');
 SET @ordH := LAST_INSERT_ID();
 
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-P2-H1', 'Orden H - terminada', @ordH, 'ML001', 'REGIS', 'LOT2026A'),
-('TMP-P2-H2', 'Orden H - terminada', @ordH, 'ML001', 'REGIS', 'LOT2026A');
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-P2-H1', @ordH, 'ML001', 'REGIS', 'LOT2026A'),   -- terminada
+('TMP-P2-H2', @ordH, 'ML001', 'REGIS', 'LOT2026A');   -- terminada
 
 SET @l := (SELECT numero FROM laptop WHERE num_serie = 'TMP-P2-H1');
 CALL sp_p2_terminar(@l); CALL sp_p2_embalar(@l, 'TE004');

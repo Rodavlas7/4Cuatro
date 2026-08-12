@@ -114,7 +114,6 @@
             <tr>
                 <th>#</th>
                 <th>Num. Serie</th>
-                <th>Descripción</th>
                 <th>Modelo</th>
                 <th>Orden</th>
                 <th>Línea</th>
@@ -130,7 +129,6 @@
                 <td>
                     <span class="font-monospace small">{{ l.num_serie|default:"—" }}</span>
                 </td>
-                <td>{{ l.descripcion|default:"—" }}</td>
                 <td>{{ l.modelo_nombre|default:"—" }}</td>
                 <td>
                     {% if l.orden_folio %}
@@ -171,7 +169,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="9" class="text-center text-muted py-4">
+            <tr><td colspan="8" class="text-center text-muted py-4">
                 {% if hay_filtros %}
                     Ninguna laptop coincide con los filtros.
                 {% else %}
@@ -244,11 +242,6 @@
                                 Provisional. Calidad la reemplaza por la definitiva
                                 (TP-AAAAMMDD-…) al aprobar la laptop.
                             </div>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label">Descripción</label>
-                            <input type="text" name="descripcion" class="form-control" maxlength="256">
                         </div>
 
                     </div>

@@ -271,7 +271,6 @@ class OrdenProduccion(models.Model):
 # 19
 class Laptop(models.Model):
     numero = models.AutoField(primary_key=True)
-    descripcion = models.CharField(max_length=256)
 
     orden = models.ForeignKey(
         OrdenProduccion,

@@ -1347,7 +1347,6 @@ def laptopsListView(request):
         payload = {
             "num_serie": (request.POST.get("num_serie") or "").strip()
                          or _serie_temporal_sugerida(laptops_actuales),
-            "descripcion": request.POST.get("descripcion") or None,
             "orden": orden,
             "estado": EDO_LAPTOP_REGISTRADA,
         }
@@ -1477,7 +1476,6 @@ def laptopEditarView(request, numero):
         #   linea         — la laptop no la guarda: sale de su registro de
         #                   ensamblaje, que se edita en su propia pantalla.
         payload = {
-            "descripcion": request.POST.get("descripcion") or None,
             "orden": request.POST.get("orden") or None,
             "estado": request.POST.get("estado") or None,
         }

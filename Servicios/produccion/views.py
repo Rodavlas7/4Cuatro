@@ -1,9 +1,7 @@
-from django.db import DatabaseError
 from django.utils import timezone
 from rest_framework import generics
-from rest_framework.views import APIView
-from api import procedimientos
-from api.errores import ErroresDeBaseMixin, mensaje_de_base
+from api.errores import ErroresDeBaseMixin
+from api.views import AccionDeProcedimientoAPIView
 from .models import *
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
@@ -355,33 +353,8 @@ class BuscarParoAPIView(generics.ListAPIView):
 # tienen que pasar o no pasar completas, así que las resuelve la base con un
 # procedimiento (DB/procedimientos.sql) y aquí sólo se dispara la llamada.
 #
-# Por eso son APIView y no generics: no hay queryset ni serializer que valga.
-# El manejo de errores tampoco puede ser ErroresDeBaseMixin —ese envuelve los
-# perform_* de las vistas genéricas—, así que se atrapa el DatabaseError a mano
-# y se traduce con el mismo api.errores.
-
-
-class AccionDeProcedimientoAPIView(APIView):
-    """Base de las tres: llama al procedimiento y devuelve su resumen.
-
-    Las subclases ponen el nombre del procedimiento, el módulo del permiso y
-    de dónde salen los argumentos."""
-
-    permission_classes = [IsAuthenticated, TienePermisoModulo]
-
-    procedimiento = None
-
-    def argumentos(self, request, **kwargs):
-        raise NotImplementedError
-
-    def post(self, request, **kwargs):
-        try:
-            resumen = procedimientos.llamar(self.procedimiento, *self.argumentos(request, **kwargs))
-        except DatabaseError as error:
-            return Response({'mensaje': mensaje_de_base(error)},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(resumen, status=status.HTTP_200_OK)
+# La clase base vive en api/views.py: la comparten todos los módulos de la API
+# (componentes también la usa, para sp_Recibir_Orden_Material).
 
 
 class CancelarOrdenProduccionAPIView(AccionDeProcedimientoAPIView):

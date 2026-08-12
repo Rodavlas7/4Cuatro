@@ -23,4 +23,5 @@ urlpatterns = [
     path('ordenes/eliminar/<int:numero>/', views.ordenEliminarView, name='orden-eliminar'),
     path('ordenes/<int:numero>/', views.ordenDetalleView, name='orden-detalle'),
     path('ordenes/<int:numero>/renglon/eliminar/<str:modelo>/', views.renglonEliminarView, name='renglon-eliminar'),
+    path('ordenes/<int:numero>/recibir/', views.ordenRecibirView, name='orden-recibir'),
 ]

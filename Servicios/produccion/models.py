@@ -93,7 +93,6 @@ class Paro(models.Model):
 class Laptop(models.Model):
     numero = models.AutoField(primary_key=True)
     num_serie = models.CharField(max_length=50)
-    descripcion = models.CharField(max_length=256, blank=True, null=True)
     orden = models.ForeignKey(OrdenProduccion, models.DO_NOTHING, db_column='orden', blank=True, null=True)
     modelo = models.ForeignKey(ModeloLaptop, models.DO_NOTHING, db_column='modelo', blank=True, null=True)
     estado = models.ForeignKey(EdoLaptop, models.DO_NOTHING, db_column='estado', blank=True, null=True)
@@ -164,7 +163,6 @@ class VistaParo(models.Model):
 class VistaLaptop(models.Model):
     numero = models.IntegerField(primary_key=True)
     num_serie = models.CharField(max_length=50, blank=True, null=True)
-    descripcion = models.CharField(max_length=256, blank=True, null=True)
     orden_folio = models.IntegerField(blank=True, null=True)
     modelo_codigo = models.CharField(max_length=8, blank=True, null=True)
     modelo_nombre = models.CharField(max_length=32, blank=True, null=True)

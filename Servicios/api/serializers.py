@@ -367,7 +367,7 @@ class LaptopListSerializer(serializers.ModelSerializer):
     estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'modelo', 'estado', 'lote']
+        fields = ['numero', 'modelo', 'estado', 'lote']
 
 
 class LaptopDetailSerializer(serializers.ModelSerializer):
@@ -377,13 +377,13 @@ class LaptopDetailSerializer(serializers.ModelSerializer):
     estado = serializers.CharField(source='estado.nombre', read_only=True)
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'orden', 'modelo', 'estado', 'lote']
+        fields = ['numero', 'orden', 'modelo', 'estado', 'lote']
 
 
 class LaptopCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Laptop
-        fields = ['numero', 'descripcion', 'orden', 'modelo', 'lote']
+        fields = ['numero', 'orden', 'modelo', 'lote']
 
 
 # ============================================================================

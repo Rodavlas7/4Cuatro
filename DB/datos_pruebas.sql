@@ -74,17 +74,17 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 --
 --  num_serie es UNIQUE, por eso cada una es distinta.
 -- ============================================================
-INSERT INTO laptop (num_serie, descripcion, orden, modelo, estado, lote) VALUES
-('TMP-0001', 'Unidad 1 - recién registrada',          1, 'ML001', 'REGIS',  'LOT2026A'),  -- numero 1
-('TMP-0002', 'Unidad 2 - en ensamblaje (completa)',   1, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 2
-('TMP-0003', 'Unidad 3 - en ensamblaje (parcial)',    1, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 3
-('TP-20260721-000004', 'Unidad 4 - será aprobada',    2, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 4
-('TMP-0005', 'Unidad 5 - será rechazada',             2, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 5
-('TMP-0006', 'Unidad 6 - en ensamblaje',              2, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 6
+INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
+('TMP-0001',           1, 'ML001', 'REGIS',  'LOT2026A'),  -- numero 1: recién registrada
+('TMP-0002',           1, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 2: en ensamblaje (completa)
+('TMP-0003',           1, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 3: en ensamblaje (parcial)
+('TP-20260721-000004', 2, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 4: será aprobada
+('TMP-0005',           2, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 5: será rechazada
+('TMP-0006',           2, 'ML001', 'PENSAM', 'LOT2026A'),  -- numero 6: en ensamblaje
 -- Las de las órdenes 3 y 4 llevan LOT2026B, que es el lote de esas órdenes:
 -- el lote de una laptop siempre tiene que coincidir con el de su orden.
-('TP-20260721-000007', 'Unidad 7 - será embalada',    3, 'ML001', 'PENSAM', 'LOT2026B'),  -- numero 7
-('TMP-0008', 'Unidad 8 - de orden cancelada',         4, 'ML001', 'REGIS',  'LOT2026B');  -- numero 8
+('TP-20260721-000007', 3, 'ML001', 'PENSAM', 'LOT2026B'),  -- numero 7: será embalada
+('TMP-0008',           4, 'ML001', 'REGIS',  'LOT2026B');  -- numero 8: de orden cancelada
 
 
 -- ============================================================

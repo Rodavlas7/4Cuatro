@@ -27,6 +27,7 @@ urlpatterns = [
     path("ordenes/", OrdenMaterialListCreateAPIView.as_view(), name="orden-material-list-create"),
     path("ordenes/mod/<int:numero>/", OrdenMaterialModifyAPIView.as_view(), name="orden-material-modify"),
     path("ordenes/<int:numero>/", OrdenMaterialDetailAPIView.as_view(), name="orden-material-detail"),
+    path("ordenes/<int:numero>/recibir/", RecibirOrdenMaterialAPIView.as_view(), name="orden-material-recibir"),
  
     # Detalle de material (renglones de una orden)
     path("detalles/", DetalleMaterialListCreateAPIView.as_view(), name="detalle-material-list-create"),

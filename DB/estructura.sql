@@ -135,7 +135,6 @@ DROP TABLE IF EXISTS laptop;
 CREATE TABLE laptop (
   numero int NOT NULL AUTO_INCREMENT,
   num_serie VARCHAR(50) NOT NULL,
-  descripcion varchar(256) DEFAULT NULL,
   orden int DEFAULT NULL,
   modelo varchar(8) DEFAULT NULL,
   estado varchar(8) DEFAULT NULL,
