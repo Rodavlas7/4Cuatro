@@ -26,8 +26,7 @@
             
             <!-- Info principal -->
             <div>
-                <span class="emp-eyebrow"><span class="dot"></span> Producción</span>
-                <h2 class="fw-bold text-dark mb-2">Orden #{{ orden.folio }}</h2>
+                <h2 class="fw-bold text-dark mb-2">Orden: {{ orden.folio }}</h2>
                 <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
                     <span class="d-flex align-items-center gap-1">
                         <i class="bi bi-laptop text-secondary"></i>
@@ -51,7 +50,7 @@
                     {% elif orden.estado_codigo == 'PROC' %}bg-primary-subtle text-primary border border-primary-subtle
                     {% elif orden.estado_codigo == 'CANC' %}bg-secondary-subtle text-secondary border border-secondary-subtle
                     {% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
-                    {% if orden.estado_codigo == 'COMP' %}<i class="bi bi-check-circle-fill me-1 small"></i>{% endif %}
+                    {% if orden.estado_codigo == 'COMP' %}{% endif %}
                     {{ orden.estado_nombre|default:"—" }}
                 </span>
 
@@ -76,7 +75,7 @@
         <div class="px-4 py-3 bg-light border-top">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <strong class="text-dark small">Avance general de registro</strong>
-                <span class="text-primary small fw-bold">{{ porcentaje }}% <span class="text-muted fw-normal ms-1">({{ registradas }} de {{ planificadas }} laptops)</span></span>
+                <span class="text-primary small fw-bold">{{ porcentaje }}% <span class="text-muted fw-normal ms-1">({{ registradas }} de {{ planificadas }} unidades)</span></span>
             </div>
             <div class="progress" style="height: 8px;" role="progressbar" aria-valuenow="{{ porcentaje }}" aria-valuemin="0" aria-valuemax="100">
                 <div class="progress-bar progress-bar-striped progress-bar-animated {% if orden.estado_codigo == 'CANC' %}bg-secondary{% else %}bg-primary{% endif %}" 
@@ -92,7 +91,7 @@
         
         <!-- Planificadas -->
         <div class="col-sm-6 col-xl-3">
-            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-secondary">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-clipboard-data"></i>
                 </div>
@@ -105,7 +104,7 @@
 
         <!-- Registradas -->
         <div class="col-sm-6 col-xl-3">
-            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-info">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-upc-scan"></i>
                 </div>
@@ -118,12 +117,12 @@
 
         <!-- Ensamblajes -->
         <div class="col-sm-6 col-xl-3">
-            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-primary">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-tools"></i>
                 </div>
                 <div class="w-100">
-                    <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Ensamblajes Terminados</div>
+                    <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Ensamblajes Finalizados</div>
                     <div class="d-flex align-items-baseline gap-2 mt-1">
                         <span class="fs-4 fw-bold text-dark lh-1">{{ terminados }}</span>
                         {% if en_proceso %}
@@ -136,14 +135,14 @@
 
         <!-- Embaladas -->
         <div class="col-sm-6 col-xl-3">
-            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-start border-4 border-success">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-box-seam"></i>
                 </div>
                 <div>
                     <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Embaladas</div>
                     <div class="fs-4 fw-bold text-dark lh-1 mt-1">{{ embaladas }}</div>
-                    <div class="text-muted mt-1" style="font-size: 10px;">Producidas total: {{ orden.cant_producida|default_if_none:"0" }}</div>
+                    
                 </div>
             </div>
         </div>
@@ -155,35 +154,34 @@
          ========================================== -->
     <div class="emp-card overflow-hidden mb-3">
         <div class="emp-header bg-white py-3">
-            <h6 class="fw-bold text-dark mb-0">Detalle de Laptops</h6>
+            <h6 class="fw-bold text-dark mb-0">Laptops de la Orden</h6>
         </div>
 
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 w-100">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold"># ID</th>
+                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Num.</th>
                         <th class="py-3 text-uppercase text-muted small fw-bold">Num. Serie</th>
                         <th class="py-3 text-uppercase text-muted small fw-bold">Descripción</th>
                         <th class="py-3 text-uppercase text-muted small fw-bold">Línea y Lote</th>
                         <th class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
-                        <th class="pe-4 py-3 text-uppercase text-muted small fw-bold">Avance (Ensamblaje)</th>
+                        <th class="pe-4 py-3 text-uppercase text-muted small fw-bold">Ver Detalles</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for l in laptops %}
                     <tr>
-                        <td class="ps-4 text-muted small fw-medium">{{ l.numero }}</td>
+                        <td class="ps-4 text-muted small fw-medium"><span class="badge-id text-primary">{{ l.numero }}</span></td>
                         <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-qr-code text-secondary fs-5"></i>
-                                <span class="fw-bold text-dark font-monospace">{{ l.num_serie|default:"—" }}</span>
+                            <div class="text-dark small fw-medium">
+                                {{ l.num_serie|default:"—" }}
                             </div>
                         </td>
                         <td class="text-secondary small">{{ l.descripcion|default:"—" }}</td>
                         <td>
                             <div class="text-dark small fw-medium">{{ l.linea_nombre|default:"—" }}</div>
-                            <div class="text-secondary small" style="font-size: 11px;"><i class="bi bi-box me-1"></i>Lote: {{ l.lote_codigo|default:"—" }}</div>
+                            <div class="text-secondary small" style="font-size: 11px;">LOTE:  {{ l.lote_codigo|default:"—" }}</div>
                         </td>
                         <td class="text-center">
                             <span class="badge rounded-pill px-2 py-1 fw-semibold
@@ -195,12 +193,12 @@
                                 <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ l.estado_nombre|default:"—" }}
                             </span>
                         </td>
-                        <td class="pe-4">
-                            <div class="d-flex flex-column justify-content-center">
-                                <span class="badge {{ l.avance.clase }} align-self-start">{{ l.avance.texto }}</span>
-                                {% if l.avance.detalle %}
-                                    <span class="text-muted mt-1" style="font-size: 11px;">{{ l.avance.detalle }}</span>
-                                {% endif %}
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <!-- ABRIR DETALLE -->
+                                <a href="{% url 'laptop-detalle' l.numero %}" class="btn text-primary" title="Ver Detalles">
+                                    <i class="bi bi-list-ul"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>

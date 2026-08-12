@@ -124,7 +124,7 @@
                 <thead class="table-light">
                     <tr>
                         <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Num.</th>
-                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Identificación</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Num. Serie</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo y Orden</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Ubicación (Línea/Lote)</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Estado</th>
@@ -144,9 +144,6 @@
                                 
                                 <div>
                                     <div class="text-dark small fw-medium">{{ l.num_serie|default:"—" }}</div>
-                                    <!--<div class="text-muted small text-truncate" style="max-width: 200px; font-size: 11px;" title="{{ l.descripcion|default:'' }}">
-                                        {{ l.descripcion|default:"Sin descripción" }}
-                                    </div> -->
                                 </div>
                             </div>
                         </td>
@@ -155,7 +152,7 @@
                             <div class="text-secondary small" style="font-size: 11px;">
                                 {% if l.orden_folio %}
                                     <a href="{% url 'orden-produccion-detalle' l.orden_folio %}" class="text-decoration-none text-muted hover-primary">
-                                        <i class="bi bi-link-45deg"></i> Orden #{{ l.orden_folio }}
+                                        Orden #{{ l.orden_folio }}
                                     </a>
                                 {% else %}
                                     <span class="text-muted">Sin orden</span>
@@ -182,23 +179,6 @@
                                 <a href="{% url 'laptop-detalle' l.numero %}" class="btn text-primary" title="Ver Detalles">
                                     <i class="bi bi-list-ul"></i>
                                 </a>
-
-                                <!-- RECHAZAR LAPTOP 
-                                {% if l.estado_codigo == 'RECHA' %}
-                                    <button type="button" class="btn text-muted" disabled title="Ya está rechazada">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                {% else %}
-                                    <button type="button" class="btn text-danger" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#modalRechazar" 
-                                        data-numero="{{ l.numero }}"
-                                        data-serie="{{ l.num_serie|default:'Sin serie' }}"
-                                        title="Rechazar laptop">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                {% endif %}
-                                -->
                             </div>
                         </td>
                     </tr>
