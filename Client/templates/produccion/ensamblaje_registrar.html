@@ -31,7 +31,7 @@
         <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Revisión de Ensamblaje</h4>
-                <p class="text-muted small mb-0">Verifica que las piezas que instala la línea estén puestas, y déjalas registradas contra la laptop.</p>
+                <p class="text-muted small mb-0">Verifica que los componentes correspondientes hayan sido instalados correctamente y registra su asociación con la laptop.</p>
             </div>
         </div>
 
@@ -75,7 +75,7 @@
     <div class="alert bg-primary-subtle text-primary-emphasis border border-primary-subtle d-flex gap-2 shadow-sm">
         <i class="bi bi-info-circle-fill mt-1"></i>
         <div>
-            Selecciona <strong>línea</strong> y <strong>laptop</strong> para ver los componentes compatibles y su stock.
+            Selecciona <strong>línea</strong> y <strong>laptop</strong> para ver los componentes.
         </div>
     </div>
     {% endif %}
@@ -136,7 +136,7 @@
         <div class="emp-card overflow-hidden shadow-sm mb-4">
             <div class="emp-header px-4 py-3 border-bottom bg-light bg-opacity-50 d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="fw-bold mb-0"><i class="bi bi-cpu text-primary me-2"></i>Componentes de esta línea</h5>
+                    <h5 class="fw-bold mb-0">Componentes instalados</h5>
                     {% if ocultos_por_linea %}
                     <span class="text-muted" style="font-size: 11px;">
                         {{ ocultos_por_linea }} componente{{ ocultos_por_linea|pluralize:"s" }} del modelo no se muestra{{ ocultos_por_linea|pluralize:"n" }}: no se instala{{ ocultos_por_linea|pluralize:"n" }} en {{ linea_sel }}.

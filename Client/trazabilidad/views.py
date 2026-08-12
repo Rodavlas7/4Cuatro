@@ -144,16 +144,28 @@ def _componentes_montados(headers_dict, registros):
     return sorted(montados, key=lambda c: ((c.get("modelo_nombre") or "").lower(), c.get("numero") or 0))
 
 def _obtener_supervisor_linea(headers_dict, linea_codigo):
-    empleados_linea = _json(f"{API}/usuarios/Empleado/Linea/Buscar/?buscar={linea_codigo}", headers_dict)
-    if not isinstance(empleados_linea, list): return "No asignado"
+    if not linea_codigo: 
+        return "Sin línea asignada"
+        
+    # ¡Aprovechamos tu VistaEmpleado que ya tiene todo cruzado!
+    empleados = _json(f"{API}/usuarios/Empleado/Listar/", headers_dict)
     
-    for emp in empleados_linea:
-        if not emp.get("fecha_fin") and emp.get("linea_codigo") == linea_codigo:
-            num_empleado = emp.get("empleado_numero")
-            detalle = _json(f"{API}/usuarios/Empleado/Detalle/{num_empleado}/", headers_dict)
-            if isinstance(detalle, dict) and detalle.get("rol_codigo") == "SUPER":
-                return detalle.get("nombre_completo")
-    return "No asignado"
+    if not isinstance(empleados, list): 
+        return "No asignado"
+        
+    linea_buscada = str(linea_codigo).strip()
+    
+    for emp in empleados:
+        # Extraemos directamente los datos de la VistaEmpleado
+        linea_emp = str(emp.get("linea_codigo") or "").strip()
+        rol_emp = str(emp.get("rol_codigo") or "").strip().upper()
+        estado_emp = str(emp.get("estado_empleado") or "").strip().upper()
+        
+        # Validamos que esté en la línea correcta, sea SUPERVISOR y siga activo
+        if linea_emp == linea_buscada and rol_emp == "SUPER" and estado_emp != "BAJA":
+            return emp.get("nombre_completo") or "Supervisor (Sin nombre)"
+            
+    return "Supervisor no encontrado"
 
 # ==============================================================================
 # RECOLECTORES DE DATOS PARA LA ORDEN
