@@ -32,7 +32,6 @@
             
             <!-- Info principal -->
             <div>
-                <span class="emp-eyebrow"><span class="dot"></span> Producción</span>
                 <h2 class="fw-bold text-dark mb-2">Laptop #{{ laptop.numero }}</h2>
                 
                 <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
@@ -211,7 +210,7 @@
             <div class="emp-card mb-4">
                 <div class="emp-header border-bottom px-4 py-3 d-flex justify-content-between align-items-center bg-light bg-opacity-50">
                     <div>
-                        <h5 class="fw-bold mb-0"><i class="bi bi-ui-checks text-primary me-2"></i>Avance de Materiales</h5>
+                        <h5 class="fw-bold mb-0"><i class="bi bi-ui-checks text-primary me-2"></i>Avance de Componentes</h5>
                         <span class="text-muted small">Modelo: {{ laptop.modelo_nombre }}</span>
                     </div>
                     {% if avance.completa %}
@@ -257,7 +256,7 @@
             <div class="alert bg-light border text-muted small d-flex gap-2 align-items-start mb-3">
                 <i class="bi bi-lock-fill mt-1 fs-5"></i>
                 <div>
-                    La laptop está <strong>{{ laptop.estado_nombre }}</strong>. Sus componentes se muestran en modo de sólo lectura. 
+                    La unidad está <strong>{{ laptop.estado_nombre }}</strong>. Sus componentes se muestran en modo de sólo lectura. 
                     Desarmar un equipo finalizado rompería la trazabilidad en el sistema.
                 </div>
             </div>
@@ -357,7 +356,7 @@
             <div class="emp-card sticky-top" style="top: 85px; z-index: 1;">
                 <div class="emp-header border-bottom px-4 py-3 bg-light bg-opacity-50">
                     <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i>Seguimiento</h5>
-                    <p class="text-muted small mb-0 mt-1">Historial de eventos de la laptop.</p>
+                    <p class="text-muted small mb-0 mt-1">Historial de eventos de la unidad.</p>
                 </div>
                 <div class="card-body p-4">
                     {% if bitacora %}

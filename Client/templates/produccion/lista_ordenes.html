@@ -74,8 +74,19 @@
                                 <span class="text-muted small fw-medium">{{ o.cant_planificada|default_if_none:"—" }}</span>
                             </div>
                         </td>
-                        <td>
-                            <!-- Pastillas de Estado (Adaptadas a Bootstrap Subtle) -->
+                       <td class="text-center">
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold
+
+                            {% if o.estado_codigo == 'COMP' %} bg-success-subtle text-success border border-success-subtle
+                            {% elif o.estado_codigo == 'PROC' %} bg-primary-subtle text-primary border border-primary-subtle
+                            {% elif o.estado_codigo == 'CANC' %}bg-danger-subtle text-danger border border-danger-subtle
+                            {% elif l.estado_codigo == 'PENSAM' %}bg-warning-subtle text-warning border border-warning-subtle
+                            {% else %}bg-light text-secondary border border-secondary-subtle{% endif %}">
+                            <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ o.estado_nombre|default:"Pendiente" }}
+
+
+
+                            <!-- Pastillas de Estado (Adaptadas a Bootstrap Subtle) 
                             {% if o.estado_codigo == 'COMP' %}
                                 <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-semibold">
                                     <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ o.estado_nombre|default:"Completada" }}
@@ -92,7 +103,8 @@
                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1 fw-semibold">
                                     <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> {{ o.estado_nombre|default:"Pendiente" }}
                                 </span>
-                            {% endif %}
+                            {% endif %}-->
+                            </span>
                         </td>
                         <td class="pe-4 text-end">
                             <div class="emp-actions d-inline-flex gap-1 align-items-center">
