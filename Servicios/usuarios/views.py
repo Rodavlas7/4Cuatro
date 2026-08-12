@@ -12,9 +12,9 @@ from rest_framework.views import APIView
 
 from lineas.models import Estacion, Linea
 
-from usuarios import models, serializers
+from usuarios import asignaciones, models, serializers
 
-from .models import Sesion, Usuario, Empleado, VistaEmpleado, VistaUsuario, EmpleadoEstacion, EmpleadoLinea
+from .models import Sesion, Usuario, Empleado, VistaEmpleado, VistaUsuario, EmpleadoEstacion, EmpleadoLinea, ROL_SUPERVISOR
 from .serializers import LoginSerializer, ListEmpleadoSerializer, DetailEmpleadoSerializer, UpdateEmpleadoSerializer, BajaEmpleadoSerializer
 from usuarios.permissions import TienePermisoModulo
 from .models import Rol, Turno
@@ -820,24 +820,19 @@ class UpdateEmpleadoAPIView(APIView):
         linea = request.data.get("linea")
 
         if linea and debe_asignar_linea(empleado.rol_id):
-            asignacion_activa = EmpleadoLinea.objects.filter(
-                empleado=empleado,
-                fecha_fin__isnull=True
-            ).first()
 
-            if asignacion_activa is None or asignacion_activa.linea_id != linea:
-                EmpleadoLinea.objects.filter(
-                    empleado=empleado,
-                    fecha_fin__isnull=True
-                ).update(
-                    fecha_fin=timezone.now().date()
-                )
+            # A un supervisor la línea se le SUMA: puede llevar varias a la vez
+            # (se las asigna el administrador desde el detalle de cada línea).
+            # Cerrar aquí las anteriores le quitaría las demás sin avisar, nomás
+            # por haberle editado el turno o el nombre.
+            if empleado.rol_id == ROL_SUPERVISOR:
+                asignaciones.asignar(empleado, linea)
 
-                EmpleadoLinea.objects.create(
-                    empleado=empleado,
-                    linea_id=linea,
-                    fecha_inicio=timezone.now().date()
-                )
+            # Los demás roles están en una sola línea: la nueva reemplaza a la
+            # que traían.
+            elif not asignaciones.tiene_linea(empleado, linea):
+                asignaciones.cerrar_todas(empleado)
+                asignaciones.asignar(empleado, linea)
 
         # ===============================
         # CAMBIO DE ESTACION

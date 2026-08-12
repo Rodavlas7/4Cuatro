@@ -58,7 +58,82 @@
     </div>
 
     <!-- ==========================================
-         TARJETA 2: ESTACIONES ASIGNADAS
+         TARJETA 2: SUPERVISORES DE LA LINEA
+
+         Salen de empleado_linea, que es M a M: esta línea puede tener varios
+         supervisores y cada supervisor puede llevar varias líneas. Por eso
+         asignar suma un renglón en lugar de reemplazar al que estuviera.
+         ========================================== -->
+    <div class="emp-card overflow-hidden mb-4">
+
+        <div class="emp-toolbar px-4 py-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+            <div>
+                <h5 class="fw-bold text-dark mb-0">Supervisores de esta línea</h5>
+                <p class="text-muted small mb-0">Una línea puede tener más de un supervisor, y un supervisor más de una línea.</p>
+            </div>
+            {% if supervisores_disponibles %}
+            <button type="button" class="btn btn-dark btn-sm py-2 px-3 fw-medium shadow-sm d-flex align-items-center gap-2"
+                    data-bs-toggle="modal" data-bs-target="#modalAsignarSupervisor">
+                <i class="bi bi-person-plus"></i> Asignar supervisor
+            </button>
+            {% else %}
+            <span class="text-muted small fst-italic">No hay supervisores libres por asignar.</span>
+            {% endif %}
+        </div>
+
+        <div class="table-responsive border-top">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Número</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Nombre</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Turno</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Asignado desde</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in supervisores %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="badge-id text-primary">{{ s.numero }}</span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ s.nombre|default:"—" }}</div>
+                        </td>
+                        <td>
+                            <span class="text-muted small">{{ s.turno|default:"—" }}</span>
+                        </td>
+                        <td>
+                            <span class="text-muted small">{{ s.fecha_inicio|default:"—" }}</span>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="emp-actions d-inline-flex gap-1 align-items-center">
+                                <form method="POST" action="{% url 'linea-supervisor-quitar' linea.codigo s.numero %}"
+                                      class="d-inline" data-confirm="¿Quitar a este supervisor de la línea?">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn text-danger" title="Quitar de la línea">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-person-badge text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            Esta línea todavía no tiene supervisores asignados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 3: ESTACIONES ASIGNADAS
          ========================================== -->
     <div class="emp-card overflow-hidden">
         
@@ -119,5 +194,48 @@
     </div>
 
 </div>
+
+<!-- ==========================================
+     MODAL: ASIGNAR SUPERVISOR
+     ========================================== -->
+{% if supervisores_disponibles %}
+<div class="modal fade" id="modalAsignarSupervisor" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'linea-supervisor-asignar' linea.codigo %}" class="w-100">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Asignar supervisor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium text-muted">Línea</label>
+                        <input type="text" class="form-control bg-light text-muted"
+                               value="{{ linea.nombre|default:linea.codigo }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Supervisor <span class="text-danger">*</span></label>
+                        <select name="empleado" class="form-select text-secondary" required>
+                            <option value="">— Selecciona —</option>
+                            {% for s in supervisores_disponibles %}
+                            <option value="{{ s.numero }}">{{ s.nombre }} (#{{ s.numero }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" style="font-size: 11px;">
+                            Sólo aparecen empleados con rol de <strong>Supervisor</strong> dados de alta.
+                            Si ya supervisa otra línea puede llevar ésta también: no se le quita la anterior.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Asignar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}

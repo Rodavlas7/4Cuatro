@@ -18,6 +18,9 @@ app_name = 'panel_supervisor'
 urlpatterns = [
     path('', views.Dashboard.as_view(), name='dashboard'),
 
+    # Con cuál de sus líneas está trabajando (el selector del menú)
+    path('linea/', views.cambiarLineaView, name='cambiar-linea'),
+
     # ------------------------------------------------------------------
     # P R O D U C C I O N
     # ------------------------------------------------------------------

@@ -8,10 +8,16 @@ from lineas.models import Estacion, Linea
 │   - Rol
 │   - Turno
 │   - Sesion
-│   - EmpleadoLinea  
-│   - EmpleadoEstacion 
+│   - EmpleadoLinea
+│   - EmpleadoEstacion
 '''
 # Create your models here.
+
+# Códigos de rol (catálogo rol, ver DB/datos.sql). Son los mismos que revisa
+# PERMISOS_ROL en permissions.py y los que maneja el cliente en core/roles.py.
+ROL_ADMIN = 'ADMIN'
+ROL_SUPERVISOR = 'SUPER'
+ROL_CALIDAD = 'OPCALI'
 
 #------------------ ROL--------------------
 class Rol(models.Model):

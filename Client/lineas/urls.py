@@ -12,5 +12,10 @@ urlpatterns = [
     path('', views.lineasListView, name='lineas-lista'),
     path('editar/<str:codigo>/', views.lineaEditarView, name='linea-editar'),
     path('baja/<str:codigo>/', views.lineaBajaView, name='linea-baja'),
+
+    # Supervisores de la línea (también antes del catch-all de abajo)
+    path('<str:codigo>/supervisores/asignar/', views.lineaSupervisorAsignarView, name='linea-supervisor-asignar'),
+    path('<str:codigo>/supervisores/quitar/<int:numero>/', views.lineaSupervisorQuitarView, name='linea-supervisor-quitar'),
+
     path('<str:codigo>/', views.lineaDetalleView, name='linea-detalle'),
 ]

@@ -105,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.sesion',
+                'core.context_processors.linea_del_supervisor',
             ],
         },
     },

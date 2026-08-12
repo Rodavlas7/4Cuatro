@@ -24,6 +24,46 @@
 
     <hr class="sidebar-divider">
 
+    {% comment %}
+        LINEA CON LA QUE ESTA TRABAJANDO
+
+        empleado_linea es M a M, así que un supervisor puede tener varias líneas
+        a su cargo, pero las pantallas trabajan una a la vez. Aquí elige cuál.
+        Los datos los pone core.context_processors.linea_del_supervisor.
+
+        Con una sola línea no hay nada que elegir: se enseña y ya.
+    {% endcomment %}
+    {% if linea_en_uso %}
+    <div class="px-3 pb-3 sidebar-linea">
+        <span class="nav-label text-uppercase small fw-bold d-block mb-1" style="opacity:.6; font-size:10px;">
+            Línea en uso
+        </span>
+
+        {% if lineas_a_mi_cargo|length > 1 %}
+            <form method="POST" action="{% url 'panel_supervisor:cambiar-linea' %}">
+                {% csrf_token %}
+                <input type="hidden" name="siguiente" value="{{ request.get_full_path }}">
+                <select name="linea" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for l in lineas_a_mi_cargo %}
+                    <option value="{{ l.codigo }}" {% if l.codigo == linea_en_uso.codigo %}selected{% endif %}>
+                        {{ l.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <noscript>
+                    <button type="submit" class="btn btn-sm btn-light w-100 mt-1">Cambiar</button>
+                </noscript>
+            </form>
+        {% else %}
+            <span class="nav-label fw-semibold d-block text-truncate" title="{{ linea_en_uso.nombre }}">
+                <i class="bi bi-diagram-3 me-2"></i>{{ linea_en_uso.nombre }}
+            </span>
+        {% endif %}
+    </div>
+
+    <hr class="sidebar-divider">
+    {% endif %}
+
     <!-- Menú -->
     <ul class="nav flex-column sidebar-menu">
 

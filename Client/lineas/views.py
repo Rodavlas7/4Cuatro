@@ -116,7 +116,7 @@ def lineaBajaView(request, codigo):
 
 
 def lineaDetalleView(request, codigo):
-    """Detalle de una línea con sus estaciones anidadas (usa LineaDetailAPIView)."""
+    """Detalle de una línea con sus estaciones y sus supervisores."""
 
     if 'token' not in request.session:
         return redirect('login')
@@ -130,7 +130,85 @@ def lineaDetalleView(request, codigo):
         messages.error(request, f"No se pudo cargar la línea {codigo}. {mensaje_error(respuesta)}")
         return redirect('lineas-lista')
 
-    return render(request, "lineas/linea_detalle.html", {"linea": objeto(respuesta)})
+    # Los supervisores van aparte porque salen de empleado_linea, no de la vista
+    # de líneas. El endpoint devuelve en una sola llamada los que ya están
+    # asignados y los que se pueden asignar, que es justo lo que pide la
+    # pantalla: la tabla y el select del modal.
+    respuesta_supervisores = get(f"{API}/lineas/{codigo}/supervisores/", headers)
+
+    if fallo(respuesta_supervisores):
+        messages.error(
+            request,
+            f"No se pudieron cargar los supervisores de la línea. {mensaje_error(respuesta_supervisores)}"
+        )
+
+    supervisores = objeto(respuesta_supervisores)
+
+    return render(
+        request,
+        "lineas/linea_detalle.html",
+        {
+            "linea": objeto(respuesta),
+            "supervisores": supervisores.get("asignados") or [],
+            "supervisores_disponibles": supervisores.get("disponibles") or [],
+        }
+    )
+
+
+
+# SUPERVISORES DE LA LINEA
+#
+# Se guardan en empleado_linea y la relación es M a M: una línea puede tener
+# varios supervisores y un supervisor puede llevar varias líneas. Por eso
+# asignar no reemplaza nada: agrega. Para dejar sin supervisor a una línea hay
+# que quitarlo aquí a propósito.
+
+
+def lineaSupervisorAsignarView(request, codigo):
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+        empleado = request.POST.get("empleado")
+
+        if not empleado:
+            messages.error(request, "Selecciona un supervisor.")
+            return redirect('linea-detalle', codigo=codigo)
+
+        respuesta = requests.post(
+            f"{API}/lineas/{codigo}/supervisores/",
+            json={"empleado": empleado},
+            headers=headers
+        )
+
+        if respuesta.status_code == 201:
+            messages.success(request, "Supervisor asignado a la línea.")
+        else:
+            messages.error(request, mensaje_error(respuesta))
+
+    return redirect('linea-detalle', codigo=codigo)
+
+
+def lineaSupervisorQuitarView(request, codigo, numero):
+    """Quitar no borra el renglón: la API le pone fecha_fin y queda de historial."""
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    if request.method == "POST":
+
+        headers = _headers(request)
+        respuesta = requests.delete(f"{API}/lineas/{codigo}/supervisores/{numero}/", headers=headers)
+
+        if respuesta.status_code == 204:
+            messages.success(request, "Supervisor quitado de la línea.")
+        else:
+            messages.error(request, mensaje_error(respuesta))
+
+    return redirect('linea-detalle', codigo=codigo)
 
 
 
