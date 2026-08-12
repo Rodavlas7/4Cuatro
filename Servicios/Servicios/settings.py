@@ -165,5 +165,10 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
         #'rest_framework.permissions.AllowAny',
     ],
-    "DEFAULT_PAGINATION_CLASS": "api.paginacion.PaginacionEstandar",
+    # Sin paginación global a propósito: las 53 vistas de lista devuelven un
+    # arreglo plano y el cliente lo lee con lista() de Client/core/api.py, que
+    # regresa [] si el JSON no es una lista. Un DEFAULT_PAGINATION_CLASS con
+    # page_size convertiría todas las respuestas en {count, next, previous,
+    # results} y dejaría en blanco cada pantalla, sin error visible. La vista
+    # que sí pagina (calidad) lo declara ella misma con pagination_class.
 }
