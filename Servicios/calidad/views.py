@@ -15,7 +15,7 @@ from . import serializers
 from usuarios.permissions import TienePermisoModulo
 from usuarios.models import EmpleadoLinea
 from django.db import OperationalError
-from produccion.models import Laptop, EdoLaptop
+from produccion.models import Laptop, EdoLaptop, RegistroEnsamblaje
 
 from django.db.models import Q
 
@@ -453,12 +453,20 @@ class RegistroDetalleInspeccionAPIView(APIView):
         # La pieza tiene que ser de la laptop que se inspeccionó. Si no, se
         # estaría culpando a un componente de otra unidad.
         renglones = serializer.validated_data if muchos else [serializer.validated_data]
+        numeros_registro = {r["componente"].registro_ensamblaje for r in renglones}
+        numeros_registro.discard(None)
+        laptop_del_registro = dict(
+            RegistroEnsamblaje.objects
+            .filter(numero__in=numeros_registro)
+            .values_list("numero", "laptop_id")
+        )
+
         for renglon in renglones:
             inspeccion = renglon["inspeccion"]
             componente = renglon["componente"]
-            registro = componente.registro_ensamblaje
+            montada_en = laptop_del_registro.get(componente.registro_ensamblaje)
 
-            if registro is None or registro.laptop_id != inspeccion.laptop_id:
+            if montada_en is None or montada_en != inspeccion.laptop_id:
                 return Response(
                     {"mensaje": (
                         f"El componente {componente.numero} no está montado en la "
