@@ -1,0 +1,118 @@
+{% extends 'panel_admin/base.html' %}
+{% load formato %}
+
+{% block topbar_titulo %}Producción{% endblock %}
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Lotes de Laptops</li>
+{% endblock %}
+
+{% block title %}Lotes de Laptops{% endblock %}
+
+{% block content %}
+
+<div class="wrap">
+
+    <!-- ==========================================
+         TARJETA 1: ENCABEZADO Y ACCIONES
+         ========================================== -->
+    <div class="emp-card mb-4">
+        <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Lotes de Laptops</h4>
+                <p class="text-muted small mb-0">Da de alta los lotes que después se asignan a las órdenes de producción.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-accent shadow-sm px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                    <i class="bi bi-plus-lg"></i> Nuevo lote
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TARJETA 2: TABLA DE DATOS
+         ========================================== -->
+    <div class="emp-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4 py-3 text-uppercase text-muted small fw-bold">Código</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Fecha</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Órdenes</th>
+                        <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-center">Laptops</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lo in lotes %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="badge-id text-primary">{{ lo.codigo }}</span>
+                        </td>
+                        <td>
+                            <div class="text-dark small fw-medium">{{ lo.fecha|fecha|default:"—" }}</div>
+                        </td>
+                        <td class="text-center">
+                            <span class="fw-bold text-dark fs-6">{{ lo.ordenes }}</span>
+                        </td>
+                        <td class="pe-4 text-center">
+                            <span class="fw-bold text-dark fs-6">{{ lo.laptops }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-box text-light d-block mb-2" style="font-size: 2.5rem;"></i>
+                            No hay lotes registrados. Crea uno para poder abrir órdenes de producción.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL: CREAR -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'lotes-laptop-lista' %}" class="w-100">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nuevo lote de laptops</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Código</label>
+                            <input type="text" name="codigo" class="form-control text-uppercase"
+                                   maxlength="8" placeholder="LOT2026D" required>
+                            <div class="form-text" style="font-size: 11px;">Hasta 8 caracteres. No se puede repetir.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium">Fecha</label>
+                            <input type="date" name="fecha" class="form-control" value="{{ hoy }}" required>
+                        </div>
+                    </div>
+
+                    <div class="alert bg-light border text-muted small mb-0 d-flex gap-2 align-items-start">
+                        <i class="bi bi-info-circle-fill text-primary mt-1"></i>
+                        <div>
+                            El lote se asigna al crear una <strong>orden de producción</strong>, y las laptops
+                            de esa orden lo heredan. El código es su identificador y ya no se puede cambiar.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent shadow-sm">Guardar lote</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

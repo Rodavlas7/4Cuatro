@@ -680,6 +680,79 @@ def _avance_ensamblaje(registros):
     }
 
 
+def lotesLaptopListView(request):
+
+    if 'token' not in request.session:
+        return redirect('login')
+
+    headers = _headers(request)
+
+    if request.method == "POST":
+
+
+        codigo = (request.POST.get("codigo") or "").strip().upper()
+
+
+        ya_existen = _json(f"{API}/produccion/lotes/", headers)
+        repetido = any(
+            str(lote.get("codigo")).upper() == codigo
+            for lote in (ya_existen if isinstance(ya_existen, list) else [])
+        )
+
+        if repetido:
+            messages.error(request, f"Ya existe un lote con el código {codigo}.")
+            return redirect('lotes-laptop-lista')
+
+        payload = {
+            "codigo": codigo,
+            "fecha": request.POST.get("fecha") or None,
+        }
+
+        respuesta = requests.post(f"{API}/produccion/lotes/", json=payload, headers=headers)
+
+        if respuesta.status_code == 201:
+            messages.success(request, f"Lote {codigo} registrado correctamente.")
+        else:
+            messages.error(request, _mensaje_api(respuesta))
+
+        return redirect('lotes-laptop-lista')
+
+    lotes = _json(f"{API}/produccion/lotes/", headers)
+    lotes = lotes if isinstance(lotes, list) else []
+
+
+    laptops = _json(f"{API}/produccion/laptops/", headers)
+    ordenes = _json(f"{API}/produccion/", headers)
+
+    def _por_lote(registros):
+        cuenta = {}
+        for registro in registros if isinstance(registros, list) else []:
+            codigo = registro.get("lote_codigo")
+            if codigo:
+                cuenta[codigo] = cuenta.get(codigo, 0) + 1
+        return cuenta
+
+    laptops_por_lote = _por_lote(laptops)
+    ordenes_por_lote = _por_lote(ordenes)
+
+    for lote in lotes:
+        codigo = lote.get("codigo")
+        lote["laptops"] = laptops_por_lote.get(codigo, 0)
+        lote["ordenes"] = ordenes_por_lote.get(codigo, 0)
+
+    ahora = datetime.now()
+
+    return render(
+        request,
+        "produccion/lista_lotes.html",
+        {
+            # Los más nuevos arriba: el que se acaba de crear es el que se busca.
+            "lotes": sorted(lotes, key=lambda l: l.get("fecha") or "", reverse=True),
+            "hoy": ahora.date().isoformat(),
+        }
+    )
+
+
 def ordenesProduccionListView(request):
     """Consulta general de órdenes de producción (lee de vista_ordenes_produccion)
     y alta de una nueva."""

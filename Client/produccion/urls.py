@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Lotes de laptops
+    path('lotes/', views.lotesLaptopListView, name='lotes-laptop-lista'),
+
     # Ordenes de produccion
     path('ordenes/', views.ordenesProduccionListView, name='ordenes-produccion-lista'),
     path('ordenes/editar/<int:folio>/', views.ordenProduccionEditarView, name='orden-produccion-editar'),
