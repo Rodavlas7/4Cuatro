@@ -383,6 +383,27 @@ class BuscarInspeccionCalidadView(generics.ListAPIView):
         buscar = self.request.GET.get("buscar")
         fecha_inicio = self.request.GET.get("fecha_inicio")
         fecha_fin = self.request.GET.get("fecha_fin")
+        linea = self.request.GET.get("linea")
+        resultado = self.request.GET.get("resultado")
+
+        # Acota a una sola línea. Lo usa el panel de calidad, donde el operador
+        # nada más tiene que ver lo suyo; los paneles que sí consultan todas las
+        # líneas simplemente no mandan el parámetro.
+        #
+        # Va aquí y no en el cliente porque la respuesta viene paginada: filtrar
+        # después de recibir la página dejaría el conteo y el número de páginas
+        # contando inspecciones que no se van a mostrar.
+        if linea:
+            queryset = queryset.filter(linea_codigo=linea)
+
+        # Aprobada / Rechazada / Continuar ensamblaje. Es filtro aparte y no
+        # parte de `buscar` porque el texto se compara contra la vista, y ahí el
+        # resultado vive como número: buscar "Rechazada" no encontraba nada.
+        #
+        # Se valida contra los códigos conocidos en lugar de pasarlo derecho: un
+        # ?resultado=abc reventaría al comparar contra una columna entera.
+        if resultado in ("0", "1", "2"):
+            queryset = queryset.filter(resultado=int(resultado))
 
         if buscar:
             filtro = (

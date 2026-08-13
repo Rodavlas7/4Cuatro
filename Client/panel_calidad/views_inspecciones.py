@@ -18,6 +18,7 @@ from core.guards import RolRequeridoMixin
 # Se importa con alias porque las vistas de este módulo tienen su propio
 # método get(); un `get` a secas adentro se leería como si fuera el método.
 from core.api import get as api_get, lista, objeto
+from core.lineas import de_la_sesion
 from core.roles import ROL_CALIDAD
  
 from .forms import get_choices_laptops, get_choices_lineas_produccion
@@ -42,8 +43,32 @@ def normalizar_listar(item):
         "empleado": item.get("empleado_nombre"),
         "linea": item.get("linea_nombre"),
     }
- 
- 
+
+
+SIN_LINEA = (
+    "Tu usuario no tiene una línea asignada, así que no se puede saber qué "
+    "inspecciones te tocan. Pídele a un administrador que te asigne a una línea."
+)
+
+AJENA = "Esa inspección es de otra línea, no la puedes modificar."
+
+
+def es_de_mi_linea(request, numero, headers):
+    """True si esa inspección es de la línea del operador.
+
+    Editar y borrar van por número y el número viaja en el formulario, así que
+    sin esta comprobación bastaría con cambiarlo a mano para tocar una
+    inspección de otra línea: justo la que la lista no le deja ver."""
+    linea = de_la_sesion(request)
+
+    if not linea:
+        return False
+
+    detalle = objeto(api_get(API_INSPECCION + f"Detalle/{numero}/", headers))
+
+    return detalle.get("linea_codigo") == linea["codigo"]
+
+
 class ListaInspecciones(RolRequeridoMixin, generic.View):
     roles_permitidos = (ROL_CALIDAD,)
  
@@ -56,28 +81,46 @@ class ListaInspecciones(RolRequeridoMixin, generic.View):
         buscar = request.GET.get("buscar", "").strip()
         fecha_inicio = request.GET.get("fecha_inicio", "")
         fecha_fin = request.GET.get("fecha_fin", "")
+        # OJO: "Rechazada" es el código "0". Se compara contra cadena vacía y no
+        # con `if resultado:` porque más adelante, si alguien lo convierte a
+        # entero, el 0 se volvería falso y el filtro se caería justo en el
+        # resultado que más se consulta.
+        resultado = request.GET.get("resultado", "")
         page = request.GET.get("page", "1")
  
-        params = {"page": page}
- 
-        if buscar:
-            params["buscar"] = buscar
- 
-        if fecha_inicio:
-            params["fecha_inicio"] = fecha_inicio
- 
-        if fecha_fin:
-            params["fecha_fin"] = fecha_fin
- 
-        response = api_get(
-            API_INSPECCION + "Buscar/",
-            headers,
-            params=params,
-        )
- 
-        # La respuesta ahora viene paginada: {count, next, previous, results}
-        data = response.json() if hasattr(response, "json") else response
- 
+        # El operador de calidad sólo ve las inspecciones de su línea. La línea
+        # sale de empleado_linea, no de un filtro de la pantalla: no es algo que
+        # él elija, así que tampoco se le ofrece para cambiarlo.
+        linea = de_la_sesion(request)
+
+        data = {}
+
+        if not linea:
+            # Sin línea no se filtra por "todas": se enseña vacío. Al revés
+            # dejaría ver justo lo que esta pantalla tiene que esconder.
+            messages.error(request, SIN_LINEA)
+        else:
+            params = {"page": page, "linea": linea["codigo"]}
+
+            if buscar:
+                params["buscar"] = buscar
+
+            if fecha_inicio:
+                params["fecha_inicio"] = fecha_inicio
+
+            if fecha_fin:
+                params["fecha_fin"] = fecha_fin
+
+            if resultado != "":
+                params["resultado"] = resultado
+
+            # La respuesta viene paginada: {count, next, previous, results}
+            data = objeto(api_get(
+                API_INSPECCION + "Buscar/",
+                headers,
+                params=params,
+            ))
+
         items = data.get("results", [])
         inspecciones_base = [normalizar_listar(i) for i in items]
  
@@ -97,9 +140,11 @@ class ListaInspecciones(RolRequeridoMixin, generic.View):
  
         context = {
             "inspecciones": inspecciones,
+            "linea": linea,
             "laptops": get_choices_laptops(token),
             "lineas": get_choices_lineas_produccion(token),
             "resultados": RESULTADO_CHOICES,
+            "resultado": resultado,
             "buscar": buscar,
             "fecha_inicio": fecha_inicio,
             "fecha_fin": fecha_fin,
@@ -150,11 +195,16 @@ class EditarInspeccion(RolRequeridoMixin, generic.View):
  
     def post(self, request, numero):
         token = request.session.get("token")
+
+        if not es_de_mi_linea(request, numero, {"Authorization": f"Bearer {token}"}):
+            messages.error(request, AJENA)
+            return redirect("panel_calidad:inspecciones")
+
         data = {
             "resultado": request.POST.get("resultado"),
             "observaciones": request.POST.get("observaciones"),
         }
- 
+
         response = requests.patch(
             API_INSPECCION + f"Actualizar/{numero}/",
             headers={"Authorization": f"Bearer {token}"},
@@ -176,7 +226,11 @@ class EliminarInspeccion(RolRequeridoMixin, generic.View):
  
     def post(self, request, numero):
         token = request.session.get("token")
- 
+
+        if not es_de_mi_linea(request, numero, {"Authorization": f"Bearer {token}"}):
+            messages.error(request, AJENA)
+            return redirect("panel_calidad:inspecciones")
+
         response = requests.delete(
             API_INSPECCION + f"Eliminar/{numero}/",
             headers={"Authorization": f"Bearer {token}"}
