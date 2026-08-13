@@ -148,16 +148,12 @@ def dashboardView(request):
 
 
 '''-----------------------------------------------------------------------------
-    L O G I N   V I E W (luego dividir en carpetas correspondientes) 
+    L O G I N   V I E W 
 -----------------------------------------------------------------------------'''
 def loginView(request):
-
     if request.method == "POST":
-
         usuario = request.POST.get('usuario')
         contrasena = request.POST.get('contrasena')
-
-
         respuesta = requests.post(
             "http://127.0.0.1:8000/api/usuarios/login/",
             json={
@@ -166,15 +162,10 @@ def loginView(request):
             }
         )
         datos = respuesta.json()
-
         if respuesta.status_code == 200:
             rol = datos.get('rol')
             destino = panel_inicio(rol)
-
             if not destino:
-                # La API ya filtra los roles con acceso, así que llegar aquí
-                # significa que allá se dio de alta un rol que en el cliente
-                # todavía no tiene panel (ver core/roles.py).
                 return render(
                     request,
                     'home/login.html',
@@ -187,14 +178,12 @@ def loginView(request):
             request.session['token'] = datos.get('token')
             request.session['usuario'] = usuario
 
-            # El rol define a qué panel entra y qué puede ver, así que se guarda
-            # en la sesión: es lo que revisan el middleware y los sidebars.
+            # El rol define a qué panel entra y qué puede ver, así que se guarda en la sesión: es lo que revisan el middleware y los sidebars.
             request.session['rol'] = rol
             request.session['nombre'] = datos.get('nombre')
             request.session['empleado'] = datos.get('empleado')
 
-            # El token va también en la cookie compartida, para no tener que
-            # iniciar sesión otra vez al entrar a la API desde el navegador.
+            # El token va también en la cookie compartida, para no tener que iniciar sesión otra vez al entrar a la API desde el navegador.
             respuesta_http = redirect(destino)
             respuesta_http.set_cookie(
                 TOKEN_COOKIE,
@@ -212,7 +201,6 @@ def loginView(request):
                     'error': datos.get('mensaje')
                 }
             )
-
     return render(request,'home/login.html')
 
 

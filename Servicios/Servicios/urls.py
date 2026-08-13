@@ -33,3 +33,8 @@ urlpatterns = [
     path("api/dashboard/", include("dashboard.urls")),
     re_path(r'^.*$', not_found, name='not-found'),
 ]
+
+
+
+
+
