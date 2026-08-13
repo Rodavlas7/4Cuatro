@@ -1,23 +1,24 @@
 {% extends 'panel_calidad/base.html' %}
-
+{% load formato %}
+ 
 {% block titulo_pagina %}Inspecciones{% endblock %}
 {% block topbar_titulo %}Inspecciones de Calidad{% endblock %}
-
+ 
 {% block content %}
-
+ 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Inspecciones de Calidad</h2>
 </div>
-
+ 
 <form method="GET" class="mb-3">
-
+ 
     <div class="row g-2 align-items-end">
-
+ 
         <!-- Buscar -->
         <div class="col-md-4">
             <label class="form-label">Buscar</label>
             <div class="input-group">
-
+ 
                 <input 
                     type="text" 
                     name="buscar" 
@@ -25,47 +26,47 @@
                     placeholder="Número, laptop, empleado o línea..."
                     value="{{ buscar|default:'' }}"
                 >
-
+ 
                 <button type="submit" class="btn btn-outline-secondary">
                     <i class="bi bi-search"></i>
                 </button>
-
+ 
             </div>
         </div>
-
-
+ 
+ 
         <!-- Fecha inicio -->
         <div class="col-md-3">
-
+ 
             <label class="form-label">
                 Desde
             </label>
-
+ 
             <input 
                 type="date"
                 name="fecha_inicio"
                 class="form-control"
                 value="{{ fecha_inicio|default:'' }}">
-
+ 
         </div>
-
-
+ 
+ 
         <!-- Fecha fin -->
         <div class="col-md-3">
-
+ 
             <label class="form-label">
                 Hasta
             </label>
-
+ 
             <input 
                 type="date"
                 name="fecha_fin"
                 class="form-control"
                 value="{{ fecha_fin|default:'' }}">
-
+ 
         </div>
-
-
+ 
+ 
         <!-- Botón filtrar -->
         <div class="col-md-1">
             <label class="form-label d-block">&nbsp;</label>
@@ -73,8 +74,8 @@
                 <i class="bi bi-funnel"></i>
             </button>
         </div>
-
-
+ 
+ 
         <!-- Limpiar -->
         {% if buscar or fecha_inicio or fecha_fin %}
         <div class="col-md-1">
@@ -84,12 +85,12 @@
             </a>
         </div>
         {% endif %}
-
-
+ 
+ 
     </div>
-
+ 
 </form>
-
+ 
 <div class="table-responsive">
     <table class="table table-hover align-middle bg-white">
         <thead class="table-light">
@@ -135,7 +136,7 @@
                         data-observaciones="{{ i.observaciones|default:'' }}">
                         <i class="bi bi-eye"></i>
                     </button>
-
+ 
                     <button
                         type="button"
                         class="btn btn-sm btn-outline-secondary"
@@ -146,7 +147,7 @@
                         data-observaciones="{{ i.observaciones|default:'' }}">
                         <i class="bi bi-pencil"></i>
                     </button>
-
+ 
                     <button
                         type="button"
                         class="btn btn-sm btn-outline-danger"
@@ -162,9 +163,38 @@
             {% endfor %}
         </tbody>
     </table>
+ 
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center px-2 py-3 border-top">
+        <span class="text-muted small">
+            Página {{ page_actual }} de {{ total_pages }} · {{ total_count }} inspecciones
+        </span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not has_previous %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page_actual|add:'-1' }}&buscar={{ buscar|default:'' }}&fecha_inicio={{ fecha_inicio|default:'' }}&fecha_fin={{ fecha_fin|default:'' }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% for num in total_pages|rango %}
+                    <li class="page-item {% if num == page_actual %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}&buscar={{ buscar|default:'' }}&fecha_inicio={{ fecha_inicio|default:'' }}&fecha_fin={{ fecha_fin|default:'' }}">
+                            {{ num }}
+                        </a>
+                    </li>
+                {% endfor %}
+                <li class="page-item {% if not has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page_actual|add:'1' }}&buscar={{ buscar|default:'' }}&fecha_inicio={{ fecha_inicio|default:'' }}&fecha_fin={{ fecha_fin|default:'' }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
 </div>
-
-
+ 
+ 
 <!-- MODAL: CREAR -->
 <div class="modal fade" id="modalCrear" tabindex="-1">
     <div class="modal-dialog">
@@ -228,7 +258,7 @@
         </form>
     </div>
 </div>
-
+ 
 <!-- MODAL: DETALLE -->
 <div class="modal fade" id="modalDetalle" tabindex="-1">
     <div class="modal-dialog">
@@ -273,7 +303,7 @@
         </div>
     </div>
 </div>
-
+ 
 <!-- MODAL: EDITAR -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog">
@@ -308,8 +338,8 @@
         </form>
     </div>
 </div>
-
-
+ 
+ 
 <!-- MODAL: ELIMINAR -->
 <div class="modal fade" id="modalEliminar" tabindex="-1">
     <div class="modal-dialog">
@@ -331,7 +361,7 @@
         </form>
     </div>
 </div>
-
+ 
 <script>
 (function () {
   'use strict'
@@ -346,14 +376,14 @@
     }, false)
   })
 })()
-
+ 
 document.getElementById('id_linea_calidad').addEventListener('change', function () {
     const lineaId = this.value;
     const empleadoSelect = document.getElementById('id_empleado_calidad');
     empleadoSelect.innerHTML = '<option value="">— Selecciona —</option>';
-
+ 
     if (!lineaId) return;
-
+ 
     fetch("/panel/calidad/empleados-calidad-por-linea/" + lineaId + "/")
         .then(response => response.json())
         .then(data => {
@@ -369,7 +399,7 @@ document.getElementById('id_linea_calidad').addEventListener('change', function 
             });
         });
 });
-
+ 
 document.getElementById('modalDetalle').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
     document.getElementById('det_numero').textContent = btn.dataset.numero;
@@ -380,18 +410,18 @@ document.getElementById('modalDetalle').addEventListener('show.bs.modal', functi
     document.getElementById('det_linea').textContent = btn.dataset.linea;
     document.getElementById('det_observaciones').textContent = btn.dataset.observaciones;
 });
-
+ 
 document.getElementById('modalEditar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
     document.getElementById('formEditar').action = "/panel/calidad/inspecciones/editar/" + btn.dataset.numero + "/";
     document.getElementById('edit_resultado').value = btn.dataset.resultado;
     document.getElementById('edit_observaciones').value = btn.dataset.observaciones;
 });
-
+ 
 document.getElementById('modalEliminar').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
     document.getElementById('formEliminar').action = "/panel/calidad/inspecciones/eliminar/" + btn.dataset.numero + "/";
 });
 </script>
-
+ 
 {% endblock %}

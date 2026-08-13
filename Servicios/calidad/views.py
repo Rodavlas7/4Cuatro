@@ -228,25 +228,18 @@ class DetailInspeccionCalidadAPIView(APIView):
 # . . . . . .  . LISTA con la vista
 
 class ListaInspeccionCalidadAPIView(APIView):
-
     permission_classes = [
-        AllowAny
-        #IsAuthenticated,
-        #TienePermisoModulo
+        IsAuthenticated,
+        TienePermisoModulo
     ]
-
     modulo = "calidad"
 
     def get(self, request):
-
         inspecciones = VistaInspeccionCalidad.objects.all().order_by('-numero')
-
-        # Usamos el serializer de lista (ligero)
         serializer = serializers.ListVistaInspeccionSerializer(
             inspecciones,
             many=True
         )
-
         return Response(
             serializer.data
         )
@@ -255,25 +248,18 @@ class ListaInspeccionCalidadAPIView(APIView):
 # . . . . . .  . DETAIL
 
 class DetailInspeccionCalidadAPIView(APIView):
-
     permission_classes = [
-        AllowAny
-        #IsAuthenticated,
-        #TienePermisoModulo
+        IsAuthenticated,
+        TienePermisoModulo
     ]
-
     modulo = "calidad"
 
     def get(self, request, numero):
-
         try:
-            
             inspeccion = VistaInspeccionCalidad.objects.get(
                 numero=numero
             )
-
         except VistaInspeccionCalidad.DoesNotExist:
-
             return Response(
                 {
                     "mensaje":
@@ -282,7 +268,6 @@ class DetailInspeccionCalidadAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Usamos el serializer de detalle (completo)
         serializer = serializers.DetailVistaInspeccionSerializer(
             inspeccion
         )

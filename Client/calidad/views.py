@@ -103,7 +103,6 @@ class CrearInspeccion(generic.View):
     def post(self, request):
         token = request.session.get("token")
         ahora = datetime.now()
-
         data = {
             "resultado": request.POST.get("resultado"),
             "observaciones": request.POST.get("observaciones"),
@@ -113,13 +112,11 @@ class CrearInspeccion(generic.View):
             "empleado": request.POST.get("empleado"),
             "linea": request.POST.get("linea"),
         }
-
         response = requests.post(
             API_INSPECCION + "Registrar/",
             headers={"Authorization": f"Bearer {token}"},
             data=data
         )
-
         if response.status_code == 201:
             datos = response.json()
             numero = datos.get("numero") or datos.get("id") or datos.get("inspeccion")
@@ -142,13 +139,11 @@ class EditarInspeccion(generic.View):
             "resultado": request.POST.get("resultado"),
             "observaciones": request.POST.get("observaciones"),
         }
-
         response = requests.patch(
             API_INSPECCION + f"Actualizar/{numero}/",
             headers={"Authorization": f"Bearer {token}"},
             data=data
         )
-
         if response.status_code == 200:
             messages.success(request, "Inspección actualizada correctamente.")
         else:

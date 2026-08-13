@@ -48,8 +48,6 @@ class CreateInspeccionCalidadSerializer(serializers.ModelSerializer):
             "linea",
         )
 
-
-
 #listar
 class ListInspeccionCalidadSerializer(serializers.ModelSerializer):
     resultado = serializers.CharField(
@@ -77,7 +75,6 @@ class ListInspeccionCalidadSerializer(serializers.ModelSerializer):
             "empleado",
             "linea",
         )
-
 
 
 #detalle
