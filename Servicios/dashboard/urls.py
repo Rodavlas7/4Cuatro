@@ -1,6 +1,7 @@
 """Rutas del dashboard de administrador. Cuelgan de /api/dashboard/.
 
     /api/dashboard/resumen/                    foto de la planta ahora
+    /api/dashboard/resumen-rango/?desde=&hasta= totales del periodo (sp_Dashboard_Resumen)
     /api/dashboard/produccion/?desde=&hasta=   laptops producidas por día
     /api/dashboard/calidad/?desde=&hasta=      inspecciones por día
     /api/dashboard/paros/?desde=&hasta=        paros por día
@@ -20,6 +21,7 @@ from .views import *
 
 urlpatterns = [
     path("resumen/", ResumenPlantaAPIView.as_view(), name="dash-resumen"),
+    path("resumen-rango/", ResumenRangoAPIView.as_view(), name="dash-resumen-rango"),
     path("produccion/", ProduccionDiariaAPIView.as_view(), name="dash-produccion"),
     path("calidad/", CalidadDiariaAPIView.as_view(), name="dash-calidad"),
     path("paros/", ParosDiariaAPIView.as_view(), name="dash-paros"),

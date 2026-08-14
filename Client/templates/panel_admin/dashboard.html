@@ -126,6 +126,8 @@
             <div class="kpi-pie">
                 {{ resumen.ordenes_pendientes|default:0 }} pendiente{{ resumen.ordenes_pendientes|pluralize }} ·
                 {{ resumen.ordenes_completadas|default:0 }} completada{{ resumen.ordenes_completadas|pluralize }}
+                <br>
+                {{ ordenes_creadas }} abierta{{ ordenes_creadas|pluralize }} en el periodo
             </div>
         </a>
     </div>

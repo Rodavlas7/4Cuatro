@@ -2,8 +2,9 @@
 
 Junta lo que devuelven los endpoints /api/dashboard/ y lo deja listo para que la
 plantilla sólo pinte. Aquí NO se cuenta nada: los conteos ya vienen hechos por
-las vistas SQL (DB/vistas.sql). Lo que sí se hace aquí es lo que es decisión de
-pantalla y no de base:
+la base —las vistas de DB/vistas.sql para el detalle por día, y
+sp_Dashboard_Resumen para los totales del rango que van en las tarjetas de
+arriba—. Lo que sí se hace aquí es lo que es decisión de pantalla y no de base:
 
   - el rango de fechas que se ofrece (hoy / 7 / 30 días / todo),
   - el umbral a partir del cual el material se considera bajo,
@@ -212,6 +213,7 @@ class Dashboard(RolRequeridoMixin, generic.View):
 
         # --- lo que trae la API -------------------------------------------
         resumen = _pedir('resumen/', cabeceras, como=objeto)
+        totales = _pedir('resumen-rango/', cabeceras, params, como=objeto)
         produccion = _pedir('produccion/', cabeceras, params)
         calidad = _pedir('calidad/', cabeceras, params)
         paros = _pedir('paros/', cabeceras, params)
@@ -221,12 +223,13 @@ class Dashboard(RolRequeridoMixin, generic.View):
         rechazos = _pedir('rechazos/', cabeceras, params)
 
         # --- totales del rango --------------------------------------------
-        producidas = _suma(produccion, 'total')
-        inspecciones = _suma(calidad, 'total')
-        aprobadas = _suma(calidad, 'aprobadas')
-        rechazadas = _suma(calidad, 'rechazadas')
-        paros_total = _suma(paros, 'total')
-        paros_minutos = _suma(paros, 'minutos')
+        producidas = totales.get('producidas', 0)
+        inspecciones = totales.get('inspecciones', 0)
+        aprobadas = totales.get('inspecciones_aprobadas', 0)
+        rechazadas = totales.get('inspecciones_rechazadas', 0)
+        paros_total = totales.get('paros', 0)
+        paros_minutos = totales.get('paros_minutos', 0)
+        ordenes_creadas = totales.get('ordenes_creadas', 0)
 
         # --- si la API no contestó nada de nada ---------------------------
         # Un dashboard en ceros y un dashboard desconectado se ven igual, y no
@@ -256,6 +259,7 @@ class Dashboard(RolRequeridoMixin, generic.View):
             'paros_total': paros_total,
             'paros_minutos': paros_minutos,
             'paros_horas': round(paros_minutos / 60, 1) if paros_minutos else 0,
+            'ordenes_creadas': ordenes_creadas,
 
             # Gráficas
             'serie_produccion': _con_altura(_serie(produccion, ['total'], desde, hasta), 'total'),

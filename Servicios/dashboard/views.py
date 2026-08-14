@@ -20,12 +20,16 @@ tronar, porque un dashboard a medias es mejor que un 500.
 """
 
 from datetime import date
+from decimal import Decimal
 
-from rest_framework import generics
+from django.db import DatabaseError
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api import procedimientos
+from api.errores import mensaje_de_base
 from usuarios.permissions import TienePermisoModulo
 
 # Las dos alertas de abajo (paros abiertos y rechazos de calidad) NO tienen
@@ -158,6 +162,29 @@ class ResumenPlantaAPIView(APIView):
             return Response({})
 
         return Response(ResumenPlantaSerializer(resumen).data)
+
+
+class ResumenRangoAPIView(APIView):
+    """Totales de producción, inspección y paros dentro del rango."""
+
+    permission_classes = [IsAuthenticated, TienePermisoModulo]
+    modulo = "reportes"
+
+    def get(self, request):
+        desde = _fecha(request.query_params.get('desde'))
+        hasta = _fecha(request.query_params.get('hasta'))
+
+        try:
+            resumen = procedimientos.llamar('sp_Dashboard_Resumen', desde, hasta)
+        except DatabaseError as error:
+            return Response({'mensaje': mensaje_de_base(error)},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+        return Response({
+            clave: int(valor) if isinstance(valor, (Decimal, int)) else valor
+            for clave, valor in resumen.items()
+        })
 
 
 class StockComponentesAPIView(SoloLecturaAdmin):
