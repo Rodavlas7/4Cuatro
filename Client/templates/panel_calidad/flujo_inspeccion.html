@@ -72,9 +72,8 @@
                     <tr>
                         <th style="width:52px;">Falla</th>
                         <th>Pieza</th>
-                        <th>Tipo</th>
-                        <th style="width:180px;">Queda como</th>
-                        <th>Qué le pasó</th>
+                        <th style="width:180px;">Estado final</th>
+                        <th>Observaciones sobre la pieza</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,7 +92,6 @@
                                 </span>
                             </label>
                         </td>
-                        <td><span class="badge text-bg-light">{{ p.tipo_nombre|default:"—" }}</span></td>
                         <td>
                             <select name="estado_{{ p.numero }}" class="form-select form-select-sm sel-estado"
                                     data-numero="{{ p.numero }}" disabled>
@@ -106,7 +104,7 @@
                             <input type="text" name="obs_{{ p.numero }}" maxlength="256"
                                    class="form-control form-control-sm obs-falla"
                                    data-numero="{{ p.numero }}"
-                                   placeholder="Ej. no lo reconoce el POST" disabled>
+                                   placeholder="Colocar razon despues de rechazar el componente" disabled>
                         </td>
                     </tr>
                     {% endfor %}
