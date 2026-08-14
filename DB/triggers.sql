@@ -14,6 +14,7 @@ DROP TRIGGER IF EXISTS tg_Bloquear_Componentes_Laptop_Finalizada;
 DROP TRIGGER IF EXISTS tg_Actualizar_Estado_Laptop_Inspeccion_Calidad;
 DROP TRIGGER IF EXISTS tg_Control_Componentes_Duplicados;
 DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente;
+DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente_Cambio;
 DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Registrar_Laptop;
 DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Mover_Laptop;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Alta;
@@ -21,6 +22,8 @@ DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Cambio;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Baja;
 DROP TRIGGER IF EXISTS tg_Validar_Linea_Ensamblaje;
 DROP TRIGGER IF EXISTS tg_Validar_Linea_Ensamblaje_Cambio;
+DROP TRIGGER IF EXISTS tg_Arrancar_Laptop_En_Ensamblaje;
+DROP TRIGGER IF EXISTS tg_Abrir_Ensamblaje_Primera_Linea;
 
 DELIMITER $$
 
@@ -430,7 +433,7 @@ BEGIN
 
     IF v_abiertos > 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error tg_Control_Componentes_Duplicados: la laptop ya tiene un ensamblaje abierto; ciérralo antes de abrir el de la siguiente línea';
+            SET MESSAGE_TEXT = 'Error tg_Control_Duplicados: la laptop ya tiene un ensamblaje abierto, ciérralo primero';
     END IF;
 
     -- La última línea de ensamblaje es la que no tiene siguiente, o cuya
@@ -454,7 +457,7 @@ BEGIN
 
         IF v_termino > 0 THEN
             SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'Error tg_Control_Componentes_Duplicados: la laptop ya recorrió todas las líneas de ensamblaje, no se puede abrir otro registro';
+                SET MESSAGE_TEXT = 'Error tg_Control_Duplicados: la laptop ya recorrió todas las líneas de ensamblaje';
         END IF;
     END IF;
 END$$
@@ -481,10 +484,16 @@ END$$
 --   - Si al agregar el nuevo se excede la capacidad, se cancela el INSERT.
 --   - Si el tipo no está en el BOM, no es compatible con el modelo → se bloquea.
 --
--- NOTA: valida en INSERT (cuando el componente se crea ya asignado). Si en
---   la app un componente se asigna después vía UPDATE (registro_ensamblaje
---   pasa de NULL a un valor), habría que replicar esta lógica en un
---   BEFORE UPDATE.
+-- Son DOS triggers, uno por cada forma de montar una pieza:
+--
+--   _Componente         BEFORE INSERT — el componente se crea ya asignado.
+--   _Componente_Cambio  BEFORE UPDATE  — la pieza ya existía en el inventario y
+--                                        se le pone el registro_ensamblaje.
+--
+-- El segundo es el camino que de verdad usa el sistema: el checklist de
+-- ensamblaje toma una pieza del stock de la línea y la asigna con un UPDATE,
+-- así que sin él la capacidad del BOM sólo la cuidaba el 'max' del formulario
+-- y cualquier otro cliente podía meter una tercera RAM sin que nadie chistara.
 
 
 CREATE TRIGGER tg_Validar_Capacidad_Componente
@@ -538,6 +547,72 @@ BEGIN
            AND (c.estado IS NULL OR c.estado <> 'EDC004');
 
         -- ¿El nuevo excedería la capacidad de ese tipo?
+        IF v_instalados + 1 > v_capacidad THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: se excede la capacidad de ese tipo de componente para el modelo de la laptop';
+        END IF;
+
+    END IF;
+END$$
+
+
+-- La versión para el montaje por UPDATE. Misma lógica, con dos diferencias:
+--
+--   1. Sólo actúa cuando el vínculo con el ensamblaje CAMBIA y termina
+--      apuntando a uno. Soltar la pieza (queda en NULL) o tocarle cualquier
+--      otra columna no revalida nada: el <=> compara tolerando nulos.
+--   2. El conteo de instalados excluye la propia pieza (c.numero <> NEW.numero).
+--      Sin eso, mover un componente de un registro a otro DE LA MISMA laptop se
+--      contaría a sí mismo y daría un falso "se excede la capacidad".
+
+CREATE TRIGGER tg_Validar_Capacidad_Componente_Cambio
+BEFORE UPDATE ON componente
+FOR EACH ROW
+BEGIN
+    DECLARE v_laptop        INT;
+    DECLARE v_modelo_laptop VARCHAR(8);
+    DECLARE v_tipo          VARCHAR(8);
+    DECLARE v_capacidad     INT;
+    DECLARE v_instalados    INT;
+
+    IF NOT (NEW.registro_ensamblaje <=> OLD.registro_ensamblaje)
+       AND NEW.registro_ensamblaje IS NOT NULL
+       AND NEW.modelo IS NOT NULL
+    THEN
+
+        SELECT re.laptop, l.modelo
+          INTO v_laptop, v_modelo_laptop
+          FROM registro_ensamblaje re
+          JOIN laptop l ON l.numero = re.laptop
+         WHERE re.numero = NEW.registro_ensamblaje;
+
+        SELECT mc.tipo_componente
+          INTO v_tipo
+          FROM modelo_componente mc
+         WHERE mc.codigo = NEW.modelo;
+
+        SELECT MAX(mlc.capacidad)
+          INTO v_capacidad
+          FROM modelo_laptop_componente mlc
+          JOIN modelo_componente mc2 ON mc2.codigo = mlc.modelo_componente
+         WHERE mlc.modelo_laptop   = v_modelo_laptop
+           AND mc2.tipo_componente = v_tipo;
+
+        IF v_capacidad IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: el tipo de componente no es compatible con el modelo de la laptop';
+        END IF;
+
+        SELECT COUNT(*)
+          INTO v_instalados
+          FROM componente c
+          JOIN registro_ensamblaje re2 ON re2.numero = c.registro_ensamblaje
+          JOIN modelo_componente   mc3 ON mc3.codigo = c.modelo
+         WHERE re2.laptop          = v_laptop
+           AND mc3.tipo_componente = v_tipo
+           AND c.numero            <> NEW.numero
+           AND (c.estado IS NULL OR c.estado <> 'EDC004');
+
         IF v_instalados + 1 > v_capacidad THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: se excede la capacidad de ese tipo de componente para el modelo de la laptop';
@@ -887,14 +962,20 @@ UPDATE orden_produccion op
 
 -- ORDEN DE DISPARO EN BEFORE INSERT registro_ensamblaje
 --
--- MySQL ejecuta múltiples triggers del mismo evento en orden
--- de creación. El orden correcto para este archivo es:
+-- MySQL ejecuta múltiples triggers del mismo evento en orden de creación, así
+-- que manda el orden en que están escritos en este archivo:
 --
---   1. tg_Control_Componentes_Duplicados  (¿ya hay ensamblaje cerrado?)
---   2. tg_Bloquear_Componentes_Laptop_Finalizada (¿el estado lo permite?)
+--   1. tg_Bloquear_Componentes_Laptop_Finalizada  (¿el estado lo permite?)
+--   2. tg_Control_Componentes_Duplicados          (¿ya hay uno abierto?)
+--   3. tg_Validar_Linea_Ensamblaje                (¿la línea es de ensamblaje?)
 --
--- Si cualquiera de los dos lanza SIGNAL, el INSERT se cancela
--- y el segundo trigger no llega a ejecutarse.
+-- En cuanto uno lanza SIGNAL el INSERT se cancela y los siguientes ya no
+-- corren. Por eso, sobre una laptop terminada, el mensaje que sale siempre es
+-- el del primero, aunque también fallara el segundo.
+--
+-- Se confirma con:
+--   SELECT trigger_name, action_order FROM information_schema.triggers
+--    WHERE event_object_table = 'registro_ensamblaje' AND action_timing = 'BEFORE';
 
 
 -- CADENA DE DISPARO AL APROBAR UNA LAPTOP

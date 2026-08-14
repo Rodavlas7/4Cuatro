@@ -149,7 +149,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# La misma zona que la API y que el servidor MySQL (ver el comentario largo en
+# Servicios/Servicios/settings.py). Aquí importa porque las pantallas arman la
+# fecha y la hora con datetime.now() antes de mandarlas a la API —el flujo de
+# calidad, el embalaje, los paros—, y Django exporta TIME_ZONE a
+# os.environ['TZ']: con 'UTC' ese now() salía siete horas adelantado.
+TIME_ZONE = 'America/Tijuana'
 
 USE_I18N = True
 

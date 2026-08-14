@@ -14,8 +14,10 @@ from . import serializers
 
 from usuarios.permissions import TienePermisoModulo
 from usuarios.models import EmpleadoLinea
-from django.db import OperationalError
+from django.db import DatabaseError
 from produccion.models import Laptop, EdoLaptop, RegistroEnsamblaje
+
+from api.errores import mensaje_de_base
 
 from django.db.models import Q
 
@@ -105,40 +107,18 @@ class RegistroInspeccionCalidadAPIView(APIView):
 
 
 
+        # El motivo lo redacta el propio trigger y mensaje_de_base sólo le quita
+        # el prefijo 'Error tg_Nombre:'. Antes había aquí una cadena de if sobre
+        # el texto del error, y se desincronizó: buscaba "la laptop ya cuenta con
+        # una inspección", frase que dejó de existir cuando se reescribió
+        # tg_Actualizar_Estado_Laptop_Inspeccion_Calidad. Los dos casos que no
+        # reconocía —ése y el de inspeccionar en una línea sin ensamblaje
+        # abierto— caían en un genérico que no le decía nada al operador.
         try:
             inspeccion = serializer.save()
-        except OperationalError as e:
-            mensaje = str(e)
-            if "la laptop ya cuenta con una inspección" in mensaje:
-                return Response(
-                    {
-                        "mensaje":
-                        "No es posible registrar la inspección. La laptop ya cuenta con una inspección final registrada."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            elif "la laptop no está en estado de ensamblaje" in mensaje:
-                return Response(
-                    {
-                        "mensaje":
-                        "No es posible registrar la inspección. La laptop no se encuentra en estado de ensamblaje."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            elif "resultado de inspección no válido" in mensaje:
-                return Response(
-                    {
-                        "mensaje":
-                        "No es posible registrar la inspección. El resultado seleccionado no es válido."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
+        except DatabaseError as e:
             return Response(
-                {
-                    "mensaje":
-                    "No fue posible registrar la inspección de calidad."
-                },
+                {"mensaje": mensaje_de_base(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

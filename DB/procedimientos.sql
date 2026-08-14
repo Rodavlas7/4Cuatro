@@ -267,11 +267,10 @@ END$$
 -- convención que ya usa el cliente. La columna es NOT NULL, así que no puede
 -- quedar vacía.
 --
--- OJO: hoy la serie definitiva NO se llega a asignar. El trigger
---   tg_Generar_Numero_Serie_Final solo actúa si num_serie viene vacío o nulo al
---   aprobar la laptop, y 'TMP-0001' no lo está. Le pasa igual a las laptops que
---   se dan de alta desde el cliente, así que no es algo que introduzca este
---   procedimiento, pero hay que arreglarlo en el trigger.
+-- La serie provisional sí se reemplaza al final: tg_Generar_Numero_Serie_Final
+--   actúa cuando num_serie viene nulo, vacío O empieza con 'TMP-', así que al
+--   aprobar la laptop en la última línea le pone su TP-{AAAAMMDD}-{numero}.
+--   (Comprobado en el recorrido del 13-08-2026: TMP-0009 -> TP-20260813-000034.)
 --
 -- Los triggers que se disparan solos al insertar:
 --   tg_Iniciar_Orden_Al_Registrar_Laptop  → si la orden estaba Pendiente,
