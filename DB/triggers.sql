@@ -36,7 +36,7 @@ DELIMITER $$
 --            conforme avanzan los embalajes de sus laptops.
 --
 -- Flujo de estados (RF26):
---   Primera laptop embalada  → orden pasa a 'En Proceso'  (PROC)
+--   Primera laptop registrada → orden pasa a 'En Proceso'  (PROC)
 --   Todas las laptops embaladas = cant_planificada → 'Completada' (COMP)
 --
 -- Mejoras sobre la versión original:
