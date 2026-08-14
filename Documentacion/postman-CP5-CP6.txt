@@ -1,0 +1,145 @@
+POSTMAN - CP5 y CP6 - Registrar ensamblaje desde Operador de Calidad
+
+
+Nada de Authorization ni token Bearer. La sesion viaja en cookies y Postman
+las guarda solo. Lo unico que se copia a mano es el csrfmiddlewaretoken.
+
+
+  Settings de Postman  >  "Automatically follow redirects"  =  ON
+
+
+
+PASO 1   -   GET   -   traer el token
+
+
+Method       GET
+URL          http://127.0.0.1:8001/login/
+
+No se llena nada mas. Solo Send.
+
+Ahora abre  "Cookies"  (letras chiquitas debajo del boton Send)
+Dominio     127.0.0.1
+Cookie      client_csrftoken
+Copia su valor. Se ve asi:   17GcKphh75pOyQ1BeqVvVbIfCNaUKxUy
+
+Ese valor es el TOKEN.
+Se copia UNA sola vez y sirve para los tres POST. No cambia.
+
+
+
+PASO 2   -   POST   -   iniciar sesion
+
+
+Method            POST
+URL               http://127.0.0.1:8001/login/
+
+Params            nada
+Authorization     No Auth
+Headers           nada, no agregues ninguno
+Body              marca la opcion  x-www-form-urlencoded
+
+   KEY                    VALUE
+   usuario                0002RTG
+   contrasena             RTG2026
+   csrfmiddlewaretoken    TOKEN
+
+Son 3 renglones. Ni uno mas.
+
+Respuesta correcta: el HTML dice  "Panel de Calidad"
+
+
+
+PASO 3   -   GET   -   OPCIONAL, es la foto del antes
+
+
+Method       GET
+URL          http://127.0.0.1:8001/panel/calidad/flujo/27/ensamblaje/
+
+No se llena nada mas. Solo Send.
+
+Debe decir:   Tipos cubiertos en la laptop: 0 de 15
+
+Sirve de evidencia de que la laptop iba vacia. Si te lo saltas, los pasos
+4 y 5 funcionan igual.
+
+
+
+PASO 4   -   POST   -   CP5: teclado fuera de orden
+
+
+Method            POST
+URL               http://127.0.0.1:8001/panel/calidad/flujo/27/ensamblaje/
+
+Params            nada
+Authorization     No Auth
+Headers           nada, no agregues ninguno
+Body              marca la opcion  x-www-form-urlencoded
+
+   KEY                    VALUE
+   -    
+   comp_MC019             on
+   csrfmiddlewaretoken    TOKEN
+
+Son 2 renglones. Ni uno mas.
+
+Asi se ve el body armado, por si quieres compararlo:
+   comp_MC019=on&csrfmiddlewaretoken=TOKEN
+
+Respuesta correcta:
+   No se registro: hay que respetar el orden de montaje -
+   Teclado va despues de Touchpad
+
+
+
+PASO 5   -   POST   -   CP6: dos touchpads en una sola ranura
+
+
+Method            POST
+URL               http://127.0.0.1:8001/panel/calidad/flujo/27/ensamblaje/
+
+Params            nada
+Authorization     No Auth
+Headers           nada, no agregues ninguno
+Body              marca la opcion  x-www-form-urlencoded
+
+   KEY                    VALUE
+   -    
+   comp_MC028             on
+   comp_MC021             on
+   comp_MC020             on
+   csrfmiddlewaretoken    TOKEN
+
+Son 4 renglones. Ni uno mas.
+
+Asi se ve el body armado, por si quieres compararlo:
+   comp_MC028=on&comp_MC021=on&comp_MC020=on&csrfmiddlewaretoken=TOKEN
+
+Respuesta correcta:
+   No se registro: se excede la capacidad por tipo -
+   Touchpad: 2 de 1 permitido(s)
+
+
+
+SI ALGO SALE MAL
+
+
+403                 Falta el csrfmiddlewaretoken o esta mal copiado.
+                    Vuelve al paso 1 y copia la cookie otra vez.
+
+302 y body vacio    Falta prender "Automatically follow redirects"
+                    en Settings.
+
+Pagina de login     Se perdio la sesion. Repite el paso 2.
+
+"1 componente(s)    La laptop 27 ya traia piezas montadas.
+ agregado(s)"       Recarga la base:   python DB/cargar.py si
+
+
+
+RECORDATORIOS
+
+
+- Puerto 8001 (Client), no 8000 (API).
+- Laptop 27. La 8 ya no sirve, se paso a LIN002.
+- Los valores "on" van en minusculas.
+- Los pasos 4 y 5 no registran nada: se pueden repetir las veces que sea.
