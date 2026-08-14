@@ -49,11 +49,11 @@ DELIMITER $$
 --            montados, los devuelve al inventario y cierra su ensamblaje.
 --
 -- Parámetros:
---   p_laptop          Número de la laptop a desarmar.
---   p_estado_destino  A qué estado regresan los componentes:
---                       EDC001 (Disponible) si sirven y vuelven al inventario
---                       EDC003 (Dañado)     si salieron defectuosos
---                     NULL se toma como EDC001.
+--   numeroLaptop   Número de la laptop a desarmar.
+--   estadoDestino  A qué estado regresan los componentes:
+--                    EDC001 (Disponible) si sirven y vuelven al inventario
+--                    EDC003 (Dañado)     si salieron defectuosos
+--                  NULL se toma como EDC001.
 --
 -- Qué NO toca:
 --   - Los componentes Mermados (EDC004). Están perdidos, no regresan al
@@ -67,8 +67,8 @@ DELIMITER $$
 --   ya no se vuelve a armar. Es a propósito, para no perder el historial.
 
 CREATE PROCEDURE sp_Liberar_Componentes_Laptop(
-    IN p_laptop         INT,
-    IN p_estado_destino VARCHAR(8)
+    IN numeroLaptop  INT,
+    IN estadoDestino VARCHAR(8)
 )
 BEGIN
     DECLARE destino_componentes VARCHAR(8);
@@ -77,11 +77,11 @@ BEGIN
     DECLARE total_mermados      INT DEFAULT 0;
     DECLARE total_cerrados      INT DEFAULT 0;
 
-    SET destino_componentes = IFNULL(p_estado_destino, 'EDC001');
+    SET destino_componentes = IFNULL(estadoDestino, 'EDC001');
 
     -- Validaciones
 
-    SELECT COUNT(*) INTO laptop_existe FROM laptop WHERE numero = p_laptop;
+    SELECT COUNT(*) INTO laptop_existe FROM laptop WHERE numero = numeroLaptop;
 
     IF laptop_existe = 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -98,7 +98,7 @@ BEGIN
       INTO total_mermados
       FROM componente c
       JOIN registro_ensamblaje re ON re.numero = c.registro_ensamblaje
-     WHERE re.laptop = p_laptop
+     WHERE re.laptop = numeroLaptop
        AND c.estado  = 'EDC004';
 
     -- Soltar los componentes montados.
@@ -108,7 +108,7 @@ BEGIN
       JOIN registro_ensamblaje re ON re.numero = c.registro_ensamblaje
        SET c.estado              = destino_componentes,
            c.registro_ensamblaje = NULL
-     WHERE re.laptop = p_laptop
+     WHERE re.laptop = numeroLaptop
        AND (c.estado IS NULL OR c.estado <> 'EDC004');
 
     SET total_liberados = ROW_COUNT();
@@ -117,12 +117,12 @@ BEGIN
     UPDATE registro_ensamblaje
        SET fecha_fin = CURDATE(),
            hora_fin  = CURTIME()
-     WHERE laptop    = p_laptop
+     WHERE laptop    = numeroLaptop
        AND fecha_fin IS NULL;
 
     SET total_cerrados = ROW_COUNT();
 
-    SELECT p_laptop            AS laptop,
+    SELECT numeroLaptop        AS laptop,
            total_liberados     AS componentes_liberados,
            destino_componentes AS estado_destino,
            total_mermados      AS mermados_conservados,
@@ -140,7 +140,7 @@ END$$
 --            por perdidas.
 --
 -- Parámetros:
---   p_folio  Folio de la orden a cancelar.
+--   folioOrden  Folio de la orden a cancelar.
 --
 -- Qué hace, en orden:
 --   1. Suelta los componentes de las laptops NO terminadas de esa orden
@@ -164,7 +164,7 @@ END$$
 --   se guarda. Si lo necesitan, hay que agregarle una a orden_produccion.
 
 CREATE PROCEDURE sp_Cancelar_Orden_Produccion(
-    IN p_folio INT
+    IN folioOrden INT
 )
 BEGIN
     DECLARE estado_orden      VARCHAR(8);
@@ -176,7 +176,7 @@ BEGIN
 
     SELECT estado INTO estado_orden
       FROM orden_produccion
-     WHERE folio = p_folio;
+     WHERE folio = folioOrden;
 
     IF estado_orden IS NULL THEN
         SIGNAL SQLSTATE '45000'
@@ -197,7 +197,7 @@ BEGIN
     SELECT COUNT(*)
       INTO total_respetadas
       FROM laptop
-     WHERE orden  = p_folio
+     WHERE orden  = folioOrden
        AND estado IN ('APROV', 'EMBALA');
 
     -- 1. Soltar los componentes de las laptops no terminadas
@@ -206,7 +206,7 @@ BEGIN
       JOIN laptop             l  ON l.numero  = re.laptop
        SET c.estado              = 'EDC001',
            c.registro_ensamblaje = NULL
-     WHERE l.orden  = p_folio
+     WHERE l.orden  = folioOrden
        AND l.estado IN ('REGIS', 'PENSAM')
        AND (c.estado IS NULL OR c.estado <> 'EDC004');
 
@@ -216,14 +216,14 @@ BEGIN
       JOIN laptop l ON l.numero = re.laptop
        SET re.fecha_fin = CURDATE(),
            re.hora_fin  = CURTIME()
-     WHERE l.orden       = p_folio
+     WHERE l.orden       = folioOrden
        AND l.estado      IN ('REGIS', 'PENSAM')
        AND re.fecha_fin  IS NULL;
 
     -- 2. Las laptops a medias se dan por perdidas
     UPDATE laptop
        SET estado = 'RECHA'
-     WHERE orden  = p_folio
+     WHERE orden  = folioOrden
        AND estado IN ('REGIS', 'PENSAM');
 
     SET total_rechazadas = ROW_COUNT();
@@ -231,9 +231,9 @@ BEGIN
     -- 3. La orden queda cancelada
     UPDATE orden_produccion
        SET estado = 'CANC'
-     WHERE folio  = p_folio;
+     WHERE folio  = folioOrden;
 
-    SELECT p_folio          AS folio,
+    SELECT folioOrden       AS folio,
            total_rechazadas AS laptops_rechazadas,
            total_respetadas AS laptops_respetadas,
            total_liberados  AS componentes_liberados;
@@ -249,7 +249,7 @@ END$$
 --            para llegar a su cantidad planificada.
 --
 -- Parámetros:
---   p_folio  Folio de la orden.
+--   folioOrden  Folio de la orden.
 --
 -- Qué hace:
 --   Crea (cant_planificada - las que ya existen) laptops en estado Registrada,
@@ -281,7 +281,7 @@ END$$
 --                                            Embaladas, no la infla.
 
 CREATE PROCEDURE sp_Iniciar_Ensamblaje_Orden(
-    IN p_folio INT
+    IN folioOrden INT
 )
 BEGIN
     DECLARE estado_orden       VARCHAR(8);
@@ -298,7 +298,7 @@ BEGIN
     SELECT estado, modelo_laptop, lote, IFNULL(cant_planificada, 0)
       INTO estado_orden, modelo_orden, lote_orden, total_planificadas
       FROM orden_produccion
-     WHERE folio = p_folio;
+     WHERE folio = folioOrden;
 
     IF estado_orden IS NULL THEN
         SIGNAL SQLSTATE '45000'
@@ -317,7 +317,7 @@ BEGIN
 
     -- Cuántas faltan
 
-    SELECT COUNT(*) INTO total_existentes FROM laptop WHERE orden = p_folio;
+    SELECT COUNT(*) INTO total_existentes FROM laptop WHERE orden = folioOrden;
 
     SET total_faltantes = total_planificadas - total_existentes;
 
@@ -338,7 +338,7 @@ BEGIN
 
         INSERT INTO laptop (num_serie, orden, modelo, estado, lote)
         VALUES (CONCAT('TMP-', LPAD(consecutivo_serie, 4, '0')),
-                p_folio,
+                folioOrden,
                 modelo_orden,
                 'REGIS',
                 lote_orden);
@@ -347,7 +347,7 @@ BEGIN
 
     END WHILE;
 
-    SELECT p_folio            AS folio,
+    SELECT folioOrden         AS folio,
            total_creadas      AS laptops_creadas,
            total_existentes   AS laptops_previas,
            total_planificadas AS cant_planificada;
@@ -363,9 +363,9 @@ END$$
 --            faltan y los deja Disponibles en el inventario de la línea.
 --
 -- Parámetros:
---   p_orden  Número de la orden de material a recibir.
---   p_lote   Lote de componentes (lote_comp) con el que entran las piezas.
---            NULL se acepta: entran sin lote.
+--   numeroOrdenMaterial  Número de la orden de material a recibir.
+--   loteComponentes      Lote de componentes (lote_comp) con el que entran las
+--                        piezas. NULL se acepta: entran sin lote.
 --
 -- Por qué existe: detalle_material dice "pedí 50 piezas del modelo X", pero los
 --   componente físicos se capturaban de uno en uno desde el formulario del
@@ -390,8 +390,8 @@ END$$
 --   UNIQUE, así que el formato cabe (4+1+8+1+3) y no se repite entre corridas.
 
 CREATE PROCEDURE sp_Recibir_Orden_Material(
-    IN p_orden INT,
-    IN p_lote  VARCHAR(12)
+    IN numeroOrdenMaterial INT,
+    IN loteComponentes     VARCHAR(12)
 )
 BEGIN
     DECLARE linea_orden        VARCHAR(8);
@@ -407,7 +407,7 @@ BEGIN
     SELECT COUNT(*), MAX(linea)
       INTO orden_existe, linea_orden
       FROM orden_material
-     WHERE numero = p_orden;
+     WHERE numero = numeroOrdenMaterial;
 
     IF orden_existe = 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -421,7 +421,7 @@ BEGIN
 
     SELECT COUNT(*) INTO total_renglones
       FROM detalle_material
-     WHERE orden = p_orden;
+     WHERE orden = numeroOrdenMaterial;
 
     IF total_renglones = 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -430,9 +430,9 @@ BEGIN
 
     -- El lote es opcional, pero si viene tiene que existir. Se valida aquí para
     -- dar el motivo en español en lugar del error de llave foránea de MySQL.
-    IF p_lote IS NOT NULL THEN
+    IF loteComponentes IS NOT NULL THEN
 
-        SELECT COUNT(*) INTO lote_existe FROM lote_comp WHERE codigo = p_lote;
+        SELECT COUNT(*) INTO lote_existe FROM lote_comp WHERE codigo = loteComponentes;
 
         IF lote_existe = 0 THEN
             SIGNAL SQLSTATE '45000'
@@ -455,10 +455,10 @@ BEGIN
       FROM detalle_material dm
       LEFT JOIN (SELECT modelo, COUNT(*) AS piezas
                    FROM componente
-                  WHERE orden_material = p_orden
+                  WHERE orden_material = numeroOrdenMaterial
                   GROUP BY modelo) AS recibido
              ON recibido.modelo = dm.modelo
-     WHERE dm.orden = p_orden;
+     WHERE dm.orden = numeroOrdenMaterial;
 
     IF total_faltantes = 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -495,18 +495,18 @@ BEGIN
                             MAX(CAST(SUBSTRING_INDEX(num_serie, '-', -1) AS UNSIGNED))
                                      AS consecutivo
                        FROM componente
-                      WHERE orden_material = p_orden
+                      WHERE orden_material = numeroOrdenMaterial
                       GROUP BY modelo) AS recibido
                  ON recibido.modelo = dm.modelo
-         WHERE dm.orden = p_orden
+         WHERE dm.orden = numeroOrdenMaterial
     )
-    SELECT CONCAT(p_orden, '-', f.modelo, '-',
+    SELECT CONCAT(numeroOrdenMaterial, '-', f.modelo, '-',
                   LPAD(f.desde + n.i, 3, '0')),
            mc.nombre,
            linea_orden,
-           p_orden,
+           numeroOrdenMaterial,
            f.modelo,
-           p_lote,
+           loteComponentes,
            'EDC001',
            NULL
       FROM faltan f
@@ -516,12 +516,12 @@ BEGIN
 
     SET total_creados = ROW_COUNT();
 
-    SELECT p_orden         AS orden,
-           linea_orden     AS linea,
-           p_lote          AS lote,
-           total_renglones AS renglones,
-           total_creados   AS componentes_creados,
-           total_previos   AS componentes_previos;
+    SELECT numeroOrdenMaterial AS orden,
+           linea_orden         AS linea,
+           loteComponentes     AS lote,
+           total_renglones     AS renglones,
+           total_creados       AS componentes_creados,
+           total_previos       AS componentes_previos;
 END$$
 
 
@@ -534,8 +534,8 @@ END$$
 --            administrador para un rango de fechas.
 --
 -- Parámetros:
---   p_desde  Primer día del rango. NULL = desde que existe la planta.
---   p_hasta  Último día del rango. NULL = hasta hoy.
+--   fechaDesde  Primer día del rango. NULL = desde que existe la planta.
+--   fechaHasta  Último día del rango. NULL = hasta hoy.
 --
 -- ADVERTENCIA — éste no es como los otros cuatro
 -- --------------------------------------------
@@ -564,14 +564,14 @@ END$$
 -- que en tg_Control_Estado_Orden_Produccion.
 
 CREATE PROCEDURE sp_Dashboard_Resumen(
-    IN p_desde DATE,
-    IN p_hasta DATE
+    IN fechaDesde DATE,
+    IN fechaHasta DATE
 )
 BEGIN
     -- Rango abierto por cualquiera de los dos lados. '1000-01-01' es el
     -- mínimo que admite un DATE en MySQL, así que sirve de "sin límite".
-    DECLARE desde DATE DEFAULT IFNULL(p_desde, '1000-01-01');
-    DECLARE hasta DATE DEFAULT IFNULL(p_hasta, CURDATE());
+    DECLARE desde DATE DEFAULT IFNULL(fechaDesde, '1000-01-01');
+    DECLARE hasta DATE DEFAULT IFNULL(fechaHasta, CURDATE());
 
     SELECT
         desde AS rango_desde,
