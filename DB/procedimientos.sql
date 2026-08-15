@@ -62,7 +62,7 @@ DELIMITER $$
 --   - El estado de la laptop. Quien llama decide qué hacer con ella
 --     (sp_Cancelar_Orden_Produccion, por ejemplo, la pasa a Rechazada).
 --
--- OJO: al cerrar el ensamblaje (fecha_fin), tg_Control_Componentes_Duplicados
+-- OJO: al cerrar el ensamblaje (fecha_fin), tg_Validar_Apertura_Ensamblaje
 --   impide abrirle uno nuevo a esa laptop. O sea que desarmarla es definitivo:
 --   ya no se vuelve a armar. Es a propósito, para no perder el historial.
 
@@ -152,7 +152,7 @@ END$$
 --   - Las laptops Aprobadas y Embaladas. Ya pasaron calidad y existen
 --     físicamente: cancelar la orden no es razón para tirarlas.
 --   - cant_producida. La recalculan solos los triggers
---     tg_Sincronizar_Cant_Producida_* al cambiar el estado de las laptops.
+--     tg_Laptop_Alta / _Cambio / _Baja al cambiar el estado de las laptops.
 --
 -- Se repiten aquí los dos UPDATE de sp_Liberar_Componentes_Laptop en vez de
 -- llamarlo en un bucle, por dos razones: así es un UPDATE por toda la orden en
@@ -272,13 +272,13 @@ END$$
 --   aprobar la laptop en la última línea le pone su TP-{AAAAMMDD}-{numero}.
 --   (Comprobado en el recorrido del 13-08-2026: TMP-0009 -> TP-20260813-000034.)
 --
--- Los triggers que se disparan solos al insertar:
---   tg_Iniciar_Orden_Al_Registrar_Laptop  → si la orden estaba Pendiente,
---                                            pasa a En Proceso.
---   tg_Sincronizar_Cant_Producida_Alta    → recuenta cant_producida. Como las
---                                            nuevas nacen Registradas y ese
---                                            conteo solo suma Aprobadas y
---                                            Embaladas, no la infla.
+-- Los triggers que se disparan solos al insertar cada laptop:
+--   tg_Arrancar_Laptop_En_Ensamblaje  → nace 'En Ensamblaje', no 'Registrada'.
+--   tg_Laptop_Alta                    → si la orden estaba Pendiente pasa a En
+--                                       Proceso, recuenta cant_producida (las
+--                                       nuevas no la inflan: ese conteo solo
+--                                       suma Aprobadas y Embaladas) y le abre
+--                                       el ensamblaje de la primera línea.
 
 CREATE PROCEDURE sp_Iniciar_Ensamblaje_Orden(
     IN folioOrden INT
@@ -561,7 +561,7 @@ END$$
 -- el punto de partida; mientras tanto, la fuente de verdad son las vistas.
 --
 -- Qué cuenta como producida: la laptop embalada, igual que en las vistas y
--- que en tg_Control_Estado_Orden_Produccion.
+-- que en tg_Registrar_Embalaje.
 
 CREATE PROCEDURE sp_Dashboard_Resumen(
     IN fechaDesde DATE,

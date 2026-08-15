@@ -36,7 +36,7 @@ from django.db import models
 class ProduccionDiaria(models.Model):
     """Laptops producidas por día, línea y modelo.
 
-    Producida = embalada. Es el criterio de tg_Control_Estado_Orden_Produccion,
+    Producida = embalada. Es el criterio de tg_Registrar_Embalaje,
     y la fecha sale de registro_embalaje porque la tabla laptop no guarda
     ninguna."""
 

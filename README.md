@@ -152,7 +152,7 @@ por lo tanto son públicas: no las lleves a un ambiente real.
 ## La lógica de negocio vive en la base
 
 Esto es **decisión de diseño, no deuda técnica**. 
-La base tiene **31 tablas, 16 triggers, 21 vistas y 5 procedimientos**, y ahí es donde
+La base tiene **31 tablas, 11 triggers, 21 vistas y 5 procedimientos**, y ahí es donde
 están las reglas.
 
 | En la base | Para qué |
@@ -207,7 +207,7 @@ del cliente nunca hacen `requests.get(...).json()` a pelo: usan los helpers de
 │   ├── estructura.sql          31 tablas
 │   ├── datos.sql               catálogos y usuarios
 │   ├── datos_pruebas2.sql      datos transaccionales de ejemplo
-│   ├── triggers.sql            16 triggers
+│   ├── triggers.sql            11 triggers
 │   ├── vistas.sql              21 vistas
 │   ├── procedimientos.sql      5 procedimientos
 │   ├── cargar.py               carga todo en orden

@@ -2,7 +2,7 @@
 
 El TIPO de la línea (ensamblaje o embalaje) decide dónde se puede registrar
 ensamblaje. Aquí abajo están la constante y el filtro que usan los formularios;
-la regla de verdad la imponen la API y el trigger tg_Validar_Linea_Ensamblaje.
+la regla de verdad la imponen la API y el trigger tg_Validar_Apertura_Ensamblaje.
 
 Lo demás de este archivo resuelve la otra pregunta:
 
@@ -57,7 +57,7 @@ def solo_de_ensamblaje(lineas):
     """Filtra un catálogo de líneas a las de ensamblaje.
 
     Se usa para llenar los selects de los formularios de ensamblaje: la API y el
-    trigger tg_Validar_Linea_Ensamblaje ya rechazan una línea de embalaje, pero
+    trigger tg_Validar_Apertura_Ensamblaje ya rechazan una línea de embalaje, pero
     ofrecerla en la lista sólo sirve para que el operador se lleve el error."""
     return [l for l in (lineas or []) if es_de_ensamblaje(l)]
 

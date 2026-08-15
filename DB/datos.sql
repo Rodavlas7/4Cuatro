@@ -73,7 +73,7 @@ INSERT INTO edo_linea (codigo, nombre, descripcion) VALUES
 --
 -- El tipo dice QUÉ PROCESO corre la línea, no cómo está (eso es edo_linea).
 -- Solo en una línea de tipo ENSA se puede registrar ensamblaje: lo obliga el
--- trigger tg_Validar_Linea_Ensamblaje (DB/triggers.sql).
+-- trigger tg_Validar_Apertura_Ensamblaje (DB/triggers.sql).
 
 INSERT INTO tipo_linea (codigo, nombre, descripcion) VALUES
 ('ENSA', 'Ensamblaje', 'Línea donde se arman las laptops a partir de componentes'),

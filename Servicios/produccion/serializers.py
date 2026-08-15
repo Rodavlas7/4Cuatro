@@ -151,7 +151,7 @@ class RegistroEnsamblajeSerializer(serializers.ModelSerializer):
         """Solo se ensambla en líneas de ensamblaje. Una de embalaje empaca lo
         que ya salió armado: ni tiene las estaciones ni surte los componentes.
 
-        El trigger tg_Validar_Linea_Ensamblaje (DB/triggers.sql) lo vuelve a
+        El trigger tg_Validar_Apertura_Ensamblaje (DB/triggers.sql) lo vuelve a
         revisar en la base —esa es la barrera que nadie se salta—, pero aquí se
         atrapa antes para devolver el error en el campo y no un 500 de MySQL."""
         if value is not None and value.tipo_id != TIPO_LINEA_ENSAMBLAJE:

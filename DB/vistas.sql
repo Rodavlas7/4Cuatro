@@ -432,7 +432,7 @@ ORDER BY re.numero Desc, re.fecha DESC, re.hora DESC;
 -- QUÉ CUENTA COMO "PRODUCIDA"
 -- ---------------------------
 -- Una laptop embalada, no una ensamblada. Es el mismo criterio que ya aplica
--- tg_Control_Estado_Orden_Produccion en DB/triggers.sql, donde la orden avanza
+-- tg_Registrar_Embalaje en DB/triggers.sql, donde la orden avanza
 -- su cant_producida cuando la laptop llega a EMBALA. La fecha de producción
 -- sale de registro_embalaje porque la tabla laptop no guarda ninguna.
 

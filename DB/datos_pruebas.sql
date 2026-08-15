@@ -48,7 +48,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 --  tres, para que se vea la relación 1 lote -> N órdenes.
 --
 --  Sobre los estados: los folios 1 a 4 se insertan en su estado inicial, pero
---  el trigger tg_Iniciar_Orden_Al_Registrar_Laptop mueve a 'PROC' cualquier
+--  el trigger tg_Laptop_Alta mueve a 'PROC' cualquier
 --  orden 'PEND' en cuanto se le registra una laptop. Por eso el folio 1 termina
 --  en 'PROC' y el 5, que se queda sin laptops, es el único que sigue 'PEND'.
 --  El folio 3 pasa a 'COMP' por el trigger de embalaje.
@@ -66,7 +66,7 @@ INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant
 --
 --  El estado que se manda aquí ya no decide nada: tg_Arrancar_Laptop_En_
 --  Ensamblaje deja en PENSAM a toda laptop que nazca en REGIS, y acto seguido
---  tg_Abrir_Ensamblaje_Primera_Linea le abre su registro en la línea A. Ese es
+--  tg_Laptop_Alta le abre su registro en la línea A. Ese es
 --  el arranque del reloj de ensamblaje que pide el proceso.
 --
 --  Las que terminan APROV/RECHA/EMBALA llegan ahí por el recorrido de la
@@ -92,7 +92,7 @@ INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
 --
 --  Los registros de ensamblaje ya NO se insertan a mano:
 --    - el alta de la laptop abre sola el de la primera línea
---      (tg_Abrir_Ensamblaje_Primera_Linea);
+--      (tg_Laptop_Alta);
 --    - cada inspección aprobada cierra el de su línea y abre el de la
 --      siguiente (tg_Actualizar_Estado_Laptop_Inspeccion_Calidad).
 --

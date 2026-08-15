@@ -40,7 +40,7 @@ EDO_COMP_MERMADO = "EDC004"
 EDO_ORDEN_PENDIENTE = "PEND"
 
 # Laptop ya embalada: es la que de verdad cuenta como producida (ver el trigger
-# tg_Control_Estado_Orden_Produccion en DB/triggers.sql).
+# tg_Registrar_Embalaje en DB/triggers.sql).
 EDO_LAPTOP_EMBALADA = "EMBALA"
 
 
@@ -864,7 +864,7 @@ def ordenProduccionDetalleView(request, folio):
 
 # Estados en los que la laptop ya cerró su ciclo productivo y no se le deben
 # quitar piezas. Es el mismo criterio del trigger
-# tg_Bloquear_Componentes_Laptop_Finalizada (ver DB/triggers.sql).
+# tg_Validar_Apertura_Ensamblaje (ver DB/triggers.sql).
 ESTADOS_LAPTOP_FINALIZADOS = {"APROV", "RECHA", "EMBALA"}
 
 # Estado con el que nace una laptop.
@@ -1544,7 +1544,7 @@ def laptopDesarmarView(request, numero):
     resuelve sp_Liberar_Componentes_Laptop, que además cierra el registro de
     ensamblaje.
 
-    OJO: al cerrarlo, tg_Control_Componentes_Duplicados ya no deja abrirle otro,
+    OJO: al cerrarlo, tg_Validar_Apertura_Ensamblaje ya no deja abrirle otro,
     o sea que la laptop no se vuelve a armar. Por eso la plantilla lo pregunta
     con todas sus letras antes de mandar el POST."""
 
