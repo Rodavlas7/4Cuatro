@@ -121,7 +121,7 @@ CREATE TRIGGER tg_Laptop_Alta
 AFTER INSERT ON laptop
 FOR EACH ROW
 BEGIN
-    DECLARE v_primera VARCHAR(8) DEFAULT NULL;
+    DECLARE primera_linea VARCHAR(8) DEFAULT NULL;
 
     IF NEW.orden IS NOT NULL THEN
 
@@ -149,16 +149,16 @@ BEGIN
     IF NEW.estado = 'PENSAM' THEN
 
         SELECT l.codigo
-          INTO v_primera
+          INTO primera_linea
           FROM linea l
          WHERE l.tipo = 'ENSA'
            AND NOT EXISTS (SELECT 1 FROM linea p WHERE p.siguiente = l.codigo)
          ORDER BY l.codigo
          LIMIT 1;
 
-        IF v_primera IS NOT NULL THEN
+        IF primera_linea IS NOT NULL THEN
             INSERT INTO registro_ensamblaje (fecha_inicio, hora_inicio, laptop, linea)
-            VALUES (CURDATE(), CURTIME(), NEW.numero, v_primera);
+            VALUES (CURDATE(), CURTIME(), NEW.numero, primera_linea);
         END IF;
 
     END IF;
@@ -330,11 +330,11 @@ CREATE TRIGGER tg_Validar_Apertura_Ensamblaje
 BEFORE INSERT ON registro_ensamblaje
 FOR EACH ROW
 BEGIN
-    DECLARE v_tipo     VARCHAR(8) DEFAULT NULL;
-    DECLARE v_estado   VARCHAR(8) DEFAULT NULL;
-    DECLARE v_abiertos INT DEFAULT 0;
-    DECLARE v_ultima   VARCHAR(8) DEFAULT NULL;
-    DECLARE v_termino  INT DEFAULT 0;
+    DECLARE tipo_de_linea     VARCHAR(8) DEFAULT NULL;
+    DECLARE estado_laptop   VARCHAR(8) DEFAULT NULL;
+    DECLARE ensamblajes_abiertos INT DEFAULT 0;
+    DECLARE ultima_linea   VARCHAR(8) DEFAULT NULL;
+    DECLARE registros_ultima_linea  INT DEFAULT 0;
 
     -- 1. La línea
     IF NEW.linea IS NULL THEN
@@ -342,41 +342,41 @@ BEGIN
             SET MESSAGE_TEXT = 'Error tg_Validar_Apertura: el registro de ensamblaje necesita una línea';
     END IF;
 
-    SELECT tipo INTO v_tipo FROM linea WHERE codigo = NEW.linea;
+    SELECT tipo INTO tipo_de_linea FROM linea WHERE codigo = NEW.linea;
 
-    IF v_tipo IS NULL THEN
+    IF tipo_de_linea IS NULL THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Validar_Apertura: esa línea no tiene tipo asignado, no se puede ensamblar en ella';
     END IF;
 
-    IF v_tipo <> 'ENSA' THEN
+    IF tipo_de_linea <> 'ENSA' THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Validar_Apertura: solo se puede registrar ensamblaje en líneas de tipo Ensamblaje';
     END IF;
 
     -- 2. El estado de la laptop
-    SELECT estado INTO v_estado FROM laptop WHERE numero = NEW.laptop;
+    SELECT estado INTO estado_laptop FROM laptop WHERE numero = NEW.laptop;
 
-    IF v_estado IN ('APROV', 'RECHA', 'EMBALA') THEN
+    IF estado_laptop IN ('APROV', 'RECHA', 'EMBALA') THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Validar_Apertura: la laptop ya finalizó su proceso productivo';
     END IF;
 
     -- 3. Que no haya otro abierto
     SELECT COUNT(*)
-      INTO v_abiertos
+      INTO ensamblajes_abiertos
       FROM registro_ensamblaje
      WHERE laptop    = NEW.laptop
        AND fecha_fin IS NULL;
 
-    IF v_abiertos > 0 THEN
+    IF ensamblajes_abiertos > 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Validar_Apertura: la laptop ya tiene un ensamblaje abierto, ciérralo primero';
     END IF;
 
     -- ...y que no haya terminado ya el recorrido
     SELECT l.codigo
-      INTO v_ultima
+      INTO ultima_linea
       FROM linea l
      WHERE l.tipo = 'ENSA'
        AND NOT EXISTS (SELECT 1 FROM linea s
@@ -384,15 +384,15 @@ BEGIN
      ORDER BY l.codigo DESC
      LIMIT 1;
 
-    IF v_ultima IS NOT NULL THEN
+    IF ultima_linea IS NOT NULL THEN
         SELECT COUNT(*)
-          INTO v_termino
+          INTO registros_ultima_linea
           FROM registro_ensamblaje
          WHERE laptop    = NEW.laptop
-           AND linea     = v_ultima
+           AND linea     = ultima_linea
            AND fecha_fin IS NOT NULL;
 
-        IF v_termino > 0 THEN
+        IF registros_ultima_linea > 0 THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Apertura: la laptop ya recorrió todas las líneas de ensamblaje';
         END IF;
@@ -414,7 +414,7 @@ CREATE TRIGGER tg_Validar_Linea_Ensamblaje_Cambio
 BEFORE UPDATE ON registro_ensamblaje
 FOR EACH ROW
 BEGIN
-    DECLARE v_tipo VARCHAR(8) DEFAULT NULL;
+    DECLARE tipo_de_linea VARCHAR(8) DEFAULT NULL;
 
     IF NOT (NEW.linea <=> OLD.linea) THEN
 
@@ -423,14 +423,14 @@ BEGIN
                 SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Cambio: el registro de ensamblaje necesita una línea';
         END IF;
 
-        SELECT tipo INTO v_tipo FROM linea WHERE codigo = NEW.linea;
+        SELECT tipo INTO tipo_de_linea FROM linea WHERE codigo = NEW.linea;
 
-        IF v_tipo IS NULL THEN
+        IF tipo_de_linea IS NULL THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Cambio: esa línea no tiene tipo asignado, no se puede ensamblar en ella';
         END IF;
 
-        IF v_tipo <> 'ENSA' THEN
+        IF tipo_de_linea <> 'ENSA' THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Linea_Cambio: solo se puede registrar ensamblaje en líneas de tipo Ensamblaje';
         END IF;
@@ -479,8 +479,8 @@ AFTER INSERT ON inspeccion_calidad
 FOR EACH ROW
 BEGIN
     DECLARE estado_laptop VARCHAR(8);
-    DECLARE v_siguiente VARCHAR(8) DEFAULT NULL;
-    DECLARE v_abierto INT DEFAULT 0;
+    DECLARE linea_siguiente VARCHAR(8) DEFAULT NULL;
+    DECLARE ensamblaje_abierto INT DEFAULT 0;
 
     SELECT estado
       INTO estado_laptop
@@ -500,13 +500,13 @@ BEGIN
             -- la inspección se está capturando donde no toca y cerrarla en falso
             -- dejaría a la laptop atorada sin registro ni relevo.
             SELECT COUNT(*)
-              INTO v_abierto
+              INTO ensamblaje_abierto
               FROM registro_ensamblaje
              WHERE laptop    = NEW.laptop
                AND linea     = NEW.linea
                AND fecha_fin IS NULL;
 
-            IF v_abierto = 0 THEN
+            IF ensamblaje_abierto = 0 THEN
                 SIGNAL SQLSTATE '45000'
                     SET MESSAGE_TEXT = 'Error tg_Inspeccion_Calidad: la laptop no tiene un ensamblaje abierto en esa línea';
             END IF;
@@ -530,16 +530,16 @@ BEGIN
             -- La siguiente línea sólo cuenta si es de ensamblaje: la cadena
             -- termina donde empieza el embalaje.
             SELECT l.siguiente
-              INTO v_siguiente
+              INTO linea_siguiente
               FROM linea l
              WHERE l.codigo = NEW.linea
                AND EXISTS (SELECT 1 FROM linea s
                             WHERE s.codigo = l.siguiente AND s.tipo = 'ENSA');
 
-            IF v_siguiente IS NOT NULL THEN
+            IF linea_siguiente IS NOT NULL THEN
                 -- Relevo: la laptop sigue en ensamblaje, ahora en la que sigue.
                 INSERT INTO registro_ensamblaje (fecha_inicio, hora_inicio, laptop, linea)
-                VALUES (CURDATE(), CURTIME(), NEW.laptop, v_siguiente);
+                VALUES (CURDATE(), CURTIME(), NEW.laptop, linea_siguiente);
             ELSE
                 -- Era la última línea: aprobación final.
                 UPDATE laptop SET estado = 'APROV' WHERE numero = NEW.laptop;
@@ -595,24 +595,24 @@ CREATE TRIGGER tg_Registrar_Embalaje
 AFTER INSERT ON registro_embalaje
 FOR EACH ROW
 BEGIN
-    DECLARE estado_actual VARCHAR(8);
+    DECLARE estado_laptop VARCHAR(8);
     DECLARE folio_orden   INT;
-    DECLARE planificadas  INT;
-    DECLARE embaladas     INT;
+    DECLARE total_planificadas  INT;
+    DECLARE total_embaladas     INT;
     DECLARE estado_orden  VARCHAR(8);
 
     -- 1. La laptop
     SELECT estado
-      INTO estado_actual
+      INTO estado_laptop
       FROM laptop
      WHERE numero = NEW.laptop;
 
-    IF estado_actual = 'EMBALA' THEN
+    IF estado_laptop = 'EMBALA' THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Registrar_Embalaje: la laptop ya fue embalada previamente';
     END IF;
 
-    IF estado_actual IS NULL OR estado_actual <> 'APROV' THEN
+    IF estado_laptop IS NULL OR estado_laptop <> 'APROV' THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Error tg_Registrar_Embalaje: la laptop debe estar Aprobada para embalarse';
     END IF;
@@ -625,19 +625,19 @@ BEGIN
     SELECT orden INTO folio_orden FROM laptop WHERE numero = NEW.laptop;
 
     SELECT estado, cant_planificada
-      INTO estado_orden, planificadas
+      INTO estado_orden, total_planificadas
       FROM orden_produccion
      WHERE folio = folio_orden;
 
     IF estado_orden IN ('PEND', 'PROC') THEN
 
         SELECT COUNT(*)
-          INTO embaladas
+          INTO total_embaladas
           FROM laptop
          WHERE orden  = folio_orden
            AND estado = 'EMBALA';
 
-        IF planificadas > 0 AND embaladas >= planificadas THEN
+        IF total_planificadas > 0 AND total_embaladas >= total_planificadas THEN
             UPDATE orden_produccion
                SET estado = 'COMP'
              WHERE folio  = folio_orden;
@@ -680,48 +680,48 @@ CREATE TRIGGER tg_Validar_Capacidad_Componente
 BEFORE INSERT ON componente
 FOR EACH ROW
 BEGIN
-    DECLARE v_laptop        INT;
-    DECLARE v_modelo_laptop VARCHAR(8);
-    DECLARE v_tipo          VARCHAR(8);
-    DECLARE v_capacidad     INT;
-    DECLARE v_instalados    INT;
+    DECLARE numero_laptop        INT;
+    DECLARE modelo_de_laptop VARCHAR(8);
+    DECLARE tipo_de_componente          VARCHAR(8);
+    DECLARE capacidad_permitida     INT;
+    DECLARE total_instalados    INT;
 
     -- Si es inventario libre (sin ensamblaje), no hay nada que validar.
     IF NEW.registro_ensamblaje IS NOT NULL AND NEW.modelo IS NOT NULL THEN
 
         SELECT re.laptop, l.modelo
-          INTO v_laptop, v_modelo_laptop
+          INTO numero_laptop, modelo_de_laptop
           FROM registro_ensamblaje re
           JOIN laptop l ON l.numero = re.laptop
          WHERE re.numero = NEW.registro_ensamblaje;
 
         SELECT mc.tipo_componente
-          INTO v_tipo
+          INTO tipo_de_componente
           FROM modelo_componente mc
          WHERE mc.codigo = NEW.modelo;
 
         SELECT MAX(mlc.capacidad)
-          INTO v_capacidad
+          INTO capacidad_permitida
           FROM modelo_laptop_componente mlc
           JOIN modelo_componente mc2 ON mc2.codigo = mlc.modelo_componente
-         WHERE mlc.modelo_laptop   = v_modelo_laptop
-           AND mc2.tipo_componente = v_tipo;
+         WHERE mlc.modelo_laptop   = modelo_de_laptop
+           AND mc2.tipo_componente = tipo_de_componente;
 
-        IF v_capacidad IS NULL THEN
+        IF capacidad_permitida IS NULL THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: el tipo de componente no es compatible con el modelo de la laptop';
         END IF;
 
         SELECT COUNT(*)
-          INTO v_instalados
+          INTO total_instalados
           FROM componente c
           JOIN registro_ensamblaje re2 ON re2.numero = c.registro_ensamblaje
           JOIN modelo_componente   mc3 ON mc3.codigo = c.modelo
-         WHERE re2.laptop          = v_laptop
-           AND mc3.tipo_componente = v_tipo
+         WHERE re2.laptop          = numero_laptop
+           AND mc3.tipo_componente = tipo_de_componente
            AND (c.estado IS NULL OR c.estado <> 'EDC004');
 
-        IF v_instalados + 1 > v_capacidad THEN
+        IF total_instalados + 1 > capacidad_permitida THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: se excede la capacidad de ese tipo de componente para el modelo de la laptop';
         END IF;
@@ -742,11 +742,11 @@ CREATE TRIGGER tg_Validar_Capacidad_Componente_Cambio
 BEFORE UPDATE ON componente
 FOR EACH ROW
 BEGIN
-    DECLARE v_laptop        INT;
-    DECLARE v_modelo_laptop VARCHAR(8);
-    DECLARE v_tipo          VARCHAR(8);
-    DECLARE v_capacidad     INT;
-    DECLARE v_instalados    INT;
+    DECLARE numero_laptop        INT;
+    DECLARE modelo_de_laptop VARCHAR(8);
+    DECLARE tipo_de_componente          VARCHAR(8);
+    DECLARE capacidad_permitida     INT;
+    DECLARE total_instalados    INT;
 
     IF NOT (NEW.registro_ensamblaje <=> OLD.registro_ensamblaje)
        AND NEW.registro_ensamblaje IS NOT NULL
@@ -754,39 +754,39 @@ BEGIN
     THEN
 
         SELECT re.laptop, l.modelo
-          INTO v_laptop, v_modelo_laptop
+          INTO numero_laptop, modelo_de_laptop
           FROM registro_ensamblaje re
           JOIN laptop l ON l.numero = re.laptop
          WHERE re.numero = NEW.registro_ensamblaje;
 
         SELECT mc.tipo_componente
-          INTO v_tipo
+          INTO tipo_de_componente
           FROM modelo_componente mc
          WHERE mc.codigo = NEW.modelo;
 
         SELECT MAX(mlc.capacidad)
-          INTO v_capacidad
+          INTO capacidad_permitida
           FROM modelo_laptop_componente mlc
           JOIN modelo_componente mc2 ON mc2.codigo = mlc.modelo_componente
-         WHERE mlc.modelo_laptop   = v_modelo_laptop
-           AND mc2.tipo_componente = v_tipo;
+         WHERE mlc.modelo_laptop   = modelo_de_laptop
+           AND mc2.tipo_componente = tipo_de_componente;
 
-        IF v_capacidad IS NULL THEN
+        IF capacidad_permitida IS NULL THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: el tipo de componente no es compatible con el modelo de la laptop';
         END IF;
 
         SELECT COUNT(*)
-          INTO v_instalados
+          INTO total_instalados
           FROM componente c
           JOIN registro_ensamblaje re2 ON re2.numero = c.registro_ensamblaje
           JOIN modelo_componente   mc3 ON mc3.codigo = c.modelo
-         WHERE re2.laptop          = v_laptop
-           AND mc3.tipo_componente = v_tipo
+         WHERE re2.laptop          = numero_laptop
+           AND mc3.tipo_componente = tipo_de_componente
            AND c.numero            <> NEW.numero
            AND (c.estado IS NULL OR c.estado <> 'EDC004');
 
-        IF v_instalados + 1 > v_capacidad THEN
+        IF total_instalados + 1 > capacidad_permitida THEN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: se excede la capacidad de ese tipo de componente para el modelo de la laptop';
         END IF;
