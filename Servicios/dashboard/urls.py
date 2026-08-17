@@ -5,6 +5,8 @@
     /api/dashboard/produccion/?desde=&hasta=   laptops producidas por día
     /api/dashboard/calidad/?desde=&hasta=      inspecciones por día
     /api/dashboard/paros/?desde=&hasta=        paros por día
+    /api/dashboard/tiempos/?desde=&hasta=      tiempo en línea por día (bruto y de turno)
+    /api/dashboard/tiempos/laptop/<numero>/    lo que lleva una laptop, pasada por pasada
     /api/dashboard/stock/?umbral=10            inventario / material bajo
     /api/dashboard/actividad/?limite=15        últimos movimientos
     /api/dashboard/paros-abiertos/             paros sin cerrar
@@ -25,6 +27,8 @@ urlpatterns = [
     path("produccion/", ProduccionDiariaAPIView.as_view(), name="dash-produccion"),
     path("calidad/", CalidadDiariaAPIView.as_view(), name="dash-calidad"),
     path("paros/", ParosDiariaAPIView.as_view(), name="dash-paros"),
+    path("tiempos/", TiempoLineaDiariaAPIView.as_view(), name="dash-tiempos"),
+    path("tiempos/laptop/<int:numero>/", TiempoLaptopAPIView.as_view(), name="dash-tiempo-laptop"),
     path("stock/", StockComponentesAPIView.as_view(), name="dash-stock"),
     path("actividad/", ActividadAPIView.as_view(), name="dash-actividad"),
     path("paros-abiertos/", ParosAbiertosAPIView.as_view(), name="dash-paros-abiertos"),

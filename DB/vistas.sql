@@ -17,6 +17,13 @@ DROP VIEW IF EXISTS vista_usuarios;
 DROP VIEW IF EXISTS vista_inspeccion_calidad;
 DROP VIEW IF EXISTS vista_registro_embalaje;
 
+-- Tiempo en línea (bloque de en medio del archivo)
+DROP VIEW IF EXISTS vista_tiempo_linea;
+DROP VIEW IF EXISTS vista_tiempo_laptop;
+DROP VIEW IF EXISTS vista_dash_tiempo_linea_diaria;
+DROP FUNCTION IF EXISTS fn_Minutos_En_Turno;
+DROP FUNCTION IF EXISTS fn_Fin_O_Ahora;
+
 -- Vistas del dashboard de administrador (bloque del final del archivo)
 DROP VIEW IF EXISTS vista_dash_produccion_diaria;
 DROP VIEW IF EXISTS vista_dash_calidad_diaria;
@@ -389,6 +396,235 @@ ORDER BY re.numero Desc, re.fecha DESC, re.hora DESC;
 
 
 -- ============================================================================
+--   T I E M P O   E N   L Í N E A
+-- ============================================================================
+--
+-- Cuánto tarda una laptop en cada línea, medido de dos maneras a la vez:
+--
+--   minutos_brutos  El reloj de pared. De que abre el registro de ensamblaje a
+--                   que cierra, sin quitarle nada.
+--   minutos_turno   Lo mismo, pero descontando lo que cayó fuera del horario de
+--                   planta. Una laptop que se queda en la línea de un viernes a
+--                   las 21:00 al lunes a las 07:00 no estuvo 3 días
+--                   ensamblándose: estuvo una hora el viernes y una el lunes.
+--
+-- Se exponen LAS DOS y no una sola porque contestan preguntas distintas. El
+-- bruto dice cuánto se tardó la unidad en salir (es lo que ve el cliente que la
+-- espera); el de turno dice cuánto trabajo costó (es contra lo que se mide a la
+-- línea). Quedarse nada más con el bruto castiga a la línea por las noches y los
+-- domingos; quedarse nada más con el de turno esconde que la unidad se atoró.
+--
+--
+-- DE DÓNDE SALE EL HORARIO
+-- ------------------------
+-- De la tabla `turno`, tomando MIN(hora_entrada) y MAX(hora_salida): la planta
+-- está abierta desde que entra el primer turno hasta que sale el último (hoy
+-- 06:00 a 22:00 con Matutino y Vespertino). No se usa el turno del empleado
+-- porque registro_ensamblaje no guarda empleado: la laptop está en la línea, no
+-- en manos de alguien. Si mañana se agrega un turno nocturno, la ventana se
+-- ensancha sola y no hay que tocar ninguna vista.
+--
+-- OJO: la ventana es la misma TODOS los días. `turno` no tiene día de la semana,
+-- así que un sábado cuenta igual que un martes. Si algún día la planta necesita
+-- distinguir días no laborables, va aquí y no en el cliente.
+--
+--
+-- LO QUE TODAVÍA NO CIERRA
+-- ------------------------
+-- Un registro sin fecha_fin es una laptop que sigue en la línea AHORITA, así que
+-- cuenta hasta la hora del equipo (NOW()) y su número crece cada vez que se
+-- consulta. Es a propósito: es la única manera de ver en pantalla cuánto lleva
+-- atorada una unidad. Los promedios de vista_dash_tiempo_linea_diaria sí las
+-- dejan fuera, porque un dato que todavía crece no es un tiempo de ciclo.
+
+
+DELIMITER $$
+
+-- FUNCIÓN: fn_Fin_O_Ahora
+--
+-- Objetivo : El momento en que terminó algo, o el de ahorita si sigue abierto.
+--            Existe para que la regla de "lo abierto cuenta hasta este momento"
+--            se escriba una sola vez y no en cada vista.
+
+CREATE FUNCTION fn_Fin_O_Ahora(fecha DATE, hora TIME)
+RETURNS DATETIME
+NOT DETERMINISTIC
+NO SQL
+BEGIN
+    IF fecha IS NULL THEN
+        RETURN NOW();
+    END IF;
+
+    RETURN TIMESTAMP(fecha, IFNULL(hora, '00:00:00'));
+END$$
+
+
+-- FUNCIÓN: fn_Minutos_En_Turno
+--
+-- Objetivo : Los minutos entre dos momentos que caen dentro del horario de
+--            planta. Es la resta de siempre pero recortando noches y madrugadas.
+--
+-- Es una función y no una fórmula repetida en cada vista porque MySQL no deja
+-- subconsultas en el FROM de una vista, y sin ella el cálculo tendría que
+-- copiarse tal cual en las cuatro vistas que lo usan.
+--
+-- Cómo cuenta, sin recorrer día por día
+-- -------------------------------------
+-- Un bucle sobre cada día del intervalo sería lo obvio, pero se puede en una
+-- sola cuenta. Si f(T) son los minutos hábiles acumulados desde siempre hasta T,
+-- la respuesta es f(fin) - f(inicio). Y f(T) es "los días completos que ya
+-- pasaron por una jornada, más lo que lleve corrido el día de T recortado a la
+-- jornada". De ahí salen los tres renglones del RETURN:
+--
+--     DATEDIFF * jornada     los días enteros entre las dos fechas
+--     + recorte del fin      lo que cuenta el último día
+--     - recorte del inicio   lo que NO cuenta del primero
+--
+-- El GREATEST(..., 0) tira lo que pasó antes de que abriera la planta y el
+-- LEAST(..., jornada) lo que pasó después de que cerró.
+--
+-- Vale mientras la planta no cruce la medianoche (hora_salida > hora_entrada).
+-- Si algún día hay turno nocturno que sí la cruce, esta cuenta se cae y hay que
+-- rehacerla; por eso el IF de abajo se sale por la puerta de atrás en ese caso
+-- en lugar de devolver un número inventado.
+
+CREATE FUNCTION fn_Minutos_En_Turno(inicio DATETIME, fin DATETIME)
+RETURNS INT
+READS SQL DATA
+BEGIN
+    DECLARE apertura TIME;
+    DECLARE cierre   TIME;
+    DECLARE jornada  INT;
+
+    IF inicio IS NULL OR fin IS NULL OR fin <= inicio THEN
+        RETURN 0;
+    END IF;
+
+    SELECT MIN(hora_entrada), MAX(hora_salida)
+      INTO apertura, cierre
+      FROM turno;
+
+    -- Sin turnos capturados, o con una ventana que cruza la medianoche, no hay
+    -- nada que recortar: se devuelve el tiempo de pared para no mentir con un 0.
+    IF apertura IS NULL OR cierre IS NULL OR cierre <= apertura THEN
+        RETURN TIMESTAMPDIFF(MINUTE, inicio, fin);
+    END IF;
+
+    SET jornada = (TIME_TO_SEC(cierre) - TIME_TO_SEC(apertura)) DIV 60;
+
+    RETURN DATEDIFF(fin, inicio) * jornada
+         + LEAST(GREATEST(TIME_TO_SEC(TIME(fin))    - TIME_TO_SEC(apertura), 0) DIV 60, jornada)
+         - LEAST(GREATEST(TIME_TO_SEC(TIME(inicio)) - TIME_TO_SEC(apertura), 0) DIV 60, jornada);
+END$$
+
+DELIMITER ;
+
+
+-- VISTA: vista_tiempo_linea
+--
+-- Objetivo : Un renglón por PASADA — cada registro_ensamblaje es el paso de una
+--            laptop por una línea — con sus dos tiempos ya calculados.
+--
+--            Salen las fechas y horas sueltas Y armadas como DATETIME. Las
+--            armadas (`inicio`, `fin`) existen para que vista_tiempo_laptop
+--            agrupe con un MIN/MAX simple en lugar de rearmar el timestamp, y
+--            para quien consulte la base a mano.
+--
+--            A pantalla viajan las sueltas, que es como el resto del proyecto
+--            guarda y expone sus tiempos (fecha_inicio + hora_inicio en paro,
+--            en inspeccion_calidad, en registro_embalaje...). Las armadas se
+--            quedan como herramienta de la propia base.
+
+CREATE VIEW vista_tiempo_linea AS
+SELECT
+    r.numero,
+    r.laptop         AS laptop_numero,
+    lap.num_serie    AS laptop_num_serie,
+    lap.orden        AS orden_folio,
+    lap.modelo       AS modelo_codigo,
+    ml.nombre        AS modelo_nombre,
+    r.linea          AS linea_codigo,
+    l.nombre         AS linea_nombre,
+
+    r.fecha_inicio,
+    r.hora_inicio,
+    r.fecha_fin,
+    r.hora_fin,
+
+    TIMESTAMP(r.fecha_inicio, IFNULL(r.hora_inicio, '00:00:00'))     AS inicio,
+    fn_Fin_O_Ahora(r.fecha_fin, r.hora_fin)                          AS fin,
+
+    CASE WHEN r.fecha_fin IS NULL THEN 1 ELSE 0 END                  AS abierto,
+
+    TIMESTAMPDIFF(
+        MINUTE,
+        TIMESTAMP(r.fecha_inicio, IFNULL(r.hora_inicio, '00:00:00')),
+        fn_Fin_O_Ahora(r.fecha_fin, r.hora_fin)
+    )                                                                AS minutos_brutos,
+
+    fn_Minutos_En_Turno(
+        TIMESTAMP(r.fecha_inicio, IFNULL(r.hora_inicio, '00:00:00')),
+        fn_Fin_O_Ahora(r.fecha_fin, r.hora_fin)
+    )                                                                AS minutos_turno
+
+FROM registro_ensamblaje r
+LEFT JOIN laptop        lap ON lap.numero = r.laptop
+LEFT JOIN modelo_laptop ml  ON ml.codigo  = lap.modelo
+LEFT JOIN linea         l   ON l.codigo   = r.linea;
+
+
+-- VISTA: vista_tiempo_laptop
+--
+-- Objetivo : El acumulado de cada laptop: cuánto lleva en total sumando todas
+--            las líneas por las que pasó.
+--
+-- Los dos pares de números NO son lo mismo y por eso salen los cuatro:
+--
+--   minutos_*  Lo que estuvo DENTRO de una línea: la suma de sus pasadas.
+--   ciclo_*    Lo que tardó de punta a punta: de que entró a la primera línea a
+--              que salió de la última.
+--
+-- La diferencia entre ambos es el tiempo que la laptop pasó esperando ENTRE
+-- líneas (típicamente esperando inspección), que no aparece en ningún lado si
+-- sólo se suman las pasadas. Ahí es donde se atoran las órdenes.
+--
+-- Sale de vista_tiempo_linea y no de `laptop`, así que una laptop apenas
+-- registrada, sin ningún ensamblaje abierto todavía, no aparece aquí. Quien la
+-- necesite con ceros que la enganche con LEFT JOIN, como hace
+-- vista_traza_orden_laptops.
+
+CREATE VIEW vista_tiempo_laptop AS
+SELECT
+    t.laptop_numero      AS laptop,
+    t.laptop_num_serie   AS num_serie,
+    t.orden_folio,
+    t.modelo_codigo,
+    t.modelo_nombre,
+
+    COUNT(*)             AS pasos,
+    SUM(t.abierto)       AS pasos_abiertos,
+
+    -- Partidas en DATE y TIME para que se lean igual que las de cualquier otra
+    -- tabla del proyecto; el DATETIME sólo se usa aquí adentro para el MIN/MAX.
+    DATE(MIN(t.inicio))  AS fecha_inicio,
+    TIME(MIN(t.inicio))  AS hora_inicio,
+    DATE(MAX(t.fin))     AS fecha_fin,
+    TIME(MAX(t.fin))     AS hora_fin,
+
+    SUM(t.minutos_brutos) AS minutos_brutos,
+    SUM(t.minutos_turno)  AS minutos_turno,
+
+    TIMESTAMPDIFF(MINUTE, MIN(t.inicio), MAX(t.fin))    AS ciclo_brutos,
+    fn_Minutos_En_Turno(MIN(t.inicio), MAX(t.fin))      AS ciclo_turno
+
+FROM vista_tiempo_linea t
+GROUP BY t.laptop_numero, t.laptop_num_serie, t.orden_folio,
+         t.modelo_codigo, t.modelo_nombre;
+
+
+
+
+-- ============================================================================
 --   D A S H B O A R D   D E   A D M I N I S T R A D O R
 -- ============================================================================
 --
@@ -506,6 +742,56 @@ SELECT
 FROM paro p
 LEFT JOIN linea l ON l.codigo = p.linea
 GROUP BY p.fecha_inicio, p.linea, l.nombre;
+
+
+-- VISTA: vista_dash_tiempo_linea_diaria
+--
+-- Objetivo : Cuánto tarda una laptop en cada línea, por día y modelo. Es el
+--            promedio de producción del dashboard, y como todo en este bloque
+--            viene con los dos tiempos: el bruto y el de turno.
+--
+--            El día es el de ARRANQUE de la pasada (fecha_inicio). Una pasada
+--            que empezó el lunes y cerró el martes cuenta completa en el lunes,
+--            para no partir un mismo tiempo entre dos renglones.
+--
+-- SÓLO PASADAS CERRADAS
+-- ---------------------
+-- El WHERE deja fuera lo que sigue abierto. Una laptop que ahorita está en la
+-- línea todavía no tiene un tiempo: tiene un tiempo que va creciendo, y meterlo
+-- al promedio lo movería solo con que alguien recargue la pantalla.
+--
+-- CÓMO SACAR EL PROMEDIO DE UN RANGO
+-- ----------------------------------
+-- Con las sumas, NO promediando los promedios. `promedio_*` es el del día y
+-- sirve para la gráfica; para la tarjeta de un rango hay que dividir:
+--
+--     SELECT SUM(minutos_turno) / SUM(pasadas) FROM vista_dash_tiempo_linea_diaria
+--      WHERE fecha BETWEEN '2026-07-01' AND '2026-07-31';
+--
+-- Un AVG(promedio_turno) daría otro número: le pondría el mismo peso a un día de
+-- 2 laptops que a uno de 200.
+
+CREATE VIEW vista_dash_tiempo_linea_diaria AS
+SELECT
+    CONCAT(t.fecha_inicio, '|', IFNULL(t.linea_codigo, '-'), '|', IFNULL(t.modelo_codigo, '-')) AS clave,
+    t.fecha_inicio    AS fecha,
+    t.linea_codigo,
+    t.linea_nombre,
+    t.modelo_codigo,
+    t.modelo_nombre,
+
+    COUNT(*)                      AS pasadas,
+    COUNT(DISTINCT t.laptop_numero) AS laptops,
+
+    SUM(t.minutos_brutos)         AS minutos_brutos,
+    SUM(t.minutos_turno)          AS minutos_turno,
+
+    ROUND(AVG(t.minutos_brutos))  AS promedio_brutos,
+    ROUND(AVG(t.minutos_turno))   AS promedio_turno
+
+FROM vista_tiempo_linea t
+WHERE t.abierto = 0
+GROUP BY t.fecha_inicio, t.linea_codigo, t.linea_nombre, t.modelo_codigo, t.modelo_nombre;
 
 
 -- VISTA: vista_dash_resumen_planta
@@ -778,7 +1064,18 @@ SELECT
     (SELECT MAX(r.fecha_fin)
        FROM registro_ensamblaje r
        JOIN laptop x ON x.numero = r.laptop
-      WHERE x.orden = op.folio)                                   AS ensamblaje_fin
+      WHERE x.orden = op.folio)                                   AS ensamblaje_fin,
+
+    -- Cuánto tarda una laptop de esta orden, en las dos medidas (ver el bloque
+    -- TIEMPO EN LÍNEA). Sólo entran las que ya salieron de línea
+    -- (pasos_abiertos = 0): las que siguen adentro no tienen un tiempo todavía y
+    -- jalarían el promedio hacia abajo nada más por estar a medias.
+    (SELECT ROUND(AVG(v.minutos_brutos))
+       FROM vista_tiempo_laptop v
+      WHERE v.orden_folio = op.folio AND v.pasos_abiertos = 0)    AS promedio_brutos,
+    (SELECT ROUND(AVG(v.minutos_turno))
+       FROM vista_tiempo_laptop v
+      WHERE v.orden_folio = op.folio AND v.pasos_abiertos = 0)    AS promedio_turno
 
 FROM orden_produccion op
 LEFT JOIN modelo_laptop  ml ON ml.codigo = op.modelo_laptop
@@ -829,12 +1126,21 @@ SELECT
       ORDER BY ic.fecha DESC, ic.hora DESC, ic.numero DESC
       LIMIT 1)                                                          AS ultimo_resultado,
 
-    (SELECT MAX(e.fecha) FROM registro_embalaje e WHERE e.laptop = lap.numero) AS embalaje_fecha
+    (SELECT MAX(e.fecha) FROM registro_embalaje e WHERE e.laptop = lap.numero) AS embalaje_fecha,
+
+    -- Los cuatro tiempos vienen de vista_tiempo_laptop, con LEFT JOIN para que
+    -- una laptop apenas registrada, sin ninguna pasada todavía, siga saliendo en
+    -- la tabla de la orden aunque sus tiempos vengan en NULL.
+    vtl.minutos_brutos,
+    vtl.minutos_turno,
+    vtl.ciclo_brutos,
+    vtl.ciclo_turno
 
 FROM laptop lap
 LEFT JOIN modelo_laptop ml ON ml.codigo = lap.modelo
 LEFT JOIN edo_laptop    el ON el.codigo = lap.estado
-LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero;
+LEFT JOIN vista_laptop_linea vll ON vll.laptop = lap.numero
+LEFT JOIN vista_tiempo_laptop vtl ON vtl.laptop = lap.numero;
 
 
 -- VISTA: vista_traza_orden_componentes

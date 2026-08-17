@@ -111,6 +111,36 @@ def fecha_hora(valor, hora_valor=None):
 
 
 @register.filter
+def duracion(minutos):
+    """Minutos en algo que se lea de un vistazo: '35 min', '2 h 10 min', '3 d 4 h'.
+
+    Un 0 es un dato bueno —abrió y cerró en el mismo minuto—, así que se escribe
+    como '0 min' y no como vacío; el vacío se reserva para cuando de plano no hay
+    dato (None).
+
+    >>> duracion(130)
+    '2 h 10 min'
+    """
+    if minutos in (None, ''):
+        return ''
+
+    try:
+        total = int(minutos)
+    except (TypeError, ValueError):
+        return str(minutos)
+
+    if total < 60:
+        return f'{total} min'
+
+    horas, resto = divmod(total, 60)
+    if horas < 24:
+        return f'{horas} h {resto} min' if resto else f'{horas} h'
+
+    dias, horas = divmod(horas, 24)
+    return f'{dias} d {horas} h' if horas else f'{dias} d'
+
+
+@register.filter
 def rango(total):
     """Genera un rango de 1 a total, para pintar botones de paginación.
 

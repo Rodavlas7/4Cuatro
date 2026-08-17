@@ -16,6 +16,9 @@ from .models import (
     ProduccionDiaria,
     ResumenPlanta,
     StockComponentes,
+    TiempoLaptop,
+    TiempoLinea,
+    TiempoLineaDiaria,
     TrazaOrden,
     TrazaOrdenComponente,
     TrazaOrdenLaptop,
@@ -38,6 +41,24 @@ class CalidadDiariaSerializer(serializers.ModelSerializer):
 class ParosDiariaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParosDiaria
+        fields = '__all__'
+
+
+class TiempoLineaDiariaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TiempoLineaDiaria
+        fields = '__all__'
+
+
+class TiempoLineaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TiempoLinea
+        fields = '__all__'
+
+
+class TiempoLaptopSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TiempoLaptop
         fields = '__all__'
 
 

@@ -553,11 +553,11 @@ INSERT INTO paro (razon, fecha_inicio, fecha_fin, hora_inicio, hora_fin, linea) 
 
 
 -- ============================================================================
---  6. REPARTO DE FECHAS
+--  6. REPARTO DE FECHAS Y HORAS
 --
---  Los triggers sellan todo con la fecha de HOY, así que sin esto las 25
---  laptops se verían producidas en el mismo instante y los reportes por fecha
---  no mostrarían nada. Se reparten hacia atrás en una semana, de forma
+--  Los triggers sellan todo con la fecha y la hora de HOY, así que sin esto las
+--  25 laptops se verían producidas en el mismo instante y los reportes por
+--  fecha no mostrarían nada. Se reparten hacia atrás en una semana, de forma
 --  determinista según el número de laptop, y solo se tocan las de este archivo.
 --
 --  El desfase se aplica igual a los tres lados (ensamblaje, inspección y
@@ -569,6 +569,25 @@ UPDATE registro_ensamblaje re
    SET re.fecha_inicio = re.fecha_inicio - INTERVAL MOD(l.numero, 7) DAY,
        re.fecha_fin    = re.fecha_fin    - INTERVAL MOD(l.numero, 7) DAY
  WHERE l.numero > @base_laptop;
+
+UPDATE registro_ensamblaje re
+  JOIN laptop l ON l.numero = re.laptop
+  JOIN (SELECT numero,
+               ROW_NUMBER() OVER (PARTITION BY laptop ORDER BY numero) AS paso
+          FROM registro_ensamblaje) o ON o.numero = re.numero
+   SET re.hora_inicio = SEC_TO_TIME(
+           TIME_TO_SEC('06:00:00') + (MOD(l.numero, 30) * 30 + (o.paso - 1) * 45) * 60)
+ WHERE l.numero > @base_laptop;
+
+--  Y la duración: de 15 a 35 minutos, según el número de registro. Sólo para lo
+--  que ya cerró; lo que sigue abierto se queda sin hora_fin, que es justo lo que
+--  lo hace contar hasta la hora actual.
+
+UPDATE registro_ensamblaje re
+  JOIN laptop l ON l.numero = re.laptop
+   SET re.hora_fin = re.hora_inicio + INTERVAL (15 + MOD(re.numero, 21)) MINUTE
+ WHERE l.numero > @base_laptop
+   AND re.fecha_fin IS NOT NULL;
 
 UPDATE inspeccion_calidad ic
   JOIN laptop l ON l.numero = ic.laptop

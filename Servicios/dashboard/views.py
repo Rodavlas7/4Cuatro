@@ -138,6 +138,16 @@ class ParosDiariaAPIView(SerieDiariaAPIView):
     serializer_class = ParosDiariaSerializer
 
 
+class TiempoLineaDiariaAPIView(SerieDiariaAPIView):
+    """Cuánto tarda una laptop en cada línea, por día, con los dos tiempos.
+
+    Cae en SerieDiariaAPIView como las otras tres porque la vista expone las
+    mismas columnas `fecha` y `linea_codigo` que el filtro de rango espera."""
+
+    queryset = TiempoLineaDiaria.objects.all()
+    serializer_class = TiempoLineaDiariaSerializer
+
+
 # ==================================================
 # F O T O   D E   A H O R A
 # ==================================================
@@ -317,6 +327,29 @@ class TrazabilidadOrdenAPIView(APIView):
             'laptops': TrazaOrdenLaptopSerializer(laptops, many=True).data,
             'componentes': TrazaOrdenComponenteSerializer(componentes, many=True).data,
             'paros': TrazaOrdenParoSerializer(paros, many=True).data,
+        })
+
+
+class TiempoLaptopAPIView(APIView):
+    """Cuánto lleva una laptop en línea: su acumulado y el desglose por pasada.
+
+    Las dos cosas juntas en una respuesta porque la pantalla las enseña juntas:
+    el total arriba y el renglón por línea abajo. Los tiempos vienen en las dos
+    medidas, bruta y de turno (ver models.py, bloque TIEMPO EN LÍNEA)."""
+
+    permission_classes = [IsAuthenticated, TienePermisoModulo]
+    modulo = "trazabilidad"
+
+    def get(self, request, numero):
+        pasadas = (TiempoLinea.objects
+                   .filter(laptop_numero=numero)
+                   .order_by('fecha_inicio', 'hora_inicio', 'numero'))
+
+        total = TiempoLaptop.objects.filter(laptop=numero).first()
+
+        return Response({
+            'total': TiempoLaptopSerializer(total).data if total else None,
+            'pasadas': TiempoLineaSerializer(pasadas, many=True).data,
         })
 
 

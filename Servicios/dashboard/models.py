@@ -91,6 +91,36 @@ class ParosDiaria(models.Model):
         db_table = 'vista_dash_paros_diaria'
 
 
+class TiempoLineaDiaria(models.Model):
+    """Cuánto tarda una laptop en cada línea, por día, línea y modelo.
+
+    Sólo entran las pasadas ya cerradas: una que sigue abierta tiene un tiempo
+    que todavía crece y movería el promedio con sólo recargar la pantalla.
+
+    Para el promedio de un RANGO hay que dividir las sumas
+    (minutos_turno / pasadas), no promediar los `promedio_*`: eso le daría el
+    mismo peso a un día de 2 laptops que a uno de 200."""
+
+    clave = models.CharField(primary_key=True, max_length=64)
+    fecha = models.DateField(blank=True, null=True)
+    linea_codigo = models.CharField(max_length=8, blank=True, null=True)
+    linea_nombre = models.CharField(max_length=32, blank=True, null=True)
+    modelo_codigo = models.CharField(max_length=8, blank=True, null=True)
+    modelo_nombre = models.CharField(max_length=32, blank=True, null=True)
+
+    pasadas = models.IntegerField(blank=True, null=True)
+    laptops = models.IntegerField(blank=True, null=True)
+
+    minutos_brutos = models.IntegerField(blank=True, null=True)
+    minutos_turno = models.IntegerField(blank=True, null=True)
+    promedio_brutos = models.IntegerField(blank=True, null=True)
+    promedio_turno = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'vista_dash_tiempo_linea_diaria'
+
+
 # ==================================================
 # F O T O   D E   A H O R A
 # ==================================================
@@ -182,6 +212,98 @@ class Actividad(models.Model):
 
 
 # ==================================================
+# T I E M P O   E N   L Í N E A
+# ==================================================
+#
+# Todo lo de aquí abajo trae los minutos POR PARTIDA DOBLE, y así se muestran en
+# pantalla:
+#
+#   *_brutos  El reloj de pared, sin quitarle nada.
+#   *_turno   Lo mismo pero descontando lo que cayó fuera del horario de planta
+#             (la tabla `turno`: hoy 06:00 a 22:00). Una laptop que se queda en
+#             la línea del viernes a las 21:00 al lunes a las 07:00 no estuvo 3
+#             días ensamblándose, estuvo 2 horas.
+#
+# Van los dos porque contestan cosas distintas: el bruto es lo que espera quien
+# pidió la unidad, el de turno es contra lo que se mide a la línea. El recorte lo
+# hace fn_Minutos_En_Turno en DB/vistas.sql, no Python.
+#
+# Una pasada sin cerrar cuenta hasta la hora del equipo, así que su número crece
+# entre una consulta y otra. Es a propósito: es lo que deja ver cuánto lleva
+# atorada una laptop que sigue en la línea.
+
+
+class TiempoLinea(models.Model):
+    """Una pasada: el paso de una laptop por una línea (un registro_ensamblaje).
+
+    `abierto` en 1 quiere decir que la laptop sigue en esa línea y que sus
+    minutos van corriendo contra la hora actual.
+
+    La vista SQL también trae `inicio` y `fin` ya armados como DATETIME, pero
+    aquí se declaran nada más las columnas sueltas de fecha y hora, que es como
+    el resto del proyecto expone sus tiempos."""
+
+    numero = models.IntegerField(primary_key=True)
+    laptop_numero = models.IntegerField(blank=True, null=True)
+    laptop_num_serie = models.CharField(max_length=50, blank=True, null=True)
+    orden_folio = models.IntegerField(blank=True, null=True)
+    modelo_codigo = models.CharField(max_length=8, blank=True, null=True)
+    modelo_nombre = models.CharField(max_length=32, blank=True, null=True)
+    linea_codigo = models.CharField(max_length=8, blank=True, null=True)
+    linea_nombre = models.CharField(max_length=32, blank=True, null=True)
+
+    fecha_inicio = models.DateField(blank=True, null=True)
+    hora_inicio = models.TimeField(blank=True, null=True)
+    fecha_fin = models.DateField(blank=True, null=True)
+    hora_fin = models.TimeField(blank=True, null=True)
+
+    abierto = models.IntegerField(blank=True, null=True)
+    minutos_brutos = models.IntegerField(blank=True, null=True)
+    minutos_turno = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'vista_tiempo_linea'
+
+
+class TiempoLaptop(models.Model):
+    """El acumulado de una laptop, sumando todas las líneas por las que pasó.
+
+    Los dos pares NO miden lo mismo:
+
+      minutos_*  Lo que estuvo DENTRO de una línea (la suma de sus pasadas).
+      ciclo_*    Lo que tardó de punta a punta, de la primera línea a la última.
+
+    La diferencia entre ambos es lo que la laptop pasó ESPERANDO entre líneas,
+    normalmente esperando inspección. Ahí es donde se atoran las órdenes.
+
+    Una laptop apenas registrada, sin ninguna pasada todavía, no aparece: la
+    vista sale de vista_tiempo_linea."""
+
+    laptop = models.IntegerField(primary_key=True)
+    num_serie = models.CharField(max_length=50, blank=True, null=True)
+    orden_folio = models.IntegerField(blank=True, null=True)
+    modelo_codigo = models.CharField(max_length=8, blank=True, null=True)
+    modelo_nombre = models.CharField(max_length=32, blank=True, null=True)
+
+    pasos = models.IntegerField(blank=True, null=True)
+    pasos_abiertos = models.IntegerField(blank=True, null=True)
+    fecha_inicio = models.DateField(blank=True, null=True)
+    hora_inicio = models.TimeField(blank=True, null=True)
+    fecha_fin = models.DateField(blank=True, null=True)
+    hora_fin = models.TimeField(blank=True, null=True)
+
+    minutos_brutos = models.IntegerField(blank=True, null=True)
+    minutos_turno = models.IntegerField(blank=True, null=True)
+    ciclo_brutos = models.IntegerField(blank=True, null=True)
+    ciclo_turno = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'vista_tiempo_laptop'
+
+
+# ==================================================
 # T R A Z A B I L I D A D   P O R   O R D E N
 # ==================================================
 #
@@ -222,6 +344,9 @@ class TrazaOrden(models.Model):
     ensamblaje_inicio = models.DateField(blank=True, null=True)
     ensamblaje_fin = models.DateField(blank=True, null=True)
 
+    promedio_brutos = models.IntegerField(blank=True, null=True)
+    promedio_turno = models.IntegerField(blank=True, null=True)
+
     class Meta:
         managed = False
         db_table = 'vista_traza_orden'
@@ -252,6 +377,13 @@ class TrazaOrdenLaptop(models.Model):
     inspecciones = models.IntegerField(blank=True, null=True)
     ultimo_resultado = models.IntegerField(blank=True, null=True)
     embalaje_fecha = models.DateField(blank=True, null=True)
+
+    # Los cuatro tiempos de TiempoLaptop, traídos con LEFT JOIN: vienen en None
+    # si la laptop todavía no ha entrado a ninguna línea.
+    minutos_brutos = models.IntegerField(blank=True, null=True)
+    minutos_turno = models.IntegerField(blank=True, null=True)
+    ciclo_brutos = models.IntegerField(blank=True, null=True)
+    ciclo_turno = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False

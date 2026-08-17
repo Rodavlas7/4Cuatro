@@ -177,7 +177,7 @@
                 </div>
             {% endif %}
         </div>
-        <div class="col-6 col-md-3 p-3">
+        <div class="col-6 col-md-3 p-3 border-end">
             <div class="text-muted small text-uppercase fw-bold mb-1">Ensamblaje</div>
             <div class="small fw-medium text-dark pt-1">
                 {{ orden.ensamblaje_inicio|fecha|default:"—" }}
@@ -185,6 +185,20 @@
             <div class="text-muted" style="font-size: 11px;">
                 <i class="bi bi-arrow-return-right me-1"></i>{{ orden.ensamblaje_fin|fecha|default:"sin cerrar" }}
             </div>
+        </div>
+
+        {# El de turno es contra lo que se mide la línea; el bruto es lo que esperó quien pidió la orden. #}
+        <div class="col-6 col-md-3 p-3">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Promedio por laptop</div>
+            {% if orden.promedio_turno is not None %}
+                <div class="fs-5 fw-bold text-dark">{{ orden.promedio_turno|duracion }}</div>
+                <div class="text-muted" style="font-size: 11px;">
+                    en turno · {{ orden.promedio_brutos|duracion }} de reloj
+                </div>
+            {% else %}
+                <div class="fs-5 fw-bold text-muted">—</div>
+                <div class="text-muted" style="font-size: 11px;">ninguna ha salido de línea</div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -206,6 +220,7 @@
                     <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Laptop</th>
                     <th class="py-3 text-uppercase text-muted small fw-bold">Línea</th>
                     <th class="py-3 text-uppercase text-muted small fw-bold">Ensamblaje</th>
+                    <th class="py-3 text-uppercase text-muted small fw-bold">Tiempo</th>
                     <th class="py-3 text-uppercase text-muted small fw-bold text-center">Piezas</th>
                     <th class="py-3 text-uppercase text-muted small fw-bold text-center">Calidad</th>
                     <th class="py-3 text-uppercase text-muted small fw-bold">Embalaje</th>
@@ -235,6 +250,21 @@
                             <div class="text-secondary" style="font-size: 11px;">
                                 <i class="bi bi-arrow-return-right me-1"></i>{{ l.ensamblaje_fin|fecha|default:"sin cerrar" }}
                             </div>
+                        </td>
+
+                        {# Arriba lo que estuvo dentro de una línea; el ciclo es de punta a punta, y su diferencia es lo que esperó entre líneas. #}
+                        <td>
+                            {% if l.minutos_turno is not None %}
+                                <div class="small fw-medium text-dark">{{ l.minutos_turno|duracion }}</div>
+                                <div class="text-secondary" style="font-size: 11px;">
+                                    {{ l.minutos_brutos|duracion }} de reloj
+                                </div>
+                                <div class="text-secondary" style="font-size: 11px;">
+                                    ciclo {{ l.ciclo_turno|duracion }}
+                                </div>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
                         </td>
                         <td class="text-center">
                             <span class="badge rounded-pill px-2 py-1
@@ -270,7 +300,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-laptop d-block fs-2 mb-2 opacity-50"></i>
                             <div class="small">Esta orden todavía no tiene laptops registradas.</div>
                         </td>
