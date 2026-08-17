@@ -428,8 +428,7 @@ BEGIN
             SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden no tiene renglones que recibir';
     END IF;
 
-    -- El lote es opcional, pero si viene tiene que existir. Se valida aquí para
-    -- dar el motivo en español en lugar del error de llave foránea de MySQL.
+    -- El lote es opcional, pero si viene tiene que existir.
     IF loteComponentes IS NOT NULL THEN
 
         SELECT COUNT(*) INTO lote_existe FROM lote_comp WHERE codigo = loteComponentes;
@@ -442,12 +441,6 @@ BEGIN
     END IF;
 
     -- Qué falta por recibir
-    --
-    -- Se calcula una vez aquí para poder cortar con un mensaje claro cuando ya
-    -- no falta nada, y otra vez dentro del INSERT de abajo. Recibido = las
-    -- piezas que ya existen de esa orden y ese modelo, sin importar en qué
-    -- estado estén: una pieza que llegó y salió dañada ya se recibió, y las
-    -- bajas del sistema son a Mermado (EDC004), no borrados.
 
     SELECT IFNULL(SUM(GREATEST(IFNULL(dm.cantidad, 0) - IFNULL(recibido.piezas, 0), 0)), 0),
            IFNULL(SUM(IFNULL(recibido.piezas, 0)), 0)
@@ -470,12 +463,6 @@ BEGIN
     -- La CTE de números llega hasta el renglón más grande que falte y el JOIN
     -- recorta por renglón con n.i <= por_recibir, así una sola CTE sirve para
     -- todos.
-    --
-    -- El consecutivo de la serie sale del MÁXIMO que ya exista de ese renglón,
-    -- no del conteo: si a una orden ya recibida le borraron piezas de en medio,
-    -- contar daría números que ya están usados. Las series que no traen el
-    -- formato <orden>-<modelo>-<nnn> (las de los datos de prueba, por ejemplo)
-    -- caen en 0 al castear, así que no estorban.
 
     INSERT INTO componente (num_serie, descripcion, linea, orden_material,
                             modelo, lote, estado, registro_ensamblaje)
@@ -569,7 +556,6 @@ CREATE PROCEDURE sp_Dashboard_Resumen(
 )
 BEGIN
     -- Rango abierto por cualquiera de los dos lados. '1000-01-01' es el
-    -- mínimo que admite un DATE en MySQL, así que sirve de "sin límite".
     DECLARE desde DATE DEFAULT IFNULL(fechaDesde, '1000-01-01');
     DECLARE hasta DATE DEFAULT IFNULL(fechaHasta, CURDATE());
 
@@ -608,3 +594,6 @@ END$$
 
 
 DELIMITER ;
+
+
+CALL sp_Dashboard_Resumen('2026-08-14','2026-08-14'); CALL sp_Dashboard_Resumen('2026-07-16','2026-08-14'); CALL sp_Dashboard_Resumen(NULL,NULL);
