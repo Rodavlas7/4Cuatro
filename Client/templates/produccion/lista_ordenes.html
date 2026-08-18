@@ -13,7 +13,7 @@
 <div class="wrap">
 
     <!-- ==========================================
-         TARJETA 1: ENCABEZADO Y ACCIONES
+         TARJETA 1: ENCABEZADO, ACCIONES Y FILTROS
          ========================================== -->
     <div class="emp-card mb-4">
         <div class="emp-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
@@ -26,6 +26,87 @@
                     <i class="bi bi-plus-lg"></i> Nueva orden
                 </button>
             </div>
+        </div>
+
+        <!-- FILTROS -->
+        <div class="emp-toolbar px-4 py-3 border-top">
+            <form method="GET">
+                <div class="row g-3">
+
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-muted small fw-bold mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-start-0 ps-1 py-2" value="{{ filtros.q }}" placeholder="Folio, modelo o lote...">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-2">
+                        <label class="form-label text-muted small fw-bold mb-1">Estado</label>
+                        <select name="estado" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for e in estados %}
+                            <option value="{{ e.codigo }}" {% if filtros.estado == e.codigo %}selected{% endif %}>{{ e.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Modelo</label>
+                        <select name="modelo" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for m in modelos %}
+                            <option value="{{ m.codigo }}" {% if filtros.modelo == m.codigo %}selected{% endif %}>{{ m.codigo }} — {{ m.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Lote</label>
+                        <select name="lote" class="form-select form-select-sm py-2 text-secondary">
+                            <option value="">— Todos —</option>
+                            {% for lo in lotes %}
+                            <option value="{{ lo.codigo }}" {% if filtros.lote == lo.codigo %}selected{% endif %}>{{ lo.codigo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Desde</label>
+                        <input type="date" name="desde" class="form-control form-control-sm py-2 text-secondary" value="{{ filtros.desde }}">
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Hasta</label>
+                        <input type="date" name="hasta" class="form-control form-control-sm py-2 text-secondary" value="{{ filtros.hasta }}">
+                    </div>
+
+                </div>
+
+                <!-- Resumen y botones -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 pt-3 border-top gap-3">
+                    <span class="text-muted small">
+                        {% if hay_filtros %}
+                            <i class="bi bi-funnel-fill text-primary me-1"></i> Mostrando <strong class="text-dark">{{ mostrados }}</strong> de {{ total }} órdenes.
+                        {% else %}
+                            <i class="bi bi-clipboard-check text-secondary me-1"></i>
+                            {% if total == 1 %}1 orden de producción registrada.{% else %}{{ total }} órdenes de producción registradas.{% endif %}
+                        {% endif %}
+                    </span>
+                    <div class="d-flex gap-2">
+                        {% if hay_filtros %}
+                        <a href="{% url 'ordenes-produccion-lista' %}" class="btn btn-white border btn-sm py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-x-lg text-danger"></i> Limpiar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark btn-sm py-2 px-4 fw-medium shadow-sm d-flex align-items-center gap-2">
+                             <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -150,7 +231,11 @@
                     <tr>
                         <td colspan="7" class="text-center text-muted py-5">
                             <i class="bi bi-clipboard-x fs-2 d-block mb-2 text-light"></i>
-                            No hay órdenes de producción registradas.
+                            {% if hay_filtros %}
+                                Ninguna orden coincide con los filtros de búsqueda.
+                            {% else %}
+                                No hay órdenes de producción registradas.
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

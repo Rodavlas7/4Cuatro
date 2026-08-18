@@ -11,6 +11,89 @@
     </button>
 </div>
 
+<!-- ...................................................................
+     F I L T R O S
+...................................................................... -->
+<form method="GET" class="card p-3 mb-3 bg-white">
+    <div class="row g-3">
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Buscar</label>
+            <input type="text" name="q" class="form-control"
+                   value="{{ filtros.q }}"
+                   placeholder="Folio, modelo o lote">
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Estado</label>
+            <select name="estado" class="form-select">
+                <option value="">— Todos —</option>
+                {% for e in estados %}
+                <option value="{{ e.codigo }}" {% if filtros.estado == e.codigo %}selected{% endif %}>
+                    {{ e.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Modelo</label>
+            <select name="modelo" class="form-select">
+                <option value="">— Todos —</option>
+                {% for m in modelos %}
+                <option value="{{ m.codigo }}" {% if filtros.modelo == m.codigo %}selected{% endif %}>
+                    {{ m.codigo }} — {{ m.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Lote</label>
+            <select name="lote" class="form-select">
+                <option value="">— Todos —</option>
+                {% for lo in lotes %}
+                <option value="{{ lo.codigo }}" {% if filtros.lote == lo.codigo %}selected{% endif %}>
+                    {{ lo.codigo }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Desde</label>
+            <input type="date" name="desde" class="form-control" value="{{ filtros.desde }}">
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Hasta</label>
+            <input type="date" name="hasta" class="form-control" value="{{ filtros.hasta }}">
+        </div>
+
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-muted small">
+            {% if hay_filtros %}
+                Mostrando <strong>{{ mostrados }}</strong> de {{ total }} órdenes.
+            {% else %}
+                {% if total == 1 %}1 orden de producción registrada.{% else %}{{ total }} órdenes de producción registradas.{% endif %}
+            {% endif %}
+        </span>
+        <div class="d-flex gap-2">
+            {% if hay_filtros %}
+            <a href="{% url 'panel_supervisor:ordenes-produccion-lista' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i> Limpiar
+            </a>
+            {% endif %}
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-funnel me-1"></i> Filtrar
+            </button>
+        </div>
+    </div>
+</form>
+
+
 <div class="table-responsive">
     <table class="table table-hover align-middle bg-white">
         <thead class="table-light">
@@ -87,7 +170,15 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="9" class="text-center text-muted py-4">No hay órdenes de producción registradas.</td></tr>
+            <tr>
+                <td colspan="9" class="text-center text-muted py-4">
+                    {% if hay_filtros %}
+                        Ninguna orden coincide con los filtros de búsqueda.
+                    {% else %}
+                        No hay órdenes de producción registradas.
+                    {% endif %}
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>

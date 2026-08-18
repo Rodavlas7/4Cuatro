@@ -14,6 +14,7 @@ from django.shortcuts import render, redirect
 from django.views import generic
 
 from core.api import get, lista, objeto
+from core.filtros import contexto as contexto_de_filtros, filtrar, pedidos
 from core.lineas import es_de_ensamblaje, solo_de_ensamblaje
 from core.guards import RolRequeridoMixin, requiere_rol
 from core.roles import ROL_SUPERVISOR
@@ -646,6 +647,31 @@ def _avance_ensamblaje(registros):
     }
 
 
+def _filtrar_ordenes(ordenes, filtros):
+    """Aplica los filtros de la barra de búsqueda de la lista de órdenes.
+
+    Se filtra aquí y no en la API porque /api/produccion/ no acepta query
+    params; el resto de la lógica vive en core/filtros.py, que es la que
+    comparten las demás listas."""
+    filtradas = filtrar(
+        ordenes,
+        filtros,
+        exactos=(("estado", "estado_codigo"),
+                 ("modelo", "modelo_codigo"),
+                 ("lote", "lote_codigo")),
+        busqueda=("folio", "modelo_nombre", "modelo_codigo", "lote_codigo"),
+    )
+
+    # El rango de fechas no es una coincidencia exacta, va aparte. Las fechas
+    # llegan como AAAA-MM-DD, que se ordena bien comparándolas como texto.
+    if filtros["desde"]:
+        filtradas = [o for o in filtradas if (o.get("fecha") or "") >= filtros["desde"]]
+    if filtros["hasta"]:
+        filtradas = [o for o in filtradas if (o.get("fecha") or "") <= filtros["hasta"]]
+
+    return filtradas
+
+
 @requiere_rol(ROL_SUPERVISOR)
 def ordenesProduccionListView(request):
     """Consulta general de órdenes de producción (lee de vista_ordenes_produccion)
@@ -685,21 +711,25 @@ def ordenesProduccionListView(request):
     estados = _json(f"{API}/produccion/estados/", headers)
     lotes = _json(f"{API}/produccion/lotes/", headers)
 
+    ordenes = ordenes if isinstance(ordenes, list) else []
+
+    filtros = pedidos(request, "q", "estado", "modelo", "lote", "desde", "hasta")
+    filtradas = _filtrar_ordenes(ordenes, filtros)
+
     ahora = datetime.now()
 
-    return render(
-        request,
-        "panel_supervisor/produccion/lista_ordenes.html",
-        {
-            "ordenes": ordenes if isinstance(ordenes, list) else [],
-            "modelos": modelos if isinstance(modelos, list) else [],
-            "estados": estados if isinstance(estados, list) else [],
-            "lotes": lotes if isinstance(lotes, list) else [],
-            # Valores por defecto del modal de alta.
-            "hoy": ahora.date().isoformat(),
-            "hora_ahora": ahora.strftime("%H:%M"),
-        }
-    )
+    contexto = {
+        "ordenes": filtradas,
+        "modelos": modelos if isinstance(modelos, list) else [],
+        "estados": estados if isinstance(estados, list) else [],
+        "lotes": lotes if isinstance(lotes, list) else [],
+        # Valores por defecto del modal de alta.
+        "hoy": ahora.date().isoformat(),
+        "hora_ahora": ahora.strftime("%H:%M"),
+    }
+    contexto.update(contexto_de_filtros(filtros, ordenes, filtradas))
+
+    return render(request, "panel_supervisor/produccion/lista_ordenes.html", contexto)
 
 
 @requiere_rol(ROL_SUPERVISOR)
