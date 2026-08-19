@@ -1,5 +1,5 @@
 -- TRACEX — Triggers
--- Version: 2026-08-13
+-- Version: 2026-08-19
 --
 --
 -- CÓMO ESTÁ ORGANIZADO
@@ -95,25 +95,34 @@ END$$
 --
 --   1. La orden arranca. Si estaba 'Pendiente' pasa a 'En Proceso': ya se está
 --      trabajando en ella. Una Cancelada o Completada no se reabre.
---   2. Se recuentan cant_producida y cant_rechazada de esa orden.
+--   2. Se recuenta cant_producida y se le aplica su delta a cant_rechazada.
 --   3. Se le abre su registro de ensamblaje en la primera línea.
 --
 -- El orden importa y por eso están juntos: el paso 3 inserta en
 -- registro_ensamblaje y dispara los validadores de esa tabla, así que va al
 -- final, cuando la laptop ya quedó consistente.
 --
--- Por qué se recuenta en lugar de sumar 1: un contador incremental se
--- desincroniza en cuanto alguien corrige un estado a mano, mueve una laptop de
--- orden o borra un registro. El COUNT(*) se autocorrige solo en cada cambio, y
+-- Por qué cant_producida se recuenta en lugar de sumar 1: un contador
+-- incremental se desincroniza en cuanto alguien corrige un estado a mano, mueve
+-- una laptop de orden o borra un registro. El COUNT(*) se autocorrige solo en cada cambio, y
 -- sobre el volumen de una orden el costo es irrelevante. Cuenta las que ya
 -- terminaron —'APROV' y 'EMBALA'—; una recién dada de alta normalmente no suma,
 -- pero si viene ya terminada de una carga de datos, el recuento la toma igual.
 --
--- cant_rechazada va en el mismo UPDATE y con el mismo criterio, pero contando
--- las 'RECHA'. Es el desperdicio de la orden: cuántas unidades se armaron y
+-- cant_rechazada es el desperdicio de la orden: cuántas unidades se armaron y
 -- calidad tiró. Se guarda en la orden en lugar de calcularse en la vista porque
 -- la pantalla de producción la lee en cada renglón de la lista, y así sale del
 -- mismo SELECT que ya trae la orden, sin subconsulta por renglón.
+--
+-- Y esta sí se lleva por fórmula, sumando y restando: cada trigger aplica el
+-- delta de la laptop que tocó —+1 cuando entra en 'RECHA', -1 cuando sale— en
+-- vez de barrer la orden completa. Para que el número no se despegue de la
+-- realidad, el delta está puesto en las cuatro vías por las que una laptop
+-- puede moverlo: el alta, el cambio de estado, el cambio de orden y la baja.
+--
+-- El término del delta es (estado <=> 'RECHA'), que vale 1 o 0. El <=> compara
+-- tolerando nulos: con '=' un estado NULL daría NULL y echaría a perder la suma.
+-- El IFNULL de la columna es por lo mismo, que admite nulos.
 --
 -- Cuál es "la primera línea" no se escribe a mano: es la línea de ensamblaje a
 -- la que ninguna otra apunta con `siguiente`. Si se reordena la cadena, esto
@@ -137,7 +146,9 @@ BEGIN
          WHERE folio  = NEW.orden
            AND estado = 'PEND';
 
-        -- 2. Recontar lo producido y lo rechazado
+        -- 2. Recontar lo producido y, si la laptop nace rechazada, sumarla.
+        --    Normalmente nace 'En Ensamblaje' y el término vale 0; una carga de
+        --    datos que la meta ya rechazada sí suma.
         UPDATE orden_produccion
            SET cant_producida = (
                    SELECT COUNT(*)
@@ -145,12 +156,7 @@ BEGIN
                     WHERE orden  = NEW.orden
                       AND estado IN ('APROV', 'EMBALA')
                ),
-               cant_rechazada = (
-                   SELECT COUNT(*)
-                     FROM laptop
-                    WHERE orden  = NEW.orden
-                      AND estado = 'RECHA'
-               )
+               cant_rechazada = IFNULL(cant_rechazada, 0) + (NEW.estado <=> 'RECHA')
          WHERE folio = NEW.orden;
 
     END IF;
@@ -221,8 +227,12 @@ END$$
 --      mismo arranque que hace tg_Laptop_Alta, pero por la otra vía: la pantalla
 --      de edición deja cambiar la orden, y por ahí una orden Pendiente recibía
 --      su primera laptop sin arrancar.
---   2. Se recuentan cant_producida y cant_rechazada. Si se movió de orden, se
---      recuentan las dos: la que la recibe y la que la pierde.
+--   2. Se recuenta cant_producida y se aplican los deltas de cant_rechazada.
+--      Si se movió de orden se tocan las dos: la que la recibe y la que la
+--      pierde. Ahí está el caso fino de la fórmula — cuando la laptop se queda
+--      en su orden, el delta es la diferencia (es_recha - era_recha); cuando
+--      cambia de orden, la de destino se la suma entera y la de origen se la
+--      resta entera, porque para cada una es una laptop que llega o que se va.
 --
 -- La orden que PIERDE la laptop no regresa a 'Pendiente'. Sería adivinar: pudo
 -- avanzar a 'En Proceso' por otras razones, y una orden que retrocede sola
@@ -241,6 +251,14 @@ CREATE TRIGGER tg_Laptop_Cambio
 AFTER UPDATE ON laptop
 FOR EACH ROW
 BEGIN
+    -- Los dos términos de la fórmula: 1 si la laptop estaba rechazada antes del
+    -- UPDATE, 1 si queda rechazada después.
+    DECLARE era_recha INT DEFAULT 0;
+    DECLARE es_recha  INT DEFAULT 0;
+
+    SET era_recha = (OLD.estado <=> 'RECHA');
+    SET es_recha  = (NEW.estado <=> 'RECHA');
+
     -- 1. Arrancar la orden nueva, sólo si de verdad cambió de orden
     IF NOT (NEW.orden <=> OLD.orden) AND NEW.orden IS NOT NULL THEN
         UPDATE orden_produccion
@@ -249,8 +267,10 @@ BEGIN
            AND estado = 'PEND';
     END IF;
 
-    -- 2. Recontar. Sólo interesan los cambios de estado o de orden.
+    -- 2. Recontar y aplicar deltas. Sólo interesan los cambios de estado o de
+    --    orden: los demás UPDATE de laptop no mueven ninguno de los dos números.
     IF NOT (NEW.estado <=> OLD.estado) OR NOT (NEW.orden <=> OLD.orden) THEN
+
 
         IF NEW.orden IS NOT NULL THEN
             UPDATE orden_produccion
@@ -260,12 +280,9 @@ BEGIN
                         WHERE orden  = NEW.orden
                           AND estado IN ('APROV', 'EMBALA')
                    ),
-                   cant_rechazada = (
-                       SELECT COUNT(*)
-                         FROM laptop
-                        WHERE orden  = NEW.orden
-                          AND estado = 'RECHA'
-                   )
+                   cant_rechazada = IFNULL(cant_rechazada, 0)
+                                    + es_recha
+                                    - IF(NEW.orden <=> OLD.orden, era_recha, 0)
              WHERE folio = NEW.orden;
         END IF;
 
@@ -277,12 +294,7 @@ BEGIN
                         WHERE orden  = OLD.orden
                           AND estado IN ('APROV', 'EMBALA')
                    ),
-                   cant_rechazada = (
-                       SELECT COUNT(*)
-                         FROM laptop
-                        WHERE orden  = OLD.orden
-                          AND estado = 'RECHA'
-                   )
+                   cant_rechazada = IFNULL(cant_rechazada, 0) - era_recha
              WHERE folio = OLD.orden;
         END IF;
 
@@ -293,8 +305,9 @@ END$$
 -- ----------------------------------------------------------------------------
 -- tg_Sincronizar_Cant_Producida_Baja      AFTER DELETE ON laptop
 -- ----------------------------------------------------------------------------
--- El mismo recuento, cuando se borra una laptop. Va solo porque es el único
--- trigger de DELETE sobre la tabla.
+-- El mismo recuento y el mismo delta, cuando se borra una laptop: si la que se
+-- va estaba rechazada, deja de contar. Va solo porque es el único trigger de
+-- DELETE sobre la tabla.
 
 CREATE TRIGGER tg_Sincronizar_Cant_Producida_Baja
 AFTER DELETE ON laptop
@@ -308,12 +321,7 @@ BEGIN
                     WHERE orden  = OLD.orden
                       AND estado IN ('APROV', 'EMBALA')
                ),
-               cant_rechazada = (
-                   SELECT COUNT(*)
-                     FROM laptop
-                    WHERE orden  = OLD.orden
-                      AND estado = 'RECHA'
-               )
+               cant_rechazada = IFNULL(cant_rechazada, 0) - (OLD.estado <=> 'RECHA')
          WHERE folio = OLD.orden;
     END IF;
 END$$
@@ -834,6 +842,11 @@ DELIMITER ;
 -- Los triggers de arriba sólo actúan de aquí en adelante. Esto pone al día lo
 -- que ya está capturado, para que cant_producida y cant_rechazada arranquen
 -- cuadradas con las laptops reales de cada orden.
+--
+-- cant_rechazada se siembra con un COUNT aunque después se lleve sumando: sobre
+-- lo que ya estaba capturado no hay delta que aplicar, no pasó por ningún
+-- trigger. Este UPDATE es el punto de partida de la fórmula, y también la forma
+-- de recuadrarla si algún día alguien mueve las laptops por fuera.
 
 UPDATE orden_produccion op
    SET op.cant_producida = (
@@ -866,8 +879,15 @@ UPDATE orden_produccion op
 --
 --   tg_Actualizar_Estado_Laptop_Inspeccion_Calidad   cierra y marca APROV
 --     ├─ tg_Generar_Numero_Serie_Final   (BEFORE UPDATE laptop) pone la serie
---     └─ tg_Laptop_Cambio                (AFTER UPDATE laptop) recuenta
+--     └─ tg_Laptop_Cambio                (AFTER UPDATE laptop) recuenta lo
+--                                        producido
 --
+-- Un INSERT en inspeccion_calidad con resultado = 0:
+--
+--   tg_Actualizar_Estado_Laptop_Inspeccion_Calidad   cierra y marca RECHA
+--     └─ tg_Laptop_Cambio                (AFTER UPDATE laptop) le suma 1 a
+--                                        cant_rechazada. Es la vía por la que
+--                                        se mueve el contador casi siempre.--
 -- Y en una línea intermedia, ese mismo INSERT abre el registro de la siguiente,
 -- que vuelve a pasar por tg_Validar_Apertura_Ensamblaje.
 --
