@@ -66,6 +66,7 @@ class OrdenProduccion(models.Model):
     modelo_laptop = models.ForeignKey(ModeloLaptop, models.DO_NOTHING, db_column='modelo_laptop', blank=True, null=True)
     cant_planificada = models.IntegerField(blank=True, null=True, default=0)
     cant_producida = models.IntegerField(blank=True, null=True, default=0)
+    cant_rechazada = models.IntegerField(blank=True, null=True, default=0)
     estado = models.ForeignKey(EdoProduccion, models.DO_NOTHING, db_column='estado', blank=True, null=True)
     lote = models.ForeignKey(LoteLaptop, models.DO_NOTHING, db_column='lote', blank=True, null=True)
 
@@ -132,6 +133,7 @@ class VistaOrdenProduccion(models.Model):
     modelo_nombre = models.CharField(max_length=32, blank=True, null=True)
     cant_planificada = models.IntegerField(blank=True, null=True)
     cant_producida = models.IntegerField(blank=True, null=True)
+    cant_rechazada = models.IntegerField(blank=True, null=True)
     estado_codigo = models.CharField(max_length=8, blank=True, null=True)
     estado_nombre = models.CharField(max_length=32, blank=True, null=True)
     lote_codigo = models.CharField(max_length=8, blank=True, null=True)

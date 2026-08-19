@@ -83,6 +83,15 @@
         </div>
     </div>
 
+    <!-- Rechazadas: sale de cant_rechazada, que la orden ya trae contada. -->
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <span class="text-muted small">Rechazadas</span>
+            <span class="fs-3 fw-semibold {% if rechazadas %}text-danger{% endif %}">{{ rechazadas }}</span>
+            <span class="text-muted small">Descartadas por calidad</span>
+        </div>
+    </div>
+
 </div>
 
 <div class="card p-3 mb-3 bg-white">

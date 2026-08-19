@@ -90,7 +90,7 @@
     <div class="row g-3 mb-4">
         
         <!-- Planificadas -->
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-xl">
             <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-clipboard-data"></i>
@@ -103,7 +103,7 @@
         </div>
 
         <!-- Registradas -->
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-xl">
             <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-upc-scan"></i>
@@ -116,7 +116,7 @@
         </div>
 
         <!-- Ensamblajes -->
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-xl">
             <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-tools"></i>
@@ -134,7 +134,7 @@
         </div>
 
         <!-- Embaladas -->
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-xl">
             <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
                 <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
                     <i class="bi bi-box-seam"></i>
@@ -143,6 +143,18 @@
                     <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Embaladas</div>
                     <div class="fs-4 fw-bold text-dark lh-1 mt-1">{{ embaladas }}</div>
                     
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl">
+            <div class="emp-card p-3 d-flex align-items-center gap-3 h-100 border-bottom-0 pb-3">
+                <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center fs-4" style="width: 48px; height: 48px;">
+                    <i class="bi bi-x-octagon"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Rechazadas</div>
+                    <div class="fs-4 fw-bold {% if rechazadas %}text-danger{% else %}text-dark{% endif %} lh-1 mt-1">{{ rechazadas }}</div>
                 </div>
             </div>
         </div>

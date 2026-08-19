@@ -211,6 +211,7 @@ CREATE TABLE orden_produccion (
   modelo_laptop varchar(8) DEFAULT NULL,
   cant_planificada INT DEFAULT 0,
   cant_producida int DEFAULT 0,
+  cant_rechazada int DEFAULT 0,
   estado varchar(8) DEFAULT NULL,
   lote varchar(8) DEFAULT NULL,
   PRIMARY KEY (folio)

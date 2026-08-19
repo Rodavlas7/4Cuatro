@@ -53,12 +53,12 @@ SET FOREIGN_KEY_CHECKS = 1;
 --  en 'PROC' y el 5, que se queda sin laptops, es el único que sigue 'PEND'.
 --  El folio 3 pasa a 'COMP' por el trigger de embalaje.
 -- ============================================================
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-07-21', '08:00:00', 'ML001', 5, 0, 'PEND', 'LOT2026A'),   -- folio 1 (el trigger la deja en PROC)
-('2026-07-21', '09:00:00', 'ML001', 3, 2, 'PROC', 'LOT2026A'),   -- folio 2
-('2026-07-20', '08:00:00', 'ML001', 1, 1, 'PROC', 'LOT2026B'),   -- folio 3 (pasará a COMP por trigger)
-('2026-07-19', '08:00:00', 'ML001', 2, 0, 'CANC', 'LOT2026B'),   -- folio 4
-('2026-07-22', '07:30:00', 'ML001', 4, 0, 'PEND', 'LOT2026B');   -- folio 5, sin laptops: se queda PEND
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-07-21', '08:00:00', 'ML001', 5, 0, 0, 'PEND', 'LOT2026A'),   -- folio 1 (el trigger la deja en PROC)
+('2026-07-21', '09:00:00', 'ML001', 3, 2, 0, 'PROC', 'LOT2026A'),   -- folio 2 (termina con 1 rechazada)
+('2026-07-20', '08:00:00', 'ML001', 1, 1, 0, 'PROC', 'LOT2026B'),   -- folio 3 (pasará a COMP por trigger)
+('2026-07-19', '08:00:00', 'ML001', 2, 0, 0, 'CANC', 'LOT2026B'),   -- folio 4
+('2026-07-22', '07:30:00', 'ML001', 4, 0, 0, 'PEND', 'LOT2026B');   -- folio 5, sin laptops: se queda PEND
 
 
 -- ============================================================

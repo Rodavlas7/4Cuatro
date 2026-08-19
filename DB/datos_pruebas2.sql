@@ -320,12 +320,17 @@ CALL sp_p2_surtir(40);
 --
 --  Se dan de alta en PEND. Los triggers las mueven: a PROC en cuanto se les
 --  registra una laptop, y a COMP cuando se embalan todas las planificadas.
+--
+--  cant_producida y cant_rechazada entran en cero: las dos las lleva el
+--  trigger de laptop conforme avanza el recorrido. Al final del archivo, las
+--  órdenes C y D son las que quedan con cant_rechazada = 1 (una unidad
+--  descartada cada una).
 -- ============================================================================
 
 -- ---------------------------------------------------------------- ORDEN A
 -- 3 planificadas, las 3 terminadas y embaladas -> queda COMPLETADA.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-01', '07:00:00', 'ML001', 3, 0, 'PEND', 'LOT2026A');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-01', '07:00:00', 'ML001', 3, 0, 0, 'PEND', 'LOT2026A');
 SET @ordA := LAST_INSERT_ID();
 
 INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
@@ -344,8 +349,8 @@ CALL sp_p2_terminar(@l); CALL sp_p2_embalar(@l, 'TE001');
 -- ---------------------------------------------------------------- ORDEN B
 -- 5 planificadas, 4 terminadas y embaladas, 1 todavía en la línea C.
 -- Queda EN PROCESO con 4 de 5. Es el caso que se pidió explícitamente.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-02', '07:00:00', 'ML001', 5, 0, 'PEND', 'LOT2026A');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-02', '07:00:00', 'ML001', 5, 0, 0, 'PEND', 'LOT2026A');
 SET @ordB := LAST_INSERT_ID();
 
 INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
@@ -370,8 +375,8 @@ CALL sp_p2_avanzar_hasta(@l, 'LIN003');
 -- ---------------------------------------------------------------- ORDEN C
 -- 6 planificadas, repartidas por las cuatro líneas para que el flujo de calidad
 -- tenga trabajo pendiente en todas, más una rechazada.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-03', '07:00:00', 'ML001', 6, 0, 'PEND', 'LOT2026B');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-03', '07:00:00', 'ML001', 6, 0, 0, 'PEND', 'LOT2026B');
 SET @ordC := LAST_INSERT_ID();
 
 INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
@@ -400,8 +405,8 @@ CALL sp_p2_terminar(@l); CALL sp_p2_embalar(@l, 'TE002');
 -- ---------------------------------------------------------------- ORDEN D
 -- 4 planificadas: 2 embaladas, 1 rechazada en la línea D (casi al final) y 1
 -- parada en B. Sirve para ver una orden con merma.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-03', '14:00:00', 'ML001', 4, 0, 'PEND', 'LOT2026B');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-03', '14:00:00', 'ML001', 4, 0, 0, 'PEND', 'LOT2026B');
 SET @ordD := LAST_INSERT_ID();
 
 INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
@@ -424,8 +429,8 @@ CALL sp_p2_avanzar_hasta(@l, 'LIN002');
 -- ---------------------------------------------------------------- ORDEN E
 -- Cancelada a media producción: alcanzó a arrancar una laptop antes de que la
 -- cancelaran, y esa se quedó parada en la línea A.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-04', '07:30:00', 'ML001', 3, 0, 'PEND', 'LOT2026B');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-04', '07:30:00', 'ML001', 3, 0, 0, 'PEND', 'LOT2026B');
 SET @ordE := LAST_INSERT_ID();
 
 INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
@@ -436,15 +441,15 @@ UPDATE orden_produccion SET estado = 'CANC' WHERE folio = @ordE;
 
 -- ---------------------------------------------------------------- ORDEN F
 -- Recién capturada, sin laptops: es la única que se queda en PENDIENTE.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-05', '07:00:00', 'ML001', 5, 0, 'PEND', 'LOT2026B');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-05', '07:00:00', 'ML001', 5, 0, 0, 'PEND', 'LOT2026B');
 
 
 -- ---------------------------------------------------------------- ORDEN G
 -- 4 planificadas: 3 ya aprobadas pero SIN embalar todavía, y 1 en la línea D.
 -- Deja trabajo pendiente en la línea de embalaje.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-05', '09:00:00', 'ML001', 4, 0, 'PEND', 'LOT2026A');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-05', '09:00:00', 'ML001', 4, 0, 0, 'PEND', 'LOT2026A');
 SET @ordG := LAST_INSERT_ID();
 
 INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
@@ -462,8 +467,8 @@ CALL sp_p2_avanzar_hasta(@l, 'LIN004');
 
 -- ---------------------------------------------------------------- ORDEN H
 -- Chica y completada: 2 de 2.
-INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, estado, lote) VALUES
-('2026-08-06', '08:00:00', 'ML001', 2, 0, 'PEND', 'LOT2026A');
+INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
+('2026-08-06', '08:00:00', 'ML001', 2, 0, 0, 'PEND', 'LOT2026A');
 SET @ordH := LAST_INSERT_ID();
 
 INSERT INTO laptop (num_serie, orden, modelo, estado, lote) VALUES
@@ -617,8 +622,9 @@ DROP PROCEDURE IF EXISTS sp_p2_embalar;
 -- ============================================================================
 
 -- Estado de las órdenes. Lo esperado: A y H completadas, F pendiente,
--- E cancelada, el resto en proceso. B tiene que decir 4 de 5.
-SELECT folio, cant_planificada, cant_producida, estado, fecha
+-- E cancelada, el resto en proceso. B tiene que decir 4 de 5, y C y D una
+-- rechazada cada una.
+SELECT folio, cant_planificada, cant_producida, cant_rechazada, estado, fecha
   FROM orden_produccion ORDER BY folio;
 
 -- Cómo quedaron repartidas las laptops.

@@ -95,7 +95,7 @@ END$$
 --
 --   1. La orden arranca. Si estaba 'Pendiente' pasa a 'En Proceso': ya se está
 --      trabajando en ella. Una Cancelada o Completada no se reabre.
---   2. Se recuenta cant_producida de esa orden.
+--   2. Se recuentan cant_producida y cant_rechazada de esa orden.
 --   3. Se le abre su registro de ensamblaje en la primera línea.
 --
 -- El orden importa y por eso están juntos: el paso 3 inserta en
@@ -108,6 +108,12 @@ END$$
 -- sobre el volumen de una orden el costo es irrelevante. Cuenta las que ya
 -- terminaron —'APROV' y 'EMBALA'—; una recién dada de alta normalmente no suma,
 -- pero si viene ya terminada de una carga de datos, el recuento la toma igual.
+--
+-- cant_rechazada va en el mismo UPDATE y con el mismo criterio, pero contando
+-- las 'RECHA'. Es el desperdicio de la orden: cuántas unidades se armaron y
+-- calidad tiró. Se guarda en la orden en lugar de calcularse en la vista porque
+-- la pantalla de producción la lee en cada renglón de la lista, y así sale del
+-- mismo SELECT que ya trae la orden, sin subconsulta por renglón.
 --
 -- Cuál es "la primera línea" no se escribe a mano: es la línea de ensamblaje a
 -- la que ninguna otra apunta con `siguiente`. Si se reordena la cadena, esto
@@ -131,13 +137,19 @@ BEGIN
          WHERE folio  = NEW.orden
            AND estado = 'PEND';
 
-        -- 2. Recontar lo producido
+        -- 2. Recontar lo producido y lo rechazado
         UPDATE orden_produccion
            SET cant_producida = (
                    SELECT COUNT(*)
                      FROM laptop
                     WHERE orden  = NEW.orden
                       AND estado IN ('APROV', 'EMBALA')
+               ),
+               cant_rechazada = (
+                   SELECT COUNT(*)
+                     FROM laptop
+                    WHERE orden  = NEW.orden
+                      AND estado = 'RECHA'
                )
          WHERE folio = NEW.orden;
 
@@ -209,8 +221,8 @@ END$$
 --      mismo arranque que hace tg_Laptop_Alta, pero por la otra vía: la pantalla
 --      de edición deja cambiar la orden, y por ahí una orden Pendiente recibía
 --      su primera laptop sin arrancar.
---   2. Se recuenta cant_producida. Si se movió de orden, se recuentan las dos:
---      la que la recibe y la que la pierde.
+--   2. Se recuentan cant_producida y cant_rechazada. Si se movió de orden, se
+--      recuentan las dos: la que la recibe y la que la pierde.
 --
 -- La orden que PIERDE la laptop no regresa a 'Pendiente'. Sería adivinar: pudo
 -- avanzar a 'En Proceso' por otras razones, y una orden que retrocede sola
@@ -247,6 +259,12 @@ BEGIN
                          FROM laptop
                         WHERE orden  = NEW.orden
                           AND estado IN ('APROV', 'EMBALA')
+                   ),
+                   cant_rechazada = (
+                       SELECT COUNT(*)
+                         FROM laptop
+                        WHERE orden  = NEW.orden
+                          AND estado = 'RECHA'
                    )
              WHERE folio = NEW.orden;
         END IF;
@@ -258,6 +276,12 @@ BEGIN
                          FROM laptop
                         WHERE orden  = OLD.orden
                           AND estado IN ('APROV', 'EMBALA')
+                   ),
+                   cant_rechazada = (
+                       SELECT COUNT(*)
+                         FROM laptop
+                        WHERE orden  = OLD.orden
+                          AND estado = 'RECHA'
                    )
              WHERE folio = OLD.orden;
         END IF;
@@ -283,6 +307,12 @@ BEGIN
                      FROM laptop
                     WHERE orden  = OLD.orden
                       AND estado IN ('APROV', 'EMBALA')
+               ),
+               cant_rechazada = (
+                   SELECT COUNT(*)
+                     FROM laptop
+                    WHERE orden  = OLD.orden
+                      AND estado = 'RECHA'
                )
          WHERE folio = OLD.orden;
     END IF;
@@ -802,8 +832,8 @@ DELIMITER ;
 -- SINCRONIZACIÓN INICIAL
 -- ============================================================================
 -- Los triggers de arriba sólo actúan de aquí en adelante. Esto pone al día lo
--- que ya está capturado, para que cant_producida arranque cuadrada con las
--- laptops reales de cada orden.
+-- que ya está capturado, para que cant_producida y cant_rechazada arranquen
+-- cuadradas con las laptops reales de cada orden.
 
 UPDATE orden_produccion op
    SET op.cant_producida = (
@@ -811,6 +841,12 @@ UPDATE orden_produccion op
              FROM laptop l
             WHERE l.orden  = op.folio
               AND l.estado IN ('APROV', 'EMBALA')
+       ),
+       op.cant_rechazada = (
+           SELECT COUNT(*)
+             FROM laptop l
+            WHERE l.orden  = op.folio
+              AND l.estado = 'RECHA'
        );
 
 

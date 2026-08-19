@@ -105,6 +105,7 @@
                 <th>Lote</th>
                 <th class="text-center">Planificadas</th>
                 <th class="text-center">Producidas</th>
+                <th class="text-center">Rechazadas</th>
                 <th>Estado</th>
                 <th class="text-end">Acciones</th>
             </tr>
@@ -124,6 +125,14 @@
                 <td>{{ o.lote_codigo|default:"—" }}</td>
                 <td class="text-center">{{ o.cant_planificada|default_if_none:"—" }}</td>
                 <td class="text-center">{{ o.cant_producida|default_if_none:"—" }}</td>
+                <!-- Rechazadas: las laptops de la orden que calidad tiró (cant_rechazada). -->
+                <td class="text-center">
+                    {% if o.cant_rechazada %}
+                        <span class="badge text-bg-danger">{{ o.cant_rechazada }}</span>
+                    {% else %}
+                        <span class="text-muted">0</span>
+                    {% endif %}
+                </td>
                 <td>
                     <span class="badge
                         {% if o.estado_codigo == 'COMP' %}text-bg-success
@@ -171,7 +180,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="9" class="text-center text-muted py-4">
+                <td colspan="10" class="text-center text-muted py-4">
                     {% if hay_filtros %}
                         Ninguna orden coincide con los filtros de búsqueda.
                     {% else %}

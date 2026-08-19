@@ -146,6 +146,7 @@ erDiagram
     varchar modelo_laptop FK
     int cant_planificada
     int cant_producida
+    int cant_rechazada
     varchar estado FK
   }
   laptop {
@@ -493,6 +494,7 @@ erDiagram
             <div class="col"><span class="k k-fk">FK</span><span>modelo_laptop</span><i>modelo_laptop</i></div>
             <div class="col"><span>cant_planificada</span><i>int · 0</i></div>
             <div class="col"><span>cant_producida</span><i>int · 0</i></div>
+            <div class="col"><span>cant_rechazada</span><i>int · 0</i></div>
             <div class="col"><span class="k k-fk">FK</span><span>estado</span><i>edo_produccion</i></div>
             <div class="col"><span class="k k-fk">FK</span><span>lote</span><i>lote_laptop</i></div>
           </div>

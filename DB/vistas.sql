@@ -96,8 +96,12 @@ GROUP BY e.codigo, e.nombre, e.descripcion, e.linea, l.nombre, e.activo;
 -- Objetivo : Consulta general del módulo de producción — une la orden con
 --            el nombre de su estado (edo_produccion), el nombre de su
 --            modelo de laptop (modelo_laptop) y su lote (lote_laptop). Las
---            cantidades planificada y producida ya vienen guardadas en la
---            propia orden, así que no requieren agregación.
+--            cantidades planificada, producida y rechazada ya vienen guardadas
+--            en la propia orden, así que no requieren agregación.
+--
+--            cant_rechazada son las laptops de la orden que calidad rechazó.
+--            La mantienen al día los triggers de laptop (ver DB/triggers.sql),
+--            igual que cant_producida; aquí sólo se expone.
 --
 --            El lote se expone aquí porque las laptops lo heredan de su orden
 --            al registrarse; el cliente lo necesita para mostrarlo sin pedir
@@ -112,6 +116,7 @@ SELECT
     ml.nombre           AS modelo_nombre,
     op.cant_planificada,
     op.cant_producida,
+    op.cant_rechazada,
     op.estado           AS estado_codigo,
     ep.nombre            AS estado_nombre,
     op.lote              AS lote_codigo,

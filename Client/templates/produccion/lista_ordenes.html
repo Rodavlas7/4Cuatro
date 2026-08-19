@@ -123,6 +123,7 @@
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Modelo</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Lote</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Avance (Prod/Plan)</th>
+                        <th scope="col" class="py-3 text-uppercase text-muted small fw-bold text-center">Rechazadas</th>
                         <th scope="col" class="py-3 text-uppercase text-muted small fw-bold">Estado</th>
                         <th scope="col" class="pe-4 py-3 text-uppercase text-muted small fw-bold text-end">Acciones</th>
                     </tr>
@@ -154,6 +155,16 @@
                                 <span class="text-muted small">/</span>
                                 <span class="text-muted small fw-medium">{{ o.cant_planificada|default_if_none:"—" }}</span>
                             </div>
+                        </td>
+                        <!-- Rechazadas: las laptops de la orden que calidad tiró (cant_rechazada). -->
+                        <td class="text-center">
+                            {% if o.cant_rechazada %}
+                                <span class="badge rounded-pill px-2 py-1 fw-semibold bg-danger-subtle text-danger border border-danger-subtle">
+                                    <i  style="font-size: 10px; vertical-align: middle;"></i>{{ o.cant_rechazada }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">0</span>
+                            {% endif %}
                         </td>
                        <td class="text-center">
                             <span class="badge rounded-pill px-2 py-1 fw-semibold
@@ -229,7 +240,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-clipboard-x fs-2 d-block mb-2 text-light"></i>
                             {% if hay_filtros %}
                                 Ninguna orden coincide con los filtros de búsqueda.

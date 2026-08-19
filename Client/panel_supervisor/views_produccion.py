@@ -690,8 +690,10 @@ def ordenesProduccionListView(request):
             "modelo_laptop": request.POST.get("modelo_laptop") or None,
             "lote": request.POST.get("lote") or None,
             "cant_planificada": request.POST.get("cant_planificada") or 0,
-            # Nace en cero: lo producido se va contando conforme avanza la orden.
+            # Nacen en cero: lo producido y lo rechazado se van contando conforme
+            # avanza la orden, y quien los cuenta son los triggers de la base.
             "cant_producida": 0,
+            "cant_rechazada": 0,
             # El estado no se captura: toda orden nueva nace Pendiente y de ahí
             # la mueven los triggers o el botón de cancelar.
             "estado": EDO_ORDEN_PENDIENTE,
@@ -866,6 +868,10 @@ def ordenProduccionDetalleView(request, folio):
 
     planificadas = orden.get("cant_planificada") or 0
     registradas = len(laptops)
+    # Las rechazadas se leen de la orden (cant_rechazada, que llevan los
+    # triggers) y no se recuentan aquí: es el mismo número, y ya viene en la
+    # misma respuesta.
+    rechazadas = orden.get("cant_rechazada") or 0
 
     return render(
         request,
@@ -878,6 +884,7 @@ def ordenProduccionDetalleView(request, folio):
             "terminados": terminados,
             "en_proceso": en_proceso,
             "embaladas": embaladas,
+            "rechazadas": rechazadas,
             # Se topa en 100 para que la barra no se desborde si se registraron too many
             "porcentaje": min(100, round(registradas * 100 / planificadas)) if planificadas else 0,
             # Para las dos acciones del encabezado: sólo tienen sentido mientras
