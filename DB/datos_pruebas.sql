@@ -52,11 +52,15 @@ SET FOREIGN_KEY_CHECKS = 1;
 --  orden 'PEND' en cuanto se le registra una laptop. Por eso el folio 1 termina
 --  en 'PROC' y el 5, que se queda sin laptops, es el único que sigue 'PEND'.
 --  El folio 3 pasa a 'COMP' por el trigger de embalaje.
+--
+--  cant_producida y cant_rechazada van en cero en todas: los triggers las
+--  llevan sumando y restando, así que un valor sembrado aquí se quedaría
+--  sumado de más. Al terminar la carga el folio 2 queda en 1 y 1, y el 3 en 1.
 -- ============================================================
 INSERT INTO orden_produccion (fecha, hora, modelo_laptop, cant_planificada, cant_producida, cant_rechazada, estado, lote) VALUES
 ('2026-07-21', '08:00:00', 'ML001', 5, 0, 0, 'PEND', 'LOT2026A'),   -- folio 1 (el trigger la deja en PROC)
-('2026-07-21', '09:00:00', 'ML001', 3, 2, 0, 'PROC', 'LOT2026A'),   -- folio 2 (termina con 1 rechazada)
-('2026-07-20', '08:00:00', 'ML001', 1, 1, 0, 'PROC', 'LOT2026B'),   -- folio 3 (pasará a COMP por trigger)
+('2026-07-21', '09:00:00', 'ML001', 3, 0, 0, 'PROC', 'LOT2026A'),   -- folio 2 (termina con 1 producida y 1 rechazada)
+('2026-07-20', '08:00:00', 'ML001', 1, 0, 0, 'PROC', 'LOT2026B'),   -- folio 3 (pasará a COMP por trigger)
 ('2026-07-19', '08:00:00', 'ML001', 2, 0, 0, 'CANC', 'LOT2026B'),   -- folio 4
 ('2026-07-22', '07:30:00', 'ML001', 4, 0, 0, 'PEND', 'LOT2026B');   -- folio 5, sin laptops: se queda PEND
 

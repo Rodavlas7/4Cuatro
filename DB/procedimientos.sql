@@ -151,9 +151,11 @@ END$$
 -- Qué NO toca:
 --   - Las laptops Aprobadas y Embaladas. Ya pasaron calidad y existen
 --     físicamente: cancelar la orden no es razón para tirarlas.
---   - cant_producida ni cant_rechazada. Las recalculan solos los triggers
---     tg_Laptop_Alta / _Cambio / _Baja al cambiar el estado de las laptops: las
---     que se rechazan en el paso 2 caen solas en cant_rechazada.
+--   - cant_producida ni cant_rechazada. Las llevan solos los triggers
+--     tg_Laptop_Alta / _Cambio / _Baja, que aplican el delta de cada laptop al
+--     cambiarle el estado: las que se rechazan en el paso 2 caen solas en
+--     cant_rechazada, y las Aprobadas y Embaladas que se respetan no se mueven
+--     de cant_producida.
 --
 -- Se repiten aquí los dos UPDATE de sp_Liberar_Componentes_Laptop en vez de
 -- llamarlo en un bucle, por dos razones: así es un UPDATE por toda la orden en
@@ -276,11 +278,11 @@ END$$
 -- Los triggers que se disparan solos al insertar cada laptop:
 --   tg_Arrancar_Laptop_En_Ensamblaje  → nace 'En Ensamblaje', no 'Registrada'.
 --   tg_Laptop_Alta                    → si la orden estaba Pendiente pasa a En
---                                       Proceso, recuenta cant_producida y
---                                       cant_rechazada (las nuevas no las
---                                       inflan: esos conteos solo suman
---                                       Aprobadas/Embaladas y Rechazadas) y le
---                                       abre el ensamblaje de la primera línea.
+--                                       Proceso, le aplica a la orden el delta
+--                                       de la laptop (las nuevas no inflan nada:
+--                                       nacen En Ensamblaje y los dos términos
+--                                       valen 0) y le abre el ensamblaje de la
+--                                       primera línea.
 
 CREATE PROCEDURE sp_Iniciar_Ensamblaje_Orden(
     IN folioOrden INT
