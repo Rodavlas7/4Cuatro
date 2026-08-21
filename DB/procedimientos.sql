@@ -526,6 +526,10 @@ BEGIN
 
     SET total_creados = ROW_COUNT();
 
+    update orden_material
+       set recepcion = CURDATE()
+     where numero = numeroOrdenMaterial;
+
     SELECT numeroOrdenMaterial AS orden,
            linea_orden         AS linea,
            loteComponentes     AS lote,
