@@ -400,6 +400,7 @@ CREATE PROCEDURE sp_Recibir_Orden_Material(
 )
 BEGIN
     DECLARE linea_orden        VARCHAR(8);
+    DECLARE recepcion_fecha    DATE DEFAULT NULL;
     DECLARE orden_existe       INT;
     DECLARE lote_existe        INT;
     DECLARE total_materiales   INT DEFAULT 0;
@@ -416,12 +417,22 @@ BEGIN
 
     IF orden_existe = 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden de material no existe';
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: Esa orden de material no existe';
+    END IF;
+
+    SELECT
+        recepcion into recepcion_fecha
+    from orden_material
+    where numero = 1;
+
+    IF recepcion_fecha is not NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: Esa orden de material ya se recibió';
     END IF;
 
     IF linea_orden IS NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: la orden no tiene línea, las piezas no aparecerían en el inventario de nadie';
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: La orden no tiene línea, las piezas no aparecerían en el inventario de nadie';
     END IF;
 
     SELECT COUNT(*) INTO total_materiales
@@ -430,7 +441,7 @@ BEGIN
 
     IF total_materiales = 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden no tiene materiales que recibir';
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: Esa orden no tiene materiales que recibir';
     END IF;
 
     -- El lote es opcional, pero si viene tiene que existir.
@@ -440,7 +451,7 @@ BEGIN
 
         IF lote_existe = 0 THEN
             SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: ese lote de componentes no existe';
+                SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: Ese lote de componentes no existe';
         END IF;
 
     END IF;
@@ -460,7 +471,7 @@ BEGIN
 
     IF total_faltantes = 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden de material ya se recibió completa';
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: Esa orden de material ya se recibió completa';
     END IF;
 
     -- Alta de las piezas
