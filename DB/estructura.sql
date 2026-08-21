@@ -184,8 +184,6 @@ CREATE TABLE modelo_laptop (
   PRIMARY KEY (codigo)
 );
 
--- Tabla puente (M a M): qué componentes puede llevar un modelo de laptop
--- y cuántos de cada uno (capacidad). Ej: 1 procesador, 2 módulos de RAM.
 DROP TABLE IF EXISTS modelo_laptop_componente;
 CREATE TABLE modelo_laptop_componente (
   modelo_laptop varchar(8) NOT NULL,
@@ -197,8 +195,9 @@ CREATE TABLE modelo_laptop_componente (
 DROP TABLE IF EXISTS orden_material;
 CREATE TABLE orden_material (
   numero int NOT NULL AUTO_INCREMENT,
-  fecha date DEFAULT NULL,
-  hora time DEFAULT NULL,
+  solicitud   DATETIME DEFAULT NULL,
+  necesitada  DATETIME DEFAULT NULL,
+  recepcion   DATETIME DEFAULT NULL,
   linea varchar(8) DEFAULT NULL,
   PRIMARY KEY (numero)
 );
@@ -304,8 +303,13 @@ CREATE TABLE usuario (
   PRIMARY KEY (numero)
 );
 
-
-
+DROP TABLE IF EXISTS estacion_compatibilidad_componente;
+CREATE TABLE estacion_compatibilidad_componente(
+  numero int NOT NULL AUTO_INCREMENT,
+  estacion varchar(8) NOT NULL,
+  modelo_componente varchar(8) NOT NULL,
+  PRIMARY KEY (numero)
+);
 
 DROP TABLE IF EXISTS sesion;
 #####ESTO ES PARA LOS TOKENS
@@ -406,6 +410,10 @@ ALTER TABLE registro_ensamblaje ADD CONSTRAINT FK_registro_ensamblaje_linea FORE
 
 -- Llaves foráneas para la tabla usuario (Agregadas)
 ALTER TABLE usuario ADD CONSTRAINT FK_usuario_empleado FOREIGN KEY (empleado) REFERENCES empleado(numero);
+
+-- Llaves foráneas para la tabla estacion_compatibilidad_componente
+ALTER TABLE estacion_compatibilidad_componente ADD CONSTRAINT FK_estacion_compatibilidad_componente_estacion FOREIGN KEY (estacion) REFERENCES estacion(codigo);
+ALTER TABLE estacion_compatibilidad_componente ADD CONSTRAINT FK_estacion_compatibilidad_componente_modelo_componente FOREIGN KEY (modelo_componente) REFERENCES modelo_componente(codigo);
 
 -- --------------------------------------------------------
 -- ÍNDICES ÚNICOS (RESTRICCIONES UNIQUE)

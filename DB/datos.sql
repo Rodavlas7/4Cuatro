@@ -41,6 +41,7 @@ TRUNCATE TABLE edo_linea;
 TRUNCATE TABLE edo_produccion;
 TRUNCATE TABLE rol;
 TRUNCATE TABLE turno;
+TRUNCATE TABLE estacion_compatibilidad_componente;
  
 -- Reactivar validación de FKs
 
@@ -290,6 +291,49 @@ INSERT INTO estacion (codigo, nombre, descripcion, linea, activo) VALUES
 ('EST-E1', 'E1 — Limpieza y Escaneo',   'Revisión estética final, limpieza de pantalla, chasis y escaneo del número de serie en embalaje',     'LIN005', TRUE),
 ('EST-E2', 'E2 — Empaque y Sellado',    'Colocación en caja con material de protección, inclusión de manuales y sellado final en embalaje',    'LIN005', TRUE),
 ('EST-E3', 'E3 — Inspección de Calidad','Verificación del empaquetado, sellado y etiquetado por el inspector, y registro del resultado de inspección','LIN005', TRUE);
+
+
+-- 12.1 COMPATIBILIDAD DE ESTACIONES CON COMPONENTES QUE ENSAMBLAN
+INSERT INTO estacion_compatibilidad_componente (estacion, modelo_componente) VALUES
+
+('EST-A1', 'MC028'),  -- Chasis Superior
+('EST-A1', 'MC020'),  -- Touchpad
+('EST-A1', 'MC021'),  -- Touchpad
+('EST-A2', 'MC018'),  -- Teclado
+('EST-A2', 'MC019'),  -- Teclado
+('EST-A3', 'MC031'),  -- Altavoces
+('EST-A4', 'MC030'),  -- Conector de Carga
+
+('EST-B1', 'MC012'),  -- Tarjeta Madre
+('EST-B1', 'MC013'),  -- Tarjeta Madre
+('EST-B3', 'MC001'),  -- Procesador
+('EST-B3', 'MC002'),  -- Procesador
+('EST-B3', 'MC003'),  -- Procesador
+('EST-B3', 'MC004'),  -- Procesador
+('EST-B4', 'MC005'),  -- Memoria RAM
+('EST-B4', 'MC006'),  -- Memoria RAM
+('EST-B4', 'MC007'),  -- Memoria RAM
+
+('EST-C1', 'MC008'),  -- Almacenamiento SSD
+('EST-C1', 'MC009'),  -- Almacenamiento SSD
+('EST-C1', 'MC010'),  -- Almacenamiento SSD
+('EST-C1', 'MC011'),  -- Almacenamiento SSD
+('EST-C2', 'MC024'),  -- Tarjeta de Red
+('EST-C2', 'MC025'),  -- Tarjeta de Red
+('EST-C3', 'MC026'),  -- Disipador / Ventilador
+('EST-C3', 'MC027'),  -- Disipador / Ventilador
+
+('EST-D1', 'MC014'),  -- Pantalla
+('EST-D1', 'MC015'),  -- Pantalla
+('EST-D1', 'MC016'),  -- Pantalla
+('EST-D2', 'MC014'),  -- Pantalla
+('EST-D2', 'MC015'),  -- Pantalla
+('EST-D2', 'MC016'),  -- Pantalla
+('EST-D3', 'MC022'),  -- Cámara Web
+('EST-D3', 'MC023'),  -- Cámara Web
+('EST-D4', 'MC017'),  -- Batería
+('EST-D5', 'MC029');  -- Chasis Inferior
+
 
 -- 13. LOTE DE LAPTOPS
 

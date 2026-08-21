@@ -514,11 +514,11 @@ UPDATE componente
 --  sus estaciones. El reparto es el mismo que el del stock: una línea nunca
 --  pide algo que no monta.
 -- ============================================================================
-INSERT INTO orden_material (fecha, hora, linea) VALUES
-('2026-08-04', '06:30:00', 'LIN001'),
-('2026-08-04', '06:45:00', 'LIN002'),
-('2026-08-04', '07:00:00', 'LIN003'),
-('2026-08-04', '07:15:00', 'LIN004');
+INSERT INTO orden_material (solicitud, linea) VALUES
+('2026-08-04 06:30:00', 'LIN001'),
+('2026-08-04 06:45:00', 'LIN002'),
+('2026-08-04 07:00:00', 'LIN003'),
+('2026-08-04 07:15:00', 'LIN004');
 
 -- Los renglones se derivan del mapa tipo -> línea, así no hay forma de que se
 -- descuadren con el stock de arriba.
@@ -537,7 +537,7 @@ SELECT om.numero, mc.codigo, 30
                       WHEN 'TC005' THEN 'LIN004' WHEN 'TC009' THEN 'LIN004'
                       WHEN 'TC006' THEN 'LIN004' WHEN 'TC013' THEN 'LIN004'
                   END
- WHERE om.fecha = '2026-08-04';
+ WHERE om.solicitud = '2026-08-04';
 
 
 -- ============================================================================
