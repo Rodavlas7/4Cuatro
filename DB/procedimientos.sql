@@ -363,7 +363,7 @@ END$$
 -- ============================================================
 --
 -- Objetivo : Convertir una orden de material en piezas físicas. Por cada
---            renglón de detalle_material da de alta los componentes que le
+--            material de detalle_material da de alta los componentes que le
 --            faltan y los deja Disponibles en el inventario de la línea.
 --
 -- Parámetros:
@@ -376,7 +376,7 @@ END$$
 --   supervisor. Cincuenta piezas eran cincuenta altas a mano, cada una su
 --   propia transacción, y a media captura el inventario quedaba a medias.
 --
--- Recepción parcial: siempre mira cuántas FALTAN por renglón (lo pedido menos
+-- Recepción parcial: siempre mira cuántas FALTAN por material (lo pedido menos
 --   lo que ya se recibió de esa orden y ese modelo), igual que
 --   sp_Iniciar_Ensamblaje_Orden. Así el proveedor puede mandar 30 de 50 hoy y
 --   20 mañana, y correrlo dos veces no duplica nada.
@@ -390,7 +390,7 @@ END$$
 --   técnica es la que ya usa sp_p2_surtir en DB/datos_pruebas2.sql.
 --
 -- El num_serie sale <orden>-<modelo>-<nnn>, con el consecutivo continuando
---   después de lo que ya existía de ese renglón. La columna es varchar(18) sin
+--   después de lo que ya existía de ese material. La columna es varchar(18) sin
 --   UNIQUE, así que el formato cabe (4+1+8+1+3) y no se repite entre corridas.
 
 CREATE PROCEDURE sp_Recibir_Orden_Material(
@@ -401,7 +401,7 @@ BEGIN
     DECLARE linea_orden        VARCHAR(8);
     DECLARE orden_existe       INT;
     DECLARE lote_existe        INT;
-    DECLARE total_renglones    INT DEFAULT 0;
+    DECLARE total_materiales   INT DEFAULT 0;
     DECLARE total_faltantes    INT DEFAULT 0;
     DECLARE total_previos      INT DEFAULT 0;
     DECLARE total_creados      INT DEFAULT 0;
@@ -423,13 +423,13 @@ BEGIN
             SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: la orden no tiene línea, las piezas no aparecerían en el inventario de nadie';
     END IF;
 
-    SELECT COUNT(*) INTO total_renglones
+    SELECT COUNT(*) INTO total_materiales
       FROM detalle_material
      WHERE orden = numeroOrdenMaterial;
 
-    IF total_renglones = 0 THEN
+    IF total_materiales = 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden no tiene renglones que recibir';
+            SET MESSAGE_TEXT = 'Error sp_Recibir_Orden_Material: esa orden no tiene materiales que recibir';
     END IF;
 
     -- El lote es opcional, pero si viene tiene que existir.
@@ -464,9 +464,18 @@ BEGIN
 
     -- Alta de las piezas
     --
-    -- La CTE de números llega hasta el renglón más grande que falte y el JOIN
-    -- recorta por renglón con n.i <= por_recibir, así una sola CTE sirve para
+    -- La CTE de números llega hasta el material más grande que falte y el JOIN
+    -- recorta por material con n.i <= por_recibir, así una sola CTE sirve para
     -- todos.
+<<<<<<< HEAD
+    --
+    -- El consecutivo de la serie sale del MÁXIMO que ya exista de ese material,
+    -- no del conteo: si a una orden ya recibida le borraron piezas de en medio,
+    -- contar daría números que ya están usados. Las series que no traen el
+    -- formato <orden>-<modelo>-<nnn> (las de los datos de prueba, por ejemplo)
+    -- caen en 0 al castear, así que no estorban.
+=======
+>>>>>>> 31a9827a4bb8e5fee3bf35d2cd883ab66d417b9c
 
     INSERT INTO componente (num_serie, descripcion, linea, orden_material,
                             modelo, lote, estado, registro_ensamblaje)
@@ -510,11 +519,10 @@ BEGIN
     SELECT numeroOrdenMaterial AS orden,
            linea_orden         AS linea,
            loteComponentes     AS lote,
-           total_renglones     AS renglones,
+           total_materiales    AS materiales,
            total_creados       AS componentes_creados,
            total_previos       AS componentes_previos;
 END$$
-
 
 
 -- ============================================================
