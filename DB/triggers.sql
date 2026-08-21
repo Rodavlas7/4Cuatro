@@ -46,6 +46,7 @@ DROP TRIGGER IF EXISTS tg_Actualizar_Estado_Laptop_Inspeccion_Calidad;
 DROP TRIGGER IF EXISTS tg_Registrar_Embalaje;
 DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente;
 DROP TRIGGER IF EXISTS tg_Validar_Capacidad_Componente_Cambio;
+DROP TRIGGER IF EXISTS tg_Validar_Compatibilidad_Componente;
 DROP TRIGGER IF EXISTS tg_Iniciar_Orden_Al_Registrar_Laptop;
 DROP TRIGGER IF EXISTS tg_Sincronizar_Cant_Producida_Alta;
 DROP TRIGGER IF EXISTS tg_Abrir_Ensamblaje_Primera_Linea;
@@ -685,7 +686,7 @@ END$$
 -- C O M P O N E N T E
 -- ============================================================================
 --
--- Los dos validan lo mismo —que no se monten en una laptop más piezas de un
+-- Los dos primeros validan lo mismo —que no se monten en una laptop más piezas de un
 -- tipo de las que permite el BOM del modelo— pero sobre eventos distintos, y
 -- MySQL nunca dispara uno por el otro:
 --
@@ -817,11 +818,108 @@ BEGIN
 
         IF total_instalados + 1 > capacidad_permitida THEN
             SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: se excede la capacidad de ese tipo de componente para el modelo de la laptop';
+                SET MESSAGE_TEXT = 'Error tg_Validar_Capacidad_Componente: Se excede la capacidad de ese tipo de componente para el modelo de la laptop';
         END IF;
 
     END IF;
 END$$
+
+-- ----------------------------------------------------------------------------
+-- tg_Validar_Compatibilidad_Componente    BEFORE INSERT ON componente
+-- ----------------------------------------------------------------------------
+-- Que una pieza no entre al stock de una línea que no la ensambla. La
+-- compatibilidad no vive en la línea sino en sus estaciones
+-- (estacion_compatibilidad_componente), así que basta con que UNA estación de
+-- esa línea monte ese modelo.
+--
+-- No confundir con los dos de arriba: aquéllos miran el BOM del modelo de
+-- laptop —cuántas piezas de un tipo caben en la máquina—, éste mira el catálogo
+-- de la planta —qué piezas sabe montar la línea—. Una pieza puede pasar uno y
+-- reprobar el otro.
+--
+-- Son dos comprobaciones, no una. La de que el modelo exista PARECE redundante
+-- con FK_componente_modelo, y no lo es: InnoDB revisa las foráneas DESPUÉS de
+-- los triggers BEFORE, así que sin ella un modelo inventado nunca llega al 1452
+-- y sale por la segunda comprobación con 'ninguna estación lo ensambla', que es
+-- verdad pero manda a buscar el problema al lado equivocado.
+--
+-- Lo que a propósito NO mira es estacion.activo: apagar una estación por
+-- mantenimiento no debería volver ilegal el material que ya está pedido para
+-- esa línea.
+--
+-- Consecuencia a tener presente: LIN005 es de tipo Embalaje y no tiene ninguna
+-- fila en estacion_compatibilidad_componente, así que con esta regla ningún
+-- componente puede quedarse en su inventario. Es lo correcto —ahí no se
+-- ensambla, se empaca—, pero si algún día hace falta, se le dan
+-- compatibilidades; no se quita el trigger.
+--
+--
+-- La tercera comprobación no es de compatibilidad, es de estado de la orden;
+-- vive aquí porque comparte evento, que es como este archivo agrupa las reglas.
+-- Lee al revés de lo que uno esperaría, así que conviene decirlo claro:
+-- `orden_material.recepcion` NO es "ya llegó el material, ahora sí captúralo";
+-- es el sello de CERRADA que sp_Recibir_Orden_Material estampa al terminar de
+-- dar de alta las piezas. En NULL la orden está abierta y admite componentes;
+-- en cuanto tiene fecha, ya no.
+--
+-- Por eso el procedimiento no choca consigo mismo: inserta primero y sella
+-- después, así que sus propias piezas entran con la orden todavía abierta. Lo
+-- que se tapa es el otro camino, el del serializer de componente, que deja
+-- escribir `orden_material` a mano (Servicios/api/serializers.py): sin esto se
+-- le seguían colgando piezas a una orden cerrada y el conteo de recibido contra
+-- pedido dejaba de cuadrar.
+--
+-- Que la orden exista no se comprueba: eso sí lo corta FK_componente_orden_material,
+-- con un 1452 pelón, y sólo se alcanza mandando un número inventado por la API.
+--
+-- Falta el gemelo BEFORE UPDATE: mover una pieza de línea —o reasignarle la
+-- orden— con un UPDATE no pasa por aquí. El par
+-- _Capacidad_/_Capacidad_Cambio de arriba es el molde.
+
+CREATE TRIGGER tg_Validar_Compatibilidad_Componente
+BEFORE INSERT ON componente
+FOR EACH ROW
+BEGIN
+
+    IF NEW.modelo IS NOT NULL
+       AND NOT EXISTS (
+               SELECT 1
+                 FROM modelo_componente mc
+                WHERE mc.codigo = NEW.modelo)
+    THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Compatibilidad_Componente: ese modelo de componente no existe';
+    END IF;
+
+    -- Pieza suelta, sin orden que la respalde: no hay orden que revisar.
+    IF NEW.orden_material IS NOT NULL
+       AND EXISTS (
+               SELECT 1
+                 FROM orden_material om
+                WHERE om.numero    = NEW.orden_material
+                  AND om.recepcion IS NOT NULL)
+    THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Error tg_Validar_Compatibilidad_Componente: esa orden de material ya se recibió, no admite más piezas';
+    END IF;
+
+    -- Pieza sin línea o sin modelo todavía: no hay contra qué comparar.
+    IF NEW.linea IS NOT NULL AND NEW.modelo IS NOT NULL THEN
+
+        IF NOT EXISTS (
+                SELECT 1
+                  FROM estacion_compatibilidad_componente ecc
+                  JOIN estacion e ON e.codigo = ecc.estacion
+                 WHERE e.linea               = NEW.linea
+                   AND ecc.modelo_componente = NEW.modelo)
+        THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Error tg_Validar_Compatibilidad_Componente: ninguna estación de esa línea ensambla ese modelo de componente';
+        END IF;
+
+    END IF;
+END$$
+
 
 DELIMITER ;
 
