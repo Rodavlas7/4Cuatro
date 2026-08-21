@@ -1,3 +1,4 @@
+-- Active: 1783038914702@@localhost@3306@cuatro
 -- TRACEX — Procedimientos almacenados
 -- Version: 2026-07-31
 --
@@ -467,15 +468,13 @@ BEGIN
     -- La CTE de números llega hasta el material más grande que falte y el JOIN
     -- recorta por material con n.i <= por_recibir, así una sola CTE sirve para
     -- todos.
-<<<<<<< HEAD
     --
     -- El consecutivo de la serie sale del MÁXIMO que ya exista de ese material,
     -- no del conteo: si a una orden ya recibida le borraron piezas de en medio,
     -- contar daría números que ya están usados. Las series que no traen el
     -- formato <orden>-<modelo>-<nnn> (las de los datos de prueba, por ejemplo)
     -- caen en 0 al castear, así que no estorban.
-=======
->>>>>>> 31a9827a4bb8e5fee3bf35d2cd883ab66d417b9c
+
 
     INSERT INTO componente (num_serie, descripcion, linea, orden_material,
                             modelo, lote, estado, registro_ensamblaje)
