@@ -362,7 +362,7 @@ class CancelarOrdenProduccionAPIView(AccionDeProcedimientoAPIView):
     rechaza. Las Aprobadas y Embaladas se respetan."""
 
     modulo = "orden_produccion"
-    procedimiento = "sp_Cancelar_Orden_Produccion"
+    procedimiento = "sp_Cancelar_Orden_Produccion" #AQUI SE LLAMA UN PROCEDIMIENTO
 
     def argumentos(self, request, folio=None):
         return (folio,)
@@ -377,7 +377,7 @@ class IniciarEnsamblajeOrdenAPIView(AccionDeProcedimientoAPIView):
     unidad."""
 
     modulo = "orden_produccion"
-    procedimiento = "sp_Iniciar_Ensamblaje_Orden"
+    procedimiento = "sp_Iniciar_Ensamblaje_Orden"#AQUI SE LLAMA UN PROCEDIMIENTO
 
     def argumentos(self, request, folio=None):
         return (folio,)
@@ -390,7 +390,7 @@ class LiberarComponentesLaptopAPIView(AccionDeProcedimientoAPIView):
     sirven, EDC003 (Dañado) si no. Si no viene, se toma Disponible."""
 
     modulo = "ensamblaje"
-    procedimiento = "sp_Liberar_Componentes_Laptop"
+    procedimiento = "sp_Liberar_Componentes_Laptop"#AQUI SE LLAMA UN PROCEDIMIENTO
 
     def argumentos(self, request, numero=None):
         return (numero, request.data.get('estado'))

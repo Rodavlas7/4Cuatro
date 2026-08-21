@@ -185,7 +185,7 @@ class ResumenRangoAPIView(APIView):
         hasta = _fecha(request.query_params.get('hasta'))
 
         try:
-            resumen = procedimientos.llamar('sp_Dashboard_Resumen', desde, hasta)
+            resumen = procedimientos.llamar('sp_Dashboard_Resumen', desde, hasta)  #AQUI SE LLAMA UN PROCEDIMIENTO
         except DatabaseError as error:
             return Response({'mensaje': mensaje_de_base(error)},
                             status=status.HTTP_400_BAD_REQUEST)

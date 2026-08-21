@@ -261,7 +261,7 @@ class RecibirOrdenMaterialAPIView(AccionDeProcedimientoAPIView):
     si no viene, entran sin lote."""
 
     modulo = "orden_material"
-    procedimiento = "sp_Recibir_Orden_Material"
+    procedimiento = "sp_Recibir_Orden_Material" #AQUI SE LLAMA UN PROCEDIMIENTO
 
     def argumentos(self, request, numero=None):
         return (numero, request.data.get('lote') or None)
